@@ -562,18 +562,51 @@ function moveStrategically() {
     // Decision making in priority order
     let chosenMove = null;
 
-    // ── Priority -3: ABSOLUTE OVERRIDE — mouse adjacent to opponent dragon ────
-    // If any CPU mouse is directly adjacent to an uncovered enemy dragon, capture it NOW.
-    // This must run before dragon-protection and all other priorities; the math shows
-    // that any other consideration is worth less than removing the opponent's dragon.
+    // ── Priority -3: ABSOLUTE OVERRIDE — game-winning capture available ─────
+    // If the opponent has only one piece left and a CPU piece is adjacent and can capture it, do it NOW.
+    // Also catches the classic mouse-adjacent-to-dragon case at any point in the game.
     {
         const opPlayer = gameState.cpuPlayer === 1 ? 2 : 1;
-        for (const mover of piecesWithMoves) {
-            if (mover.piece.type !== 'mouse') continue;
-            for (const m of mover.validMoves) {
-                const target = gameState.board[m.row][m.col];
-                if (target && target.type === 'dragon' && target.player === opPlayer) {
-                    if (!gameState.covered[m.row][m.col]) {
+
+        // Count opponent pieces
+        let opPieceCount = 0;
+        for (let r = 0; r < BOARD_SIZE; r++)
+            for (let c = 0; c < BOARD_SIZE; c++) {
+                const p = gameState.board[r][c];
+                if (p && p.player === opPlayer) opPieceCount++;
+            }
+
+        // Case A: opponent has 1 piece left — any adjacent capturer wins the game
+        if (opPieceCount === 1) {
+            outer: for (const mover of piecesWithMoves) {
+                for (const m of mover.validMoves) {
+                    const target = gameState.board[m.row][m.col];
+                    if (target && target.player === opPlayer && !gameState.covered[m.row][m.col]) {
+                        if (canCapture(mover.piece, target)) {
+                            chosenMove = {
+                                from: { row: mover.row, col: mover.col },
+                                to: m,
+                                piece: mover.piece,
+                                isCapture: true,
+                                wouldBeSafe: true,
+                                strategicValue: 999,
+                                targetPiece: target
+                            };
+                            debugLog(`Priority -3: GAME-WINNING CAPTURE with ${mover.piece.type} at (${mover.row},${mover.col})`);
+                            break outer;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Case B: mouse adjacent to dragon at any point in the game
+        if (!chosenMove) {
+            outer2: for (const mover of piecesWithMoves) {
+                if (mover.piece.type !== 'mouse') continue;
+                for (const m of mover.validMoves) {
+                    const target = gameState.board[m.row][m.col];
+                    if (target && target.type === 'dragon' && target.player === opPlayer && !gameState.covered[m.row][m.col]) {
                         chosenMove = {
                             from: { row: mover.row, col: mover.col },
                             to: m,
@@ -584,11 +617,10 @@ function moveStrategically() {
                             targetPiece: target
                         };
                         debugLog(`Priority -3: CAPTURE DRAGON NOW with mouse at (${mover.row},${mover.col})`);
-                        break;
+                        break outer2;
                     }
                 }
             }
-            if (chosenMove) break;
         }
     }
 
@@ -987,7 +1019,7 @@ function moveStrategically() {
     }
 
     // Priority 1: If a piece is in danger, try to move it to safety
-    if (piecesInDanger.length > 0) {
+    if (!chosenMove && piecesInDanger.length > 0) {
         debugLog(`Found ${piecesInDanger.length} CPU pieces in danger`);
 
         // Sort pieces in danger by priority (higher power pieces first, but mice get priority over lower-power pieces)
