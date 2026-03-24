@@ -27,8 +27,8 @@ Capture enemy pieces by moving onto their square. Higher power beats lower power
 | 🐭 Mouse | 1 |
 | 😸 Cat | 2 |
 | 🐶 Wolf | 3 |
-| 🧙 Bear | 4 |
-| 🤖 Eagle | 5 |
+| 🧙 Wizard | 4 |
+| 🤖 Robot | 5 |
 | 🐉 Dragon | 6 |
 
 **Special rule:** 🐭 Mouse captures 🐉 Dragon (but Dragon beats everything else).

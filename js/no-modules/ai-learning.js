@@ -19,8 +19,8 @@ const aiLearning = {
             mouse: 1.0,              // Base values, will be adjusted by learning
             cat: 1.0,
             wolf: 1.0,
-            bear: 1.0,
-            eagle: 1.0,
+            wizard: 1.0,
+            robot: 1.0,
             dragon: 1.0,
             centerControl: 1.0        // Value of controlling center positions
         },
@@ -397,8 +397,8 @@ const aiLearning = {
                 mouse: 1.0,
                 cat: 1.0,
                 wolf: 1.0,
-                bear: 1.0,
-                eagle: 1.0,
+                wizard: 1.0,
+                robot: 1.0,
                 dragon: 1.0,
                 centerControl: 1.0
             },

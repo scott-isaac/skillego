@@ -5,8 +5,8 @@ const PIECES = [
     { type: 'mouse', power: 1, quantity: 6, emoji: '🐭' },
     { type: 'cat', power: 2, quantity: 4, emoji: '😸' },
     { type: 'wolf', power: 3, quantity: 4, emoji: '🐶' },
-    { type: 'bear', power: 4, quantity: 2, emoji: '🧙‍♂️' },
-    { type: 'eagle', power: 5, quantity: 1, emoji: '🤖' },
+    { type: 'wizard', power: 4, quantity: 2, emoji: '🧙‍♂️' },
+    { type: 'robot', power: 5, quantity: 1, emoji: '🤖' },
     { type: 'dragon', power: 6, quantity: 1, emoji: '🐉' },
 ];
 
