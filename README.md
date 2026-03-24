@@ -22,14 +22,14 @@ On your turn, either:
 
 Capture enemy pieces by moving onto their square. Higher power beats lower power:
 
-| Piece | Power |
-|-------|-------|
-| 🐭 Mouse | 1 |
-| 😸 Cat | 2 |
-| 🐶 Dog | 3 |
-| 🧙 Wizard | 4 |
-| 🤖 Robot | 5 |
-| 🐉 Dragon | 6 |
+| Piece | Power | Count |
+|-------|-------|-------|
+| 🐭 Mouse | 1 | ×6 |
+| 😸 Cat | 2 | ×4 |
+| 🐶 Dog | 3 | ×4 |
+| 🧙 Wizard | 4 | ×2 |
+| 🤖 Robot | 5 | ×1 |
+| 🐉 Dragon | 6 | ×1 |
 
 **Special rule:** 🐭 Mouse captures 🐉 Dragon (but Dragon beats everything else).
 
