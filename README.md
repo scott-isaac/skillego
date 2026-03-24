@@ -2,7 +2,7 @@
 
 A hidden-information strategy board game playable in the browser — no install, no server, no build step required.
 
-**[Play it live →](https://[your-username].github.io/skillego/)**
+**[Play it live →](https://scott-isaac.github.io/skillego/)**
 
 ---
 
@@ -75,9 +75,3 @@ cd skillego
 open index.html   # or double-click it
 ```
 
-## Deploying to GitHub Pages
-
-1. Push this repo to GitHub
-2. Go to **Settings → Pages**
-3. Set source to **Deploy from branch**, branch `main`, folder `/root`
-4. Your game will be live at `https://[your-username].github.io/skillego/`
