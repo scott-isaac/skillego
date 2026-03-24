@@ -251,6 +251,27 @@ body {
     margin: 6px 0;
 }
 
+.piece-table {
+    border-collapse: collapse;
+    margin: 6px 0 8px;
+    font-size: 13px;
+}
+
+.piece-table td {
+    padding: 2px 10px 2px 0;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.piece-table td:first-child {
+    font-size: 18px;
+    padding-right: 6px;
+}
+
+.piece-table td:last-child {
+    color: #888;
+}
+
 /* ── Debug log (dev tool, collapsed by default) ── */
 #debug-log {
     margin-top: 20px;
