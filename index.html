@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skillego</title>
+    <meta name="description" content="Skillego — a hidden-information strategy board game with AI opponents ranging from Easy to Expert (minimax with alpha-beta pruning).">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="game-container">
+        <h1>Skillego</h1>
+
+        <!-- ── Setup screen ── -->
+        <div id="setup-screen">
+            <p class="tagline">Hidden-information strategy · Capture all enemy pieces to win</p>
+
+            <details class="rules-toggle">
+                <summary>How to Play</summary>
+                <div class="rules-body">
+                    <p>All 18 pieces per side start <strong>face-down</strong> on a 6×6 board. On your turn, either <strong>flip a covered piece</strong> to reveal it, or <strong>move an uncovered piece</strong> one step (orthogonal).</p>
+                    <p><strong>Piece hierarchy</strong> (higher captures lower):<br>
+                    🐭 Mouse (1) · 😸 Cat (2) · 🐶 Wolf (3) · 🧙 Bear (4) · 🤖 Eagle (5) · 🐉 Dragon (6)</p>
+                    <p><strong>Special rule:</strong> 🐭 Mouse captures 🐉 Dragon — but Dragon beats everything else.</p>
+                    <p>Eliminate all opponent pieces to win.</p>
+                </div>
+            </details>
+
+            <div class="player-config">
+                <div class="player-row">
+                    <span class="player-label">Player 1</span>
+                    <select id="p1-type">
+                        <option value="human">Human</option>
+                        <option value="cpu">CPU</option>
+                    </select>
+                    <select id="p1-difficulty" disabled>
+                        <option value="easy">Easy</option>
+                        <option value="medium">Medium</option>
+                        <option value="hard" selected>Hard</option>
+                        <option value="expert">Expert</option>
+                    </select>
+                </div>
+                <div class="player-row">
+                    <span class="player-label">Player 2</span>
+                    <select id="p2-type">
+                        <option value="human">Human</option>
+                        <option value="cpu" selected>CPU</option>
+                    </select>
+                    <select id="p2-difficulty">
+                        <option value="easy">Easy</option>
+                        <option value="medium">Medium</option>
+                        <option value="hard" selected>Hard</option>
+                        <option value="expert">Expert</option>
+                    </select>
+                </div>
+                <div class="speed-row">
+                    <label>CPU Speed:
+                        <input type="range" id="cpu-speed" min="0" max="3000" value="800" step="100">
+                        <span id="cpu-speed-label">0.8s</span>
+                    </label>
+                </div>
+            </div>
+            <button id="start-game-btn">Start Game</button>
+        </div>
+
+        <!-- ── Game screen (hidden until Start Game) ── -->
+        <div id="game-screen" style="display:none">
+            <div id="turn-indicator">Player 1's Turn</div>
+            <div id="board"></div>
+            <div id="controls">
+                <button id="resign-button">Resign</button>
+                <button id="copy-log-btn" onclick="gameLog.copyToClipboard()">📋 Copy Log</button>
+            </div>
+            <details id="debug-log">
+                <summary>Dev Log</summary>
+                <div id="debug-content"></div>
+            </details>
+        </div>
+
+        <!-- ── Winner overlay ── -->
+        <div id="winner-message" style="display:none">
+            <div id="winner-text"></div>
+            <button id="play-again-btn">Play Again</button>
+        </div>
+    </div>
+
+    <!-- Load scripts in the correct order (no modules) -->
+    <script src="js/no-modules/gamelog.js"></script>
+    <script src="js/no-modules/utils.js"></script>
+    <script src="js/no-modules/constants.js"></script>
+    <script src="js/no-modules/state.js"></script>
+    <script src="js/no-modules/ai-learning.js"></script>
+    <script src="js/no-modules/board.js"></script>
+    <script src="js/no-modules/minimax.js"></script>
+    <script src="js/no-modules/cpu.js"></script>
+    <script src="js/no-modules/game.js"></script>
+    <script src="js/no-modules/main.js"></script>
+</body>
+</html>
