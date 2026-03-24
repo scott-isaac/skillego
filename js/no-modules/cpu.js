@@ -26,6 +26,42 @@ function makeCpuMove() {
         return;
     }
 
+    // ── FORCED WIN: if any CPU piece can capture the opponent's last piece, do it NOW ──
+    // Runs before all difficulty logic so no heuristic can ever block a game-winning move.
+    {
+        const opPlayer = gameState.cpuPlayer === 1 ? 2 : 1;
+        let opCount = 0;
+        for (let r = 0; r < BOARD_SIZE; r++)
+            for (let c = 0; c < BOARD_SIZE; c++) {
+                const p = gameState.board[r][c];
+                if (p && p.player === opPlayer) opCount++;
+            }
+        if (opCount === 1) {
+            const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+            let forcedMove = null;
+            outer: for (let r = 0; r < BOARD_SIZE; r++) {
+                for (let c = 0; c < BOARD_SIZE; c++) {
+                    const p = gameState.board[r][c];
+                    if (!p || p.player !== gameState.cpuPlayer || gameState.covered[r][c]) continue;
+                    for (const [dr, dc] of dirs) {
+                        const nr = r + dr, nc = c + dc;
+                        if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) continue;
+                        const target = gameState.board[nr][nc];
+                        if (target && target.player === opPlayer && !gameState.covered[nr][nc] && canCapture(p, target)) {
+                            forcedMove = { fromRow: r, fromCol: c, toRow: nr, toCol: nc };
+                            break outer;
+                        }
+                    }
+                }
+            }
+            if (forcedMove) {
+                debugLog(`FORCED WIN: ${gameState.board[forcedMove.fromRow][forcedMove.fromCol].type} captures last enemy piece`);
+                executeCpuMove(forcedMove.fromRow, forcedMove.fromCol, forcedMove.toRow, forcedMove.toCol);
+                return;
+            }
+        }
+    }
+
     if (gameState.cpuDifficulty === 'expert') {
         makeExpertMove();
         return;
