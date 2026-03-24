@@ -18,7 +18,7 @@ const aiLearning = {
         pieceValues: {               // How much to value each piece relatively
             mouse: 1.0,              // Base values, will be adjusted by learning
             cat: 1.0,
-            wolf: 1.0,
+            dog: 1.0,
             wizard: 1.0,
             robot: 1.0,
             dragon: 1.0,
@@ -396,7 +396,7 @@ const aiLearning = {
             pieceValues: {
                 mouse: 1.0,
                 cat: 1.0,
-                wolf: 1.0,
+                dog: 1.0,
                 wizard: 1.0,
                 robot: 1.0,
                 dragon: 1.0,
