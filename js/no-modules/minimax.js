@@ -188,7 +188,8 @@ const SkillMinimax = (function () {
                     const t = state.board[nr][nc];
                     if (!t || state.covered[nr][nc] || t.player === p.player) continue;
                     if (canCapturePiece(p, t)) {
-                        const bonus = t.power * 1.5; // Adjacent capture threat
+                        // Adjacent capture threat — use full material value so taking is always preferred
+                        const bonus = t.power * 10;
                         if (p.player === cpuPlayer) score += bonus;
                         else score -= bonus;
                     }
@@ -198,12 +199,12 @@ const SkillMinimax = (function () {
 
         // Endgame hunt: when opponent has only 1 piece left, close in hard
         if (opPieces === 1 && !hasCovered) {
-            let lastR = -1, lastC = -1;
+            let lastR = -1, lastC = -1, lastPiece = null;
             outer: for (let r = 0; r < BOARD_SIZE; r++)
                 for (let c = 0; c < BOARD_SIZE; c++) {
                     const p = state.board[r][c];
                     if (p && p.player === opPlayer && !state.covered[r][c]) {
-                        lastR = r; lastC = c; break outer;
+                        lastR = r; lastC = c; lastPiece = p; break outer;
                     }
                 }
             if (lastR >= 0) {
@@ -211,8 +212,10 @@ const SkillMinimax = (function () {
                     for (let c = 0; c < BOARD_SIZE; c++) {
                         const p = state.board[r][c];
                         if (!p || p.player !== cpuPlayer || state.covered[r][c]) continue;
+                        // Only reward pieces that can actually capture the last enemy
+                        if (!canCapturePiece(p, lastPiece)) continue;
                         const dist = Math.abs(r - lastR) + Math.abs(c - lastC);
-                        score += Math.max(0, 8 - dist) * 8;
+                        score += Math.max(0, 8 - dist) * 12;
                     }
                 score -= opMobility * 12;
             }
