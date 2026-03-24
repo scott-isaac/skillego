@@ -326,11 +326,40 @@ function showResult(text) {
     clearValidMoves();
 }
 
+function restartGame() {
+    // Re-use existing player config — no DOM reads needed
+    document.getElementById('winner-message').style.display = 'none';
+    const p1 = gameState.player1;
+    const p2 = gameState.player2;
+    const bothCpu = p1.type === 'cpu' && p2.type === 'cpu';
+    gameState.cpuVsCpu   = bothCpu;
+    gameState.cpuEnabled = p1.type === 'cpu' || p2.type === 'cpu';
+    gameState.cpuPlayer  = p2.type === 'cpu' ? 2 : 1;
+    gameState.cpuDifficulty = p2.type === 'cpu' ? p2.difficulty : p1.difficulty;
+    gameState.currentPlayer = 1;
+    gameState.gameOver      = false;
+    gameState.selectedCell  = null;
+    gameState.validMoves    = [];
+    gameState.cpuLastMoveFrom         = null;
+    gameState.cpuLastMoveTo           = null;
+    gameState.cpuRecentSquares        = {};
+    gameState.cpuJustUncoveredHighValue = null;
+    if (typeof gameLog !== 'undefined') gameLog.reset();
+    initializeBoard();
+    updateTurnIndicator();
+    const resignBtn = document.getElementById('resign-button');
+    if (resignBtn) resignBtn.textContent = bothCpu ? 'Stop' : 'Resign';
+    if (gameState.cpuVsCpu || (gameState.cpuEnabled && gameState.currentPlayer === gameState.cpuPlayer)) {
+        setTimeout(makeCpuMove, 500);
+    }
+}
+
 // ── Event listeners ───────────────────────────────────────────────────────────
 
 function setupEventListeners() {
     document.getElementById('start-game-btn').addEventListener('click', startGame);
-    document.getElementById('play-again-btn').addEventListener('click', showSetupScreen);
+    document.getElementById('restart-btn').addEventListener('click', restartGame);
+    document.getElementById('new-game-btn').addEventListener('click', showSetupScreen);
     document.getElementById('resign-button').addEventListener('click', resignGame);
 
     // Enable/disable difficulty selects based on player type
