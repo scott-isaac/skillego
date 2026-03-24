@@ -26,39 +26,48 @@ function makeCpuMove() {
         return;
     }
 
-    // ── FORCED WIN: if any CPU piece can capture the opponent's last piece, do it NOW ──
-    // Runs before all difficulty logic so no heuristic can ever block a game-winning move.
+    // ── FORCED CAPTURES: always take these immediately, before any difficulty logic ──
+    // 1. Any piece that can capture the opponent's last remaining piece (forced win)
+    // 2. Any piece that can capture an enemy dragon (too valuable to pass up)
     {
         const opPlayer = gameState.cpuPlayer === 1 ? 2 : 1;
+        const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+
         let opCount = 0;
         for (let r = 0; r < BOARD_SIZE; r++)
             for (let c = 0; c < BOARD_SIZE; c++) {
                 const p = gameState.board[r][c];
                 if (p && p.player === opPlayer) opCount++;
             }
-        if (opCount === 1) {
-            const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
-            let forcedMove = null;
-            outer: for (let r = 0; r < BOARD_SIZE; r++) {
-                for (let c = 0; c < BOARD_SIZE; c++) {
-                    const p = gameState.board[r][c];
-                    if (!p || p.player !== gameState.cpuPlayer || gameState.covered[r][c]) continue;
-                    for (const [dr, dc] of dirs) {
-                        const nr = r + dr, nc = c + dc;
-                        if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) continue;
-                        const target = gameState.board[nr][nc];
-                        if (target && target.player === opPlayer && !gameState.covered[nr][nc] && canCapture(p, target)) {
-                            forcedMove = { fromRow: r, fromCol: c, toRow: nr, toCol: nc };
-                            break outer;
-                        }
+
+        let forcedMove = null;
+
+        outer: for (let r = 0; r < BOARD_SIZE; r++) {
+            for (let c = 0; c < BOARD_SIZE; c++) {
+                const p = gameState.board[r][c];
+                if (!p || p.player !== gameState.cpuPlayer || gameState.covered[r][c]) continue;
+                for (const [dr, dc] of dirs) {
+                    const nr = r + dr, nc = c + dc;
+                    if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) continue;
+                    const target = gameState.board[nr][nc];
+                    if (!target || target.player !== opPlayer || gameState.covered[nr][nc]) continue;
+                    if (!canCapture(p, target)) continue;
+                    const isLastPiece = opCount === 1;
+                    const isDragon = target.type === 'dragon';
+                    if (isLastPiece || isDragon) {
+                        forcedMove = { fromRow: r, fromCol: c, toRow: nr, toCol: nc };
+                        break outer;
                     }
                 }
             }
-            if (forcedMove) {
-                debugLog(`FORCED WIN: ${gameState.board[forcedMove.fromRow][forcedMove.fromCol].type} captures last enemy piece`);
-                executeCpuMove(forcedMove.fromRow, forcedMove.fromCol, forcedMove.toRow, forcedMove.toCol);
-                return;
-            }
+        }
+
+        if (forcedMove) {
+            const mover = gameState.board[forcedMove.fromRow][forcedMove.fromCol];
+            const target = gameState.board[forcedMove.toRow][forcedMove.toCol];
+            debugLog(`FORCED CAPTURE: ${mover.type} takes enemy ${target.type}`);
+            executeCpuMove(forcedMove.fromRow, forcedMove.fromCol, forcedMove.toRow, forcedMove.toCol);
+            return;
         }
     }
 
