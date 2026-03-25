@@ -10,12 +10,9 @@ const PIECES = [
     { type: 'dragon', power: 6, quantity: 1, emoji: '🐉' },
 ];
 
-// Abilities available per piece type.
-// Each entry: { id, label, icon, description }
+// Abilities available per piece type (list of ability IDs).
 const PIECE_ABILITIES = {
-    dragon: [
-        { id: 'push', label: 'Push', icon: '💨', description: 'Push an adjacent enemy one square away' }
-    ],
+    dragon: ['push'],
 };
 
 const PLAYER_COLORS = {
