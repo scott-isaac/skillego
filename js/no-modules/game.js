@@ -112,6 +112,7 @@ function getPushButtons(dragonRow, dragonCol) {
         { dr:  0, dc: -1, icon: '←', label: 'Push Left' },
         { dr:  0, dc:  1, icon: '→', label: 'Push Right' },
     ];
+    const SPELL_ICON = '💨';
     return dirs.map(({ dr, dc, icon, label }) => {
         const er = dragonRow + dr, ec = dragonCol + dc;
         const destR = dragonRow + 2*dr, destC = dragonCol + 2*dc;
@@ -122,7 +123,7 @@ function getPushButtons(dragonRow, dragonCol) {
         const enabled = !!(inBounds && enemy && enemy.player !== piece.player &&
                            !gameState.covered[er][ec] && dest === null);
         return {
-            icon, label,
+            icon, label, spellIcon: SPELL_ICON,
             enabled,
             enemyRow: er, enemyCol: ec,
             destRow: destR, destCol: destC,
@@ -152,11 +153,13 @@ function populateSkillTray(piece, row, col) {
         slot.disabled = true;
         slot.className = 'skill-slot';
         slot.title = '';
+        delete slot.dataset.spellIcon;
         if (i < buttons.length) {
             const b = buttons[i];
             slot.textContent = b.icon;
             slot.title = b.label;
             slot.disabled = !b.enabled;
+            if (b.spellIcon) slot.dataset.spellIcon = b.spellIcon;
             if (b.enabled) {
                 slot.classList.add('skill-available');
                 slot.onclick = () => { b.action(); };
@@ -183,6 +186,7 @@ function clearSkillTray() {
         slot.disabled = true;
         slot.className = 'skill-slot';
         slot.title = '';
+        delete slot.dataset.spellIcon;
     });
     document.querySelectorAll('.push-destination-preview')
         .forEach(el => el.classList.remove('push-destination-preview'));

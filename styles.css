@@ -187,12 +187,26 @@ body {
     border: 1px solid #9a9088;
     border-radius: 6px;
     color: #9a9088;
-    font-size: 22px;
+    font-size: 20px;
     cursor: default;
     display: flex;
     align-items: center;
     justify-content: center;
+    position: relative;
     transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.skill-slot::before {
+    content: attr(data-spell-icon);
+    position: absolute;
+    font-size: 30px;
+    opacity: 0.18;
+    pointer-events: none;
+    line-height: 1;
+}
+
+.skill-slot.skill-available::before {
+    opacity: 0.35;
 }
 
 .skill-slot.skill-available {
