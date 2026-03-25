@@ -40,6 +40,15 @@ const gameLog = {
         }
     },
 
+    recordPush(player, dragonRow, dragonCol, enemyRow, enemyCol, destRow, destCol, pushedPiece) {
+        this.turnNumber++;
+        const cfg = player === 1 ? gameState.player1 : gameState.player2;
+        const who = cfg && cfg.type === 'cpu' ? `CPU` : `P${player}`;
+        this.entries.push(
+            `T${this.turnNumber} ${who}: dragon[6] PUSHES ${this._pieceLabel(pushedPiece)} ${this._coord(enemyRow, enemyCol)} → ${this._coord(destRow, destCol)}`
+        );
+    },
+
     boardSnapshot() {
         const colHeader = '     ' + [0,1,2,3,4,5].join('    ');
         const rows = [colHeader];

@@ -28,15 +28,34 @@ function handleCellClick(row, col, cellElement) {
         // Select the cell
         gameState.selectedCell = { row, col, piece: cell };
         cellElement.classList.add('selected');
-        
+
         // Show valid moves
         gameState.validMoves = getValidMoves(row, col);
         for (const move of gameState.validMoves) {
             highlightCell(move.row, move.col, 'valid-move');
         }
-    } 
+
+        // Show push targets for dragons
+        if (cell.type === 'dragon') {
+            gameState.validPushes = getValidPushes(row, col);
+            for (const push of gameState.validPushes) {
+                highlightCell(push.enemyRow, push.enemyCol, 'valid-push');
+                const destEl = document.querySelector(`.cell[data-row="${push.destRow}"][data-col="${push.destCol}"]`);
+                if (destEl) {
+                    destEl.classList.add('push-destination');
+                    destEl.dataset.pushArrow = push.arrow;
+                }
+            }
+        }
+    }
     // If a cell is already selected
     else if (gameState.selectedCell) {
+        // Check if the clicked cell is a valid push target
+        if (isValidPush(row, col)) {
+            executePush(gameState.selectedCell.row, gameState.selectedCell.col, row, col);
+            return;
+        }
+
         // Check if the clicked cell is a valid move
         if (isValidMove(gameState.selectedCell.row, gameState.selectedCell.col, row, col)) {
             // Move the piece
@@ -94,8 +113,70 @@ function handleCellClick(row, col, cellElement) {
 }
 
 function isValidMove(fromRow, fromCol, toRow, toCol) {
-    // Check if the move is one of the valid moves
     return gameState.validMoves.some(move => move.row === toRow && move.col === toCol);
+}
+
+// Returns push targets for a dragon: pieces it can't capture (mice) with clear space behind them.
+function getValidPushes(row, col) {
+    const piece = gameState.board[row][col];
+    if (!piece || piece.type !== 'dragon') return [];
+    const pushes = [];
+    const dirs = [[-1,0,'up'],[1,0,'down'],[0,-1,'left'],[0,1,'right']];
+    const arrows = { up:'↑', down:'↓', left:'←', right:'→' };
+    for (const [dr, dc, dir] of dirs) {
+        const er = row + dr, ec = col + dc;
+        const destR = row + 2*dr, destC = col + 2*dc;
+        if (er < 0 || er >= BOARD_SIZE || ec < 0 || ec >= BOARD_SIZE) continue;
+        if (destR < 0 || destR >= BOARD_SIZE || destC < 0 || destC >= BOARD_SIZE) continue;
+        const enemy = gameState.board[er][ec];
+        if (!enemy || enemy.player === piece.player || gameState.covered[er][ec]) continue;
+        if (canCapture(piece, enemy)) continue; // capturable pieces are handled as captures, not pushes
+        if (gameState.board[destR][destC] !== null) continue; // destination must be empty
+        pushes.push({ enemyRow: er, enemyCol: ec, destRow: destR, destCol: destC, arrow: arrows[dir] });
+    }
+    return pushes;
+}
+
+function isValidPush(row, col) {
+    return gameState.validPushes.some(p => p.enemyRow === row && p.enemyCol === col);
+}
+
+function executePush(dragonRow, dragonCol, enemyRow, enemyCol) {
+    const push = gameState.validPushes.find(p => p.enemyRow === enemyRow && p.enemyCol === enemyCol);
+    if (!push) return;
+
+    const enemy = gameState.board[enemyRow][enemyCol];
+
+    // Update board state
+    gameState.board[push.destRow][push.destCol] = enemy;
+    gameState.board[enemyRow][enemyCol] = null;
+    gameState.covered[push.destRow][push.destCol] = false;
+
+    // Update DOM
+    const fromCell = document.querySelector(`.cell[data-row="${enemyRow}"][data-col="${enemyCol}"]`);
+    const toCell   = document.querySelector(`.cell[data-row="${push.destRow}"][data-col="${push.destCol}"]`);
+    fromCell.textContent = '';
+    fromCell.style.backgroundColor = '#e0c9a6';
+    toCell.textContent = enemy.emoji;
+    toCell.style.backgroundColor = PLAYER_COLORS[enemy.player];
+
+    if (typeof gameLog !== 'undefined') {
+        gameLog.recordPush(gameState.currentPlayer, dragonRow, dragonCol, enemyRow, enemyCol, push.destRow, push.destCol, enemy);
+    }
+
+    clearValidMoves();
+    const dragonEl = document.querySelector(`.cell[data-row="${dragonRow}"][data-col="${dragonCol}"]`);
+    if (dragonEl) dragonEl.classList.remove('selected');
+    gameState.selectedCell = null;
+
+    checkGameOver();
+    if (!gameState.gameOver) {
+        gameState.currentPlayer = gameState.currentPlayer === 1 ? 2 : 1;
+        updateTurnIndicator();
+        if (gameState.cpuEnabled && gameState.currentPlayer === gameState.cpuPlayer) {
+            setTimeout(makeCpuMove, gameState.cpuMoveDelay);
+        }
+    }
 }
 
 function getValidMoves(row, col) {
@@ -277,6 +358,7 @@ function startGame() {
     gameState.gameOver      = false;
     gameState.selectedCell  = null;
     gameState.validMoves    = [];
+    gameState.validPushes   = [];
     gameState.cpuLastMoveFrom         = null;
     gameState.cpuLastMoveTo           = null;
     gameState.cpuRecentSquares        = {};
@@ -340,6 +422,7 @@ function restartGame() {
     gameState.gameOver      = false;
     gameState.selectedCell  = null;
     gameState.validMoves    = [];
+    gameState.validPushes   = [];
     gameState.cpuLastMoveFrom         = null;
     gameState.cpuLastMoveTo           = null;
     gameState.cpuRecentSquares        = {};
