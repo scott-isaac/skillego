@@ -7,6 +7,8 @@ const gameState = {
     selectedCell: null,
     validMoves: [],
     validPushes: [],
+    armedSpell: null,   // currently armed spell id, e.g. 'push'
+    spellTargets: [],   // valid targets for the armed spell
     playerColors: PLAYER_COLORS,
     // Per-player config (source of truth for setup screen)
     player1: { type: 'human', difficulty: 'hard' },

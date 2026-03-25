@@ -35,24 +35,27 @@ function handleCellClick(row, col, cellElement) {
             highlightCell(move.row, move.col, 'valid-move');
         }
 
-        // Show push targets for dragons
-        if (cell.type === 'dragon') {
-            gameState.validPushes = getValidPushes(row, col);
-            for (const push of gameState.validPushes) {
-                highlightCell(push.enemyRow, push.enemyCol, 'valid-push');
-                const destEl = document.querySelector(`.cell[data-row="${push.destRow}"][data-col="${push.destCol}"]`);
-                if (destEl) {
-                    destEl.classList.add('push-destination');
-                    destEl.dataset.pushArrow = push.arrow;
-                }
-            }
-        }
+        // Show spell bar if this piece has abilities
+        showSpellBar(cell);
     }
     // If a cell is already selected
     else if (gameState.selectedCell) {
-        // Check if the clicked cell is a valid push target
-        if (isValidPush(row, col)) {
-            executePush(gameState.selectedCell.row, gameState.selectedCell.col, row, col);
+        // If a spell is armed, clicks go to spell target handling
+        if (gameState.armedSpell) {
+            const isTarget = gameState.spellTargets.some(t => t.row === row && t.col === col);
+            if (isTarget) {
+                executeSpell(gameState.armedSpell,
+                    gameState.selectedCell.row, gameState.selectedCell.col, row, col);
+            } else {
+                disarmSpell();
+                // fall through to deselect below
+            }
+            // Clear selection if spell fired or disarmed
+            const selEl = document.querySelector(`.cell[data-row="${gameState.selectedCell?.row}"][data-col="${gameState.selectedCell?.col}"]`);
+            if (selEl) selEl.classList.remove('selected');
+            clearValidMoves();
+            hideSpellBar();
+            gameState.selectedCell = null;
             return;
         }
 
@@ -76,13 +79,11 @@ function handleCellClick(row, col, cellElement) {
             }
         }
         
-        // Clear selection and valid moves
+        // Clear selection, valid moves, and spell bar
         const selectedCellElement = document.querySelector(`.cell[data-row="${gameState.selectedCell.row}"][data-col="${gameState.selectedCell.col}"]`);
-        if (selectedCellElement) {
-            selectedCellElement.classList.remove('selected');
-        }
-        
+        if (selectedCellElement) selectedCellElement.classList.remove('selected');
         clearValidMoves();
+        hideSpellBar();
         gameState.selectedCell = null;
     }
     // If no cell is selected and clicked on a covered piece
@@ -116,57 +117,107 @@ function isValidMove(fromRow, fromCol, toRow, toCol) {
     return gameState.validMoves.some(move => move.row === toRow && move.col === toCol);
 }
 
-// Returns push targets for a dragon: pieces it can't capture (mice) with clear space behind them.
-function getValidPushes(row, col) {
+// ── Spell system ──────────────────────────────────────────────────────────────
+
+function getSpellTargets(spellId, row, col) {
     const piece = gameState.board[row][col];
-    if (!piece || piece.type !== 'dragon') return [];
-    const pushes = [];
-    const dirs = [[-1,0,'up'],[1,0,'down'],[0,-1,'left'],[0,1,'right']];
-    const arrows = { up:'↑', down:'↓', left:'←', right:'→' };
-    for (const [dr, dc, dir] of dirs) {
-        const er = row + dr, ec = col + dc;
-        const destR = row + 2*dr, destC = col + 2*dc;
-        if (er < 0 || er >= BOARD_SIZE || ec < 0 || ec >= BOARD_SIZE) continue;
-        if (destR < 0 || destR >= BOARD_SIZE || destC < 0 || destC >= BOARD_SIZE) continue;
-        const enemy = gameState.board[er][ec];
-        if (!enemy || enemy.player === piece.player || gameState.covered[er][ec]) continue;
-        if (canCapture(piece, enemy)) continue; // capturable pieces are handled as captures, not pushes
-        if (gameState.board[destR][destC] !== null) continue; // destination must be empty
-        pushes.push({ enemyRow: er, enemyCol: ec, destRow: destR, destCol: destC, arrow: arrows[dir] });
+    if (!piece) return [];
+    if (spellId === 'push') {
+        const targets = [];
+        const dirs = [[-1,0,'up'],[1,0,'down'],[0,-1,'left'],[0,1,'right']];
+        const arrows = { up:'↑', down:'↓', left:'←', right:'→' };
+        for (const [dr, dc, dir] of dirs) {
+            const er = row + dr, ec = col + dc;
+            const destR = row + 2*dr, destC = col + 2*dc;
+            if (er < 0 || er >= BOARD_SIZE || ec < 0 || ec >= BOARD_SIZE) continue;
+            if (destR < 0 || destR >= BOARD_SIZE || destC < 0 || destC >= BOARD_SIZE) continue;
+            const enemy = gameState.board[er][ec];
+            if (!enemy || enemy.player === piece.player || gameState.covered[er][ec]) continue;
+            if (gameState.board[destR][destC] !== null) continue;
+            targets.push({ row: er, col: ec, destRow: destR, destCol: destC, arrow: arrows[dir] });
+        }
+        return targets;
     }
-    return pushes;
+    return [];
 }
 
-function isValidPush(row, col) {
-    return gameState.validPushes.some(p => p.enemyRow === row && p.enemyCol === col);
-}
+function armSpell(spellId) {
+    if (!gameState.selectedCell) return;
+    // Clear move highlights — spell mode replaces them
+    document.querySelectorAll('.valid-move, .valid-capture').forEach(el =>
+        el.classList.remove('valid-move', 'valid-capture'));
 
-function executePush(dragonRow, dragonCol, enemyRow, enemyCol) {
-    const push = gameState.validPushes.find(p => p.enemyRow === enemyRow && p.enemyCol === enemyCol);
-    if (!push) return;
+    // Clear any previous spell highlights
+    clearSpellHighlights();
 
-    const enemy = gameState.board[enemyRow][enemyCol];
+    const { row, col } = gameState.selectedCell;
+    const targets = getSpellTargets(spellId, row, col);
 
-    // Update board state
-    gameState.board[push.destRow][push.destCol] = enemy;
-    gameState.board[enemyRow][enemyCol] = null;
-    gameState.covered[push.destRow][push.destCol] = false;
+    if (targets.length === 0) return; // no valid targets, don't arm
 
-    // Update DOM
-    const fromCell = document.querySelector(`.cell[data-row="${enemyRow}"][data-col="${enemyCol}"]`);
-    const toCell   = document.querySelector(`.cell[data-row="${push.destRow}"][data-col="${push.destCol}"]`);
-    fromCell.textContent = '';
-    fromCell.style.backgroundColor = '#e0c9a6';
-    toCell.textContent = enemy.emoji;
-    toCell.style.backgroundColor = PLAYER_COLORS[enemy.player];
+    gameState.armedSpell = spellId;
+    gameState.spellTargets = targets;
 
-    if (typeof gameLog !== 'undefined') {
-        gameLog.recordPush(gameState.currentPlayer, dragonRow, dragonCol, enemyRow, enemyCol, push.destRow, push.destCol, enemy);
+    // Highlight targets and destinations
+    for (const t of targets) {
+        highlightCell(t.row, t.col, 'valid-push');
+        const destEl = document.querySelector(`.cell[data-row="${t.destRow}"][data-col="${t.destCol}"]`);
+        if (destEl) { destEl.classList.add('push-destination'); destEl.dataset.pushArrow = t.arrow; }
     }
 
+    // Mark spell button as active
+    document.querySelectorAll('.spell-btn').forEach(btn =>
+        btn.classList.toggle('spell-btn-active', btn.dataset.spell === spellId));
+}
+
+function disarmSpell() {
+    clearSpellHighlights();
+    gameState.armedSpell = null;
+    gameState.spellTargets = [];
+    document.querySelectorAll('.spell-btn').forEach(btn => btn.classList.remove('spell-btn-active'));
+    // Re-show move highlights if a piece is still selected
+    if (gameState.selectedCell) {
+        for (const move of gameState.validMoves) {
+            highlightCell(move.row, move.col, 'valid-move');
+        }
+    }
+}
+
+function clearSpellHighlights() {
+    document.querySelectorAll('.valid-push, .push-destination').forEach(el => {
+        el.classList.remove('valid-push', 'push-destination');
+        delete el.dataset.pushArrow;
+    });
+}
+
+function executeSpell(spellId, fromRow, fromCol, targetRow, targetCol) {
+    if (spellId === 'push') {
+        const target = gameState.spellTargets.find(t => t.row === targetRow && t.col === targetCol);
+        if (!target) return;
+
+        const enemy = gameState.board[targetRow][targetCol];
+        gameState.board[target.destRow][target.destCol] = enemy;
+        gameState.board[targetRow][targetCol] = null;
+        gameState.covered[target.destRow][target.destCol] = false;
+
+        const fromEl = document.querySelector(`.cell[data-row="${targetRow}"][data-col="${targetCol}"]`);
+        const toEl   = document.querySelector(`.cell[data-row="${target.destRow}"][data-col="${target.destCol}"]`);
+        fromEl.textContent = '';
+        fromEl.style.backgroundColor = '#e0c9a6';
+        toEl.textContent = enemy.emoji;
+        toEl.style.backgroundColor = PLAYER_COLORS[enemy.player];
+
+        if (typeof gameLog !== 'undefined') {
+            gameLog.recordPush(gameState.currentPlayer, fromRow, fromCol, targetRow, targetCol, target.destRow, target.destCol, enemy);
+        }
+    }
+
+    // End turn
+    disarmSpell();
     clearValidMoves();
-    const dragonEl = document.querySelector(`.cell[data-row="${dragonRow}"][data-col="${dragonCol}"]`);
-    if (dragonEl) dragonEl.classList.remove('selected');
+    hideSpellBar();
+    const selEl = document.querySelector(`.cell[data-row="${fromRow}"][data-col="${fromCol}"]`);
+    if (selEl) selEl.classList.remove('selected');
     gameState.selectedCell = null;
 
     checkGameOver();
@@ -177,6 +228,41 @@ function executePush(dragonRow, dragonCol, enemyRow, enemyCol) {
             setTimeout(makeCpuMove, gameState.cpuMoveDelay);
         }
     }
+}
+
+// ── Spell bar UI ───────────────────────────────────────────────────────────────
+
+function showSpellBar(piece) {
+    const abilities = (typeof PIECE_ABILITIES !== 'undefined' && PIECE_ABILITIES[piece.type]) || [];
+    if (abilities.length === 0) { hideSpellBar(); return; }
+
+    const bar = document.getElementById('spell-bar');
+    const btns = document.getElementById('spell-buttons');
+    if (!bar || !btns) return;
+
+    btns.innerHTML = '';
+    for (const ability of abilities) {
+        const targets = getSpellTargets(ability.id,
+            gameState.selectedCell.row, gameState.selectedCell.col);
+        const btn = document.createElement('button');
+        btn.className = 'spell-btn';
+        btn.dataset.spell = ability.id;
+        btn.title = ability.description;
+        btn.textContent = `${ability.icon} ${ability.label}`;
+        btn.disabled = targets.length === 0;
+        btn.addEventListener('click', () => {
+            if (gameState.armedSpell === ability.id) disarmSpell();
+            else armSpell(ability.id);
+        });
+        btns.appendChild(btn);
+    }
+    bar.style.display = 'flex';
+}
+
+function hideSpellBar() {
+    const bar = document.getElementById('spell-bar');
+    if (bar) bar.style.display = 'none';
+    disarmSpell();
 }
 
 function getValidMoves(row, col) {
@@ -359,6 +445,8 @@ function startGame() {
     gameState.selectedCell  = null;
     gameState.validMoves    = [];
     gameState.validPushes   = [];
+    gameState.armedSpell    = null;
+    gameState.spellTargets  = [];
     gameState.cpuLastMoveFrom         = null;
     gameState.cpuLastMoveTo           = null;
     gameState.cpuRecentSquares        = {};
@@ -423,6 +511,8 @@ function restartGame() {
     gameState.selectedCell  = null;
     gameState.validMoves    = [];
     gameState.validPushes   = [];
+    gameState.armedSpell    = null;
+    gameState.spellTargets  = [];
     gameState.cpuLastMoveFrom         = null;
     gameState.cpuLastMoveTo           = null;
     gameState.cpuRecentSquares        = {};
