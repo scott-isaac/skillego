@@ -88,12 +88,10 @@ function highlightCell(row, col, className) {
 }
 
 function clearValidMoves() {
-    document.querySelectorAll('.valid-move, .valid-capture, .valid-push, .push-destination').forEach(cell => {
-        cell.classList.remove('valid-move', 'valid-capture', 'valid-push', 'push-destination');
-        delete cell.dataset.pushArrow;
+    document.querySelectorAll('.valid-move, .valid-capture').forEach(cell => {
+        cell.classList.remove('valid-move', 'valid-capture');
     });
     gameState.validMoves = [];
-    gameState.validPushes = [];
 }
 
 function movePiece(fromRow, fromCol, toRow, toCol) {
