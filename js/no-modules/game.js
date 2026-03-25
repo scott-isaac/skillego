@@ -157,12 +157,61 @@ function getHopButtons(row, col) {
     });
 }
 
+function getTransformButtons(row, col) {
+    const SPELL_ICON = '🔮';
+    const inBounds = (r, c) => r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE;
+    const isEmpty  = (r, c) => inBounds(r, c) && gameState.board[r][c] === null;
+    const buttons = [];
+
+    // Line transforms: wizard stays as mouse[0], 3 more extend in direction
+    const dirs = [
+        { dr: -1, dc:  0, icon: '↑', label: 'Transform Line Up' },
+        { dr:  1, dc:  0, icon: '↓', label: 'Transform Line Down' },
+        { dr:  0, dc: -1, icon: '←', label: 'Transform Line Left' },
+        { dr:  0, dc:  1, icon: '→', label: 'Transform Line Right' },
+    ];
+    for (const { dr, dc, icon, label } of dirs) {
+        const cells = [
+            { row, col },
+            { row: row +   dr, col: col +   dc },
+            { row: row + 2*dr, col: col + 2*dc },
+            { row: row + 3*dr, col: col + 3*dc },
+        ];
+        // Wizard's own cell is replaced; the 3 beyond must be empty and in bounds
+        const enabled = cells.slice(1).every(c => isEmpty(c.row, c.col));
+        buttons.push({
+            icon, label, spellIcon: SPELL_ICON,
+            enabled,
+            destCells: cells,
+            action: enabled ? () => executeTransform(row, col, cells) : null,
+        });
+    }
+
+    // Explosion: wizard disappears, 4 mice appear orthogonally around it
+    const explodeCells = [
+        { row: row - 1, col },
+        { row: row + 1, col },
+        { row, col: col - 1 },
+        { row, col: col + 1 },
+    ];
+    const explodeEnabled = explodeCells.every(c => isEmpty(c.row, c.col));
+    buttons.push({
+        icon: '✦', label: 'Transform Explode', spellIcon: SPELL_ICON,
+        enabled: explodeEnabled,
+        destCells: explodeCells,
+        action: explodeEnabled ? () => executeTransform(row, col, explodeCells, true) : null,
+    });
+
+    return buttons;
+}
+
 function buildSkillButtons(piece, row, col) {
     if (!piece || !(typeof PIECE_ABILITIES !== 'undefined' && PIECE_ABILITIES[piece.type])) return [];
     const buttons = [];
     for (const abilityId of PIECE_ABILITIES[piece.type]) {
-        if (abilityId === 'push') buttons.push(...getPushButtons(row, col));
-        if (abilityId === 'hop')  buttons.push(...getHopButtons(row, col));
+        if (abilityId === 'push')      buttons.push(...getPushButtons(row, col));
+        if (abilityId === 'hop')       buttons.push(...getHopButtons(row, col));
+        if (abilityId === 'transform') buttons.push(...getTransformButtons(row, col));
     }
     return buttons.slice(0, SKILL_TRAY_SLOTS);
 }
@@ -189,10 +238,14 @@ function populateSkillTray(piece, row, col) {
             if (b.enabled) {
                 slot.classList.add('skill-available');
                 slot.onclick = () => { b.action(); };
-                // Preview destination on hover
+                // Preview destination(s) on hover
+                const previewCells = b.destCells
+                    || (b.destRow !== undefined ? [{ row: b.destRow, col: b.destCol }] : []);
                 slot.onmouseenter = () => {
-                    const el = document.querySelector(`.cell[data-row="${b.destRow}"][data-col="${b.destCol}"]`);
-                    if (el) el.classList.add('push-destination-preview');
+                    previewCells.forEach(({ row, col }) => {
+                        const el = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
+                        if (el) el.classList.add('push-destination-preview');
+                    });
                 };
                 slot.onmouseleave = () => {
                     document.querySelectorAll('.push-destination-preview')
@@ -238,6 +291,43 @@ function executeHop(mouseRow, mouseCol, destRow, destCol) {
     clearSkillTray();
     const selEl = document.querySelector(`.cell[data-row="${mouseRow}"][data-col="${mouseCol}"]`);
     if (selEl) selEl.classList.remove('selected');
+    gameState.selectedCell = null;
+
+    checkGameOver();
+    if (!gameState.gameOver) {
+        gameState.currentPlayer = gameState.currentPlayer === 1 ? 2 : 1;
+        updateTurnIndicator();
+        if (gameState.cpuEnabled && gameState.currentPlayer === gameState.cpuPlayer) {
+            setTimeout(makeCpuMove, gameState.cpuMoveDelay);
+        }
+    }
+}
+
+function executeTransform(wizRow, wizCol, mouseCells, isExplosion = false) {
+    const player = gameState.board[wizRow][wizCol].player;
+    const newMouse = () => ({ type: 'mouse', power: 1, player, emoji: '🐭' });
+
+    // Clear wizard cell
+    gameState.board[wizRow][wizCol] = null;
+    const wizEl = document.querySelector(`.cell[data-row="${wizRow}"][data-col="${wizCol}"]`);
+    wizEl.textContent = '';
+    wizEl.style.backgroundColor = '#e0c9a6';
+    wizEl.classList.remove('selected');
+
+    // Place mice
+    for (const { row, col } of mouseCells) {
+        gameState.board[row][col] = newMouse();
+        gameState.covered[row][col] = false;
+        const el = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
+        el.textContent = '🐭';
+        el.style.backgroundColor = PLAYER_COLORS[player];
+        el.classList.remove('covered');
+    }
+
+    if (typeof gameLog !== 'undefined') gameLog.recordTransform(gameState.currentPlayer, wizRow, wizCol, mouseCells);
+
+    clearValidMoves();
+    clearSkillTray();
     gameState.selectedCell = null;
 
     checkGameOver();

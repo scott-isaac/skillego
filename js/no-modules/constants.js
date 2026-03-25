@@ -14,6 +14,7 @@ const PIECES = [
 const PIECE_ABILITIES = {
     dragon: ['push'],
     mouse:  ['hop'],
+    wizard: ['transform'],
 };
 
 const PLAYER_COLORS = {

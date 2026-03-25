@@ -40,6 +40,14 @@ const gameLog = {
         }
     },
 
+    recordTransform(player, wizRow, wizCol, mouseCells) {
+        this.turnNumber++;
+        const cfg = player === 1 ? gameState.player1 : gameState.player2;
+        const who = cfg && cfg.type === 'cpu' ? `CPU` : `P${player}`;
+        const positions = mouseCells.map(c => this._coord(c.row, c.col)).join(' ');
+        this.entries.push(`T${this.turnNumber} ${who}: wizard[4] ${this._coord(wizRow, wizCol)} TRANSFORMS → mice at ${positions}`);
+    },
+
     recordHop(player, fromRow, fromCol, destRow, destCol) {
         this.turnNumber++;
         const cfg = player === 1 ? gameState.player1 : gameState.player2;
