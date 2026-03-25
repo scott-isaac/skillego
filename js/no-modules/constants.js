@@ -13,6 +13,7 @@ const PIECES = [
 // Abilities available per piece type (list of ability IDs).
 const PIECE_ABILITIES = {
     dragon: ['push'],
+    mouse:  ['hop'],
 };
 
 const PLAYER_COLORS = {

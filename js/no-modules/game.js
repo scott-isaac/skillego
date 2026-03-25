@@ -132,11 +132,37 @@ function getPushButtons(dragonRow, dragonCol) {
     });
 }
 
+function getHopButtons(row, col) {
+    const dirs = [
+        { dr: -1, dc:  0, icon: '↑', label: 'Hop Up' },
+        { dr:  1, dc:  0, icon: '↓', label: 'Hop Down' },
+        { dr:  0, dc: -1, icon: '←', label: 'Hop Left' },
+        { dr:  0, dc:  1, icon: '→', label: 'Hop Right' },
+    ];
+    const SPELL_ICON = '🐾';
+    return dirs.map(({ dr, dc, icon, label }) => {
+        const midR = row + dr, midC = col + dc;
+        const destR = row + 2*dr, destC = col + 2*dc;
+        const inBounds = midR >= 0 && midR < BOARD_SIZE && midC >= 0 && midC < BOARD_SIZE &&
+                         destR >= 0 && destR < BOARD_SIZE && destC >= 0 && destC < BOARD_SIZE;
+        const middle = inBounds ? gameState.board[midR][midC] : null;
+        const dest   = inBounds ? gameState.board[destR][destC] : null;
+        const enabled = !!(inBounds && middle !== null && dest === null);
+        return {
+            icon, label, spellIcon: SPELL_ICON,
+            enabled,
+            destRow: destR, destCol: destC,
+            action: enabled ? () => executeHop(row, col, destR, destC) : null,
+        };
+    });
+}
+
 function buildSkillButtons(piece, row, col) {
     if (!piece || !(typeof PIECE_ABILITIES !== 'undefined' && PIECE_ABILITIES[piece.type])) return [];
     const buttons = [];
     for (const abilityId of PIECE_ABILITIES[piece.type]) {
         if (abilityId === 'push') buttons.push(...getPushButtons(row, col));
+        if (abilityId === 'hop')  buttons.push(...getHopButtons(row, col));
     }
     return buttons.slice(0, SKILL_TRAY_SLOTS);
 }
@@ -190,6 +216,38 @@ function clearSkillTray() {
     });
     document.querySelectorAll('.push-destination-preview')
         .forEach(el => el.classList.remove('push-destination-preview'));
+}
+
+function executeHop(mouseRow, mouseCol, destRow, destCol) {
+    const mouse = gameState.board[mouseRow][mouseCol];
+
+    gameState.board[destRow][destCol] = mouse;
+    gameState.board[mouseRow][mouseCol] = null;
+    gameState.covered[destRow][destCol] = false;
+
+    const fromEl = document.querySelector(`.cell[data-row="${mouseRow}"][data-col="${mouseCol}"]`);
+    const toEl   = document.querySelector(`.cell[data-row="${destRow}"][data-col="${destCol}"]`);
+    fromEl.textContent = '';
+    fromEl.style.backgroundColor = '#e0c9a6';
+    toEl.textContent = mouse.emoji;
+    toEl.style.backgroundColor = PLAYER_COLORS[mouse.player];
+
+    if (typeof gameLog !== 'undefined') gameLog.recordHop(gameState.currentPlayer, mouseRow, mouseCol, destRow, destCol);
+
+    clearValidMoves();
+    clearSkillTray();
+    const selEl = document.querySelector(`.cell[data-row="${mouseRow}"][data-col="${mouseCol}"]`);
+    if (selEl) selEl.classList.remove('selected');
+    gameState.selectedCell = null;
+
+    checkGameOver();
+    if (!gameState.gameOver) {
+        gameState.currentPlayer = gameState.currentPlayer === 1 ? 2 : 1;
+        updateTurnIndicator();
+        if (gameState.cpuEnabled && gameState.currentPlayer === gameState.cpuPlayer) {
+            setTimeout(makeCpuMove, gameState.cpuMoveDelay);
+        }
+    }
 }
 
 function executePush(dragonRow, dragonCol, enemyRow, enemyCol, destRow, destCol) {

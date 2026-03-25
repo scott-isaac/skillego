@@ -40,6 +40,13 @@ const gameLog = {
         }
     },
 
+    recordHop(player, fromRow, fromCol, destRow, destCol) {
+        this.turnNumber++;
+        const cfg = player === 1 ? gameState.player1 : gameState.player2;
+        const who = cfg && cfg.type === 'cpu' ? `CPU` : `P${player}`;
+        this.entries.push(`T${this.turnNumber} ${who}: mouse[1] HOP ${this._coord(fromRow, fromCol)} → ${this._coord(destRow, destCol)}`);
+    },
+
     recordPush(player, dragonRow, dragonCol, enemyRow, enemyCol, destRow, destCol, pushedPiece) {
         this.turnNumber++;
         const cfg = player === 1 ? gameState.player1 : gameState.player2;
