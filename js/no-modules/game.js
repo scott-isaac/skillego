@@ -158,7 +158,7 @@ function getHopButtons(row, col) {
 }
 
 function getTransformButtons(row, col) {
-    const SPELL_ICON = '🔮';
+    const SPELL_ICON = '🐭';
     const inBounds = (r, c) => r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE;
     const isEmpty  = (r, c) => inBounds(r, c) && gameState.board[r][c] === null;
     const buttons = [];
