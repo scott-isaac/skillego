@@ -694,7 +694,9 @@ function calcPowerScore(player) {
 function showResult(text, scoreText) {
     document.getElementById('winner-text').textContent = text;
     const scoreEl = document.getElementById('winner-score');
-    if (scoreEl) scoreEl.textContent = scoreText || '';
+    const moves = typeof gameLog !== 'undefined' ? Math.ceil(gameLog.turnNumber / 2) : 0;
+    const movesLabel = moves > 0 ? ` · ${moves} moves` : '';
+    if (scoreEl) scoreEl.textContent = (scoreText || '') + movesLabel;
     document.getElementById('winner-message').style.display = 'flex';
     if (typeof gameLog !== 'undefined') gameLog.saveToStorage();
     clearValidMoves();
