@@ -118,19 +118,18 @@ function canUncover() {
 }
 
 function decideCpuMoveType() {
-    // Count uncovered pieces for the CPU player
+    // Count uncovered CPU pieces and ALL covered pieces (any player can be uncovered on any turn)
     let uncoveredPieces = 0;
     let coveredPieces = 0;
 
     for (let row = 0; row < BOARD_SIZE; row++) {
         for (let col = 0; col < BOARD_SIZE; col++) {
             const piece = gameState.board[row][col];
-            if (piece && piece.player === gameState.cpuPlayer) {
-                if (!gameState.covered[row][col]) {
-                    uncoveredPieces++;
-                } else {
-                    coveredPieces++;
-                }
+            if (!piece) continue;
+            if (gameState.covered[row][col]) {
+                coveredPieces++; // count any covered cell — either player's pieces can be uncovered
+            } else if (piece.player === gameState.cpuPlayer) {
+                uncoveredPieces++;
             }
         }
     }
@@ -217,7 +216,7 @@ function moveRandomPiece() {
                 const cellElement = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
                 if (!gameState.covered[row][col]) {
                     // Check if this piece has valid moves
-                    const validMoves = getValidMoves(row, col);
+                    const validMoves = getValidMoves(gameState, row, col);
                     if (validMoves.length > 0) {
                         uncoveredPieces.push({ row, col, element: cellElement, validMoves });
                     }
@@ -249,42 +248,6 @@ function moveRandomPiece() {
     executeCpuMove(selectedPiece.row, selectedPiece.col, selectedMove.row, selectedMove.col);
 }
 
-function getValidMovesForPiece(row, col) {
-    const piece = gameState.board[row][col];
-    const validMoves = [];
-
-    // Check all four directions
-    const directions = [
-        [-1, 0], // up
-        [0, 1],  // right
-        [1, 0],  // down
-        [0, -1]  // left
-    ];
-
-    directions.forEach(([dRow, dCol]) => {
-        const newRow = row + dRow;
-        const newCol = col + dCol;
-
-        // Check if the new position is within the board
-        if (newRow >= 0 && newRow < BOARD_SIZE && newCol >= 0 && newCol < BOARD_SIZE) {
-            const targetCell = gameState.board[newRow][newCol];
-
-            // Empty cell is a valid move
-            if (!targetCell) {
-                validMoves.push({ row: newRow, col: newCol });
-            }
-            // Cell with opponent's piece that is not covered
-            else if (targetCell.player !== piece.player && !gameState.covered[newRow][newCol]) {
-                // Check capture rules
-                if (canCapture(piece, targetCell)) {
-                    validMoves.push({ row: newRow, col: newCol });
-                }
-            }
-        }
-    });
-
-    return validMoves;
-}
 
 function hasValidMoves() {
     // Check if CPU has any uncovered pieces that can move
@@ -294,7 +257,7 @@ function hasValidMoves() {
             if (piece && piece.player === gameState.cpuPlayer) {
                 if (!gameState.covered[row][col]) {
                     // Check if this piece has valid moves
-                    const validMoves = getValidMoves(row, col);
+                    const validMoves = getValidMoves(gameState, row, col);
                     if (validMoves.length > 0) {
                         return true;
                     }
@@ -442,7 +405,7 @@ function moveStrategically() {
             if (piece && piece.player === gameState.cpuPlayer) {
                 const cellElement = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
                 if (!gameState.covered[row][col]) {
-                    const validMoves = getValidMoves(row, col);
+                    const validMoves = getValidMoves(gameState, row, col);
 
                     if (validMoves.length > 0) {
                         const pieceData = {
@@ -537,7 +500,7 @@ function moveStrategically() {
                                     if (canCapture(piece, adjPiece)) {
                                         strategicValue += 2.5; // Threatening an opponent piece is valuable
                                         // Extra bonus if opponent piece has few escape routes (it's pinned)
-                                        const escapes = getValidMoves(ar, ac).filter(
+                                        const escapes = getValidMoves(gameState, ar, ac).filter(
                                             m => !(m.row === move.row && m.col === move.col)
                                         ).length;
                                         strategicValue += Math.max(0, 3 - escapes) * 1.5; // Fewer escapes = more pinned
@@ -941,7 +904,7 @@ function moveStrategically() {
             // Primary target: the opponent piece with the most escape routes (hardest to corner) — or highest power
             // Score each opponent piece by "cornering priority"
             const targets = opUncovered.map(op => {
-                const escapeCount = getValidMoves(op.row, op.col).length;
+                const escapeCount = getValidMoves(gameState, op.row, op.col).length;
                 return { ...op, escapeCount };
             });
             // Prefer to corner the most mobile piece (most escapes = needs closing first)
@@ -965,7 +928,7 @@ function moveStrategically() {
 
                     // Simulate: if we move here, how many escapes does the target have?
                     // Quick approximation: count target's moves that would be blocked by our new position
-                    const targetEscapes = getValidMoves(primaryTarget.row, primaryTarget.col);
+                    const targetEscapes = getValidMoves(gameState, primaryTarget.row, primaryTarget.col);
                     const escapesBlocked = targetEscapes.filter(e =>
                         e.row === m.row && e.col === m.col  // We physically occupy that escape square
                     ).length;
@@ -1231,22 +1194,24 @@ function moveStrategically() {
         const bestMove = safeMoves[0];
         const bestMoveScore = bestMove.strategicValue + bestMove.proximityScore;
 
-        // Count own covered pieces — if we have many and the best move is low-value, prefer uncovering
+        // Count ALL covered pieces (own + opponent) — either can be uncovered on our turn
         let ownCoveredCount = 0;
+        let totalCoveredCount = 0;
         for (let r = 0; r < BOARD_SIZE; r++) {
             for (let c = 0; c < BOARD_SIZE; c++) {
                 const p = gameState.board[r][c];
-                if (p && p.player === gameState.cpuPlayer) {
-                    if (gameState.covered[r][c]) ownCoveredCount++;
+                if (p && gameState.covered[r][c]) {
+                    totalCoveredCount++;
+                    if (p.player === gameState.cpuPlayer) ownCoveredCount++;
                 }
             }
         }
 
         // Prefer uncovering over aimless repositioning:
-        // If best safe move score is low (not a real threat) and we still have covered pieces, uncover instead
+        // If best safe move score is low (not a real threat) and there are still covered pieces, uncover instead
         const uncoverThreshold = opponentPositions.length === 0 ? 0 : 2; // low bar — any approach counts
-        if (ownCoveredCount > 0 && bestMoveScore < uncoverThreshold) {
-            debugLog(`Best safe move score (${bestMoveScore.toFixed(1)}) too low with ${ownCoveredCount} covered pieces — uncovering instead`);
+        if (totalCoveredCount > 0 && bestMoveScore < uncoverThreshold) {
+            debugLog(`Best safe move score (${bestMoveScore.toFixed(1)}) too low with ${totalCoveredCount} covered pieces — uncovering instead`);
             uncoverStrategically();
             return;
         }
@@ -1264,7 +1229,7 @@ function moveStrategically() {
             if (highPowerMoves.length > 0) {
                 chosenMove = highPowerMoves[0];
                 debugLog(`Overriding low-power loiter: using ${chosenMove.piece.type} instead of ${bestSafe.piece.type}`);
-            } else if (ownCoveredCount > 0) {
+            } else if (totalCoveredCount > 0) {
                 uncoverStrategically();
                 return;
             } else {
@@ -1390,7 +1355,7 @@ function moveStrategically() {
                     const piece = gameState.board[row][col];
                     if (!piece || piece.player !== gameState.cpuPlayer) continue;
                     if (gameState.covered[row][col]) continue;
-                    const moves = getValidMoves(row, col);
+                    const moves = getValidMoves(gameState, row, col);
                     for (const m of moves) {
                         const isCapture = gameState.board[m.row][m.col] !== null;
                         const targetPow = isCapture ? gameState.board[m.row][m.col].power : 0;
@@ -1424,78 +1389,38 @@ function moveStrategically() {
 
 // Execute a CPU move (extracted common functionality)
 function executeCpuMove(fromRow, fromCol, toRow, toCol) {
-    if (gameState.board[fromRow][fromCol]) {
-        //debugLog(`CPU executing move from (${fromRow}, ${fromCol}) to (${toRow}, ${toCol})`);
-
-        const fromPiece = gameState.board[fromRow][fromCol];
-        const toPiece = gameState.board[toRow][toCol];
-
-        // Update the board state
-        gameState.board[toRow][toCol] = fromPiece;
-        gameState.board[fromRow][fromCol] = null;
-
-        // Update the visual representation
-        const fromCell = document.querySelector(`.cell[data-row="${fromRow}"][data-col="${fromCol}"]`);
-        const toCell = document.querySelector(`.cell[data-row="${toRow}"][data-col="${toCol}"]`);
-
-        // Clear source cell
-        if (fromCell) {
-            fromCell.textContent = '';
-            fromCell.style.backgroundColor = '#e0c9a6';  // Reset to board cell color
-        }
-
-        // Update target cell
-        if (toCell) {
-            toCell.textContent = fromPiece.emoji;
-            toCell.style.backgroundColor = PLAYER_COLORS[fromPiece.player];
-            gameState.covered[toRow][toCol] = false;
-            toCell.classList.remove('covered', 'valid-move', 'valid-capture');
-        }
-
-        // Log capture if applicable
-        if (toPiece) {
-            debugLog(`CPU captured Player ${toPiece.player}'s ${toPiece.type} with a ${fromPiece.type}`);
-        }
-
-        // Record last move for oscillation detection
-        gameState.cpuLastMoveFrom = { row: fromRow, col: fromCol };
-        gameState.cpuLastMoveTo = { row: toRow, col: toCol };
-
-        // Track recent squares per piece for multi-step oscillation detection
-        // Key by piece type+player so each piece has its own history
-        if (!gameState.cpuRecentSquares) gameState.cpuRecentSquares = {};
-        const pieceKey = `${fromPiece.type}_${fromRow}_${fromCol}_${toRow}_${toCol}`;
-        const histKey = `${fromPiece.type}`;
-        gameState.cpuRecentSquares[histKey] = [
-            { row: toRow, col: toCol },
-            ...( gameState.cpuRecentSquares[histKey] || [] )
-        ].slice(0, 6);
-
-        // Clear high-value "just uncovered" flag once that piece makes its first move
-        if (gameState.cpuJustUncoveredHighValue &&
-            gameState.cpuJustUncoveredHighValue.row === fromRow &&
-            gameState.cpuJustUncoveredHighValue.col === fromCol) {
-            gameState.cpuJustUncoveredHighValue = null;
-        }
-
-        if (typeof gameLog !== 'undefined') {
-            gameLog.recordMove(fromPiece.player, fromRow, fromCol, toRow, toCol, fromPiece, toPiece || null);
-        }
-
-        // Check if the game is over after the CPU's move
-        if (!gameState.gameOver) {
-            checkGameOver();
-        }
-
-        // Switch to next player (only if game is still going)
-        if (!gameState.gameOver) {
-            debugLog("CPU's turn complete, switching turns");
-            gameState.currentPlayer = gameState.currentPlayer === 1 ? 2 : 1;
-            updateTurnIndicator();
-            scheduleNextCpuMoveIfNeeded();
-        }
-    } else {
+    const fromPiece = gameState.board[fromRow][fromCol];
+    if (!fromPiece) {
         debugLog("Error: Failed to move piece - missing board data");
+        return;
+    }
+
+    // CPU-specific tracking (captured before movePiece mutates the board)
+    gameState.cpuLastMoveFrom = { row: fromRow, col: fromCol };
+    gameState.cpuLastMoveTo   = { row: toRow,   col: toCol   };
+
+    if (!gameState.cpuRecentSquares) gameState.cpuRecentSquares = {};
+    const histKey = fromPiece.type;
+    gameState.cpuRecentSquares[histKey] = [
+        { row: toRow, col: toCol },
+        ...( gameState.cpuRecentSquares[histKey] || [] )
+    ].slice(0, 6);
+
+    if (gameState.cpuJustUncoveredHighValue &&
+        gameState.cpuJustUncoveredHighValue.row === fromRow &&
+        gameState.cpuJustUncoveredHighValue.col === fromCol) {
+        gameState.cpuJustUncoveredHighValue = null;
+    }
+
+    // Delegate board state, visuals, burn-down, logging, and checkGameOver to shared movePiece
+    movePiece(fromRow, fromCol, toRow, toCol);
+
+    // Switch to next player (only if game is still going)
+    if (!gameState.gameOver) {
+        debugLog("CPU's turn complete, switching turns");
+        gameState.currentPlayer = gameState.currentPlayer === 1 ? 2 : 1;
+        updateTurnIndicator();
+        scheduleNextCpuMoveIfNeeded();
     }
 }
 
@@ -1527,7 +1452,6 @@ function makeExpertMove() {
             el.style.backgroundColor = PLAYER_COLORS[piece.player];
             el.textContent = piece.emoji;
             if (typeof gameLog !== 'undefined') gameLog.recordUncover(piece.player, move.r, move.c, piece);
-            // Flag high-value piece for immediate activation next turn
             if (piece.power >= 5) {
                 gameState.cpuJustUncoveredHighValue = { row: move.r, col: move.c };
                 debugLog(`Expert: flagged ${piece.type} for immediate activation`);
@@ -1539,9 +1463,24 @@ function makeExpertMove() {
                 scheduleNextCpuMoveIfNeeded();
             }
         }
-    } else {
-        // move or capture
+    } else if (move.type === 'move' || move.type === 'capture') {
         executeCpuMove(move.fromR, move.fromC, move.toR, move.toC);
+    } else if (move.type === 'push') {
+        executePush(move.drR, move.drC, move.enemyR, move.enemyC, move.destR, move.destC);
+    } else if (move.type === 'hop') {
+        executeHop(move.fromR, move.fromC, move.toR, move.toC);
+    } else if (move.type === 'engulf') {
+        executeEngulf(move.r, move.c);
+    } else if (move.type === 'snipe') {
+        executeRobotKitty(move.robotR, move.robotC, move.targetR, move.targetC);
+    } else if (move.type === 'pyro') {
+        executePyromania(move.fromR, move.fromC, move.targetR, move.targetC);
+    } else if (move.type === 'transform') {
+        const cells = move.cells.map(({ r, c }) => ({ row: r, col: c }));
+        executeTransform(move.wizR, move.wizC, cells, move.isExplosion);
+    } else {
+        debugLog(`Expert: unknown move type '${move.type}', falling back`);
+        moveStrategically();
     }
 }
 

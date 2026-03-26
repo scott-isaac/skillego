@@ -28,7 +28,17 @@
                         <tr><td>😸</td><td>Cat</td><td>×4</td></tr>
                         <tr><td>🐭</td><td>Mouse</td><td>×6</td></tr>
                     </table>
-                    <p><strong>Special rule:</strong> 🐭 Mouse captures 🐉 Dragon — but Dragon beats everything else.</p>
+                    <p><strong>Special rules:</strong> 🐭 Mouse captures 🐉 Dragon — but Dragon beats everything else.</p>
+                    <p><strong>Abilities</strong> (can be toggled on/off in setup):</p>
+                    <table class="piece-table">
+                        <tr><td>🐉</td><td><strong>Dragon — Push:</strong> Push an adjacent enemy one square away (space behind must be clear).</td></tr>
+                        <tr><td>🐉</td><td><strong>Dragon — Enflame:</strong> Go up in flames. Burning Dragon is immune to Mice and can kill them — but loses 1 power every time it moves, cycling down through the piece hierarchy until it burns out.</td></tr>
+                        <tr><td>🐭</td><td><strong>Mouse — Hop:</strong> Jump over any adjacent piece to the empty square beyond it.</td></tr>
+                        <tr><td>🧙‍♂️</td><td><strong>Wizard — Transform:</strong> Permanently become 4 Mice — line (Wizard stays + 3 extend in a direction) or explosion (Wizard vanishes, 4 Mice surround it).</td></tr>
+                        <tr><td>🤖</td><td><strong>Robot Wants Kitty:</strong> If a Robot sees a friendly Kitty in danger from another piece, it can race to help — capturing any enemy along a clear orthogonal line if a friendly (non-burning) Cat is adjacent to the target. The Robot moves to the target's square. A burning Robot cannot snipe.</td></tr>
+                        <tr><td>🔥</td><td><strong>Pyromania:</strong> Any burning piece can spread fire to an adjacent uncovered enemy, setting it ablaze. Costs the spreader 1 power level — all the way to burnout.</td></tr>
+                    </table>
+                    <p>When a piece with an ability is selected, action buttons appear in the skill tray below the board.</p>
                     <p>Eliminate all opponent pieces to win.</p>
                 </div>
             </details>
@@ -56,17 +66,72 @@
                     <select id="p2-difficulty">
                         <option value="easy">Easy</option>
                         <option value="medium">Medium</option>
-                        <option value="hard" selected>Hard</option>
-                        <option value="expert">Expert</option>
+                        <option value="hard">Hard</option>
+                        <option value="expert" selected>Expert</option>
                     </select>
                 </div>
-                <div class="speed-row">
+                <div class="speed-row" id="speed-row" style="display:none">
                     <label>CPU Speed:
                         <input type="range" id="cpu-speed" min="0" max="3000" value="800" step="100">
                         <span id="cpu-speed-label">0.8s</span>
                     </label>
                 </div>
             </div>
+            <details class="abilities-toggle">
+                <summary>Abilities <span id="abilities-count" style="font-weight:normal;color:#888;font-size:12px"></span></summary>
+                <div class="abilities-body">
+                    <p class="abilities-hint">Choose which special abilities are available in this game.</p>
+                    <div class="ability-row">
+                        <label class="ability-label">
+                            <input type="checkbox" class="ability-toggle" value="push" checked>
+                            <span class="ability-emoji">🐉</span>
+                            <span class="ability-name">Dragon — Push</span>
+                        </label>
+                        <span class="ability-desc">Push an adjacent enemy one square away (space behind must be clear).</span>
+                    </div>
+                    <div class="ability-row">
+                        <label class="ability-label">
+                            <input type="checkbox" class="ability-toggle" value="engulf" checked>
+                            <span class="ability-emoji">🐉</span>
+                            <span class="ability-name">Dragon — Enflame 🔥</span>
+                        </label>
+                        <span class="ability-desc">Go up in flames. Immune to Mice, can kill Mice — but loses 1 power on every move, cycling down through all pieces until it burns out.</span>
+                    </div>
+                    <div class="ability-row">
+                        <label class="ability-label">
+                            <input type="checkbox" class="ability-toggle" value="hop" checked>
+                            <span class="ability-emoji">🐭</span>
+                            <span class="ability-name">Mouse — Hop</span>
+                        </label>
+                        <span class="ability-desc">Jump over any adjacent piece to the empty square beyond it.</span>
+                    </div>
+                    <div class="ability-row">
+                        <label class="ability-label">
+                            <input type="checkbox" class="ability-toggle" value="snipe" checked>
+                            <span class="ability-emoji">🤖</span>
+                            <span class="ability-name">Robot Wants Kitty</span>
+                        </label>
+                        <span class="ability-desc">Robot captures any enemy along a clear line if a friendly Cat is spotting it. Hover a direction button to see target + spotter highlighted.</span>
+                    </div>
+                    <div class="ability-row">
+                        <label class="ability-label">
+                            <input type="checkbox" class="ability-toggle" value="transform" checked>
+                            <span class="ability-emoji">🧙‍♂️</span>
+                            <span class="ability-name">Wizard — Transform</span>
+                        </label>
+                        <span class="ability-desc">Permanently become 4 Mice — line direction or 4-way explosion.</span>
+                    </div>
+                    <div class="ability-row">
+                        <label class="ability-label">
+                            <input type="checkbox" class="ability-toggle" value="pyromania" checked>
+                            <span class="ability-emoji">🔥</span>
+                            <span class="ability-name">Pyromania</span>
+                        </label>
+                        <span class="ability-desc">Any burning piece can spread fire to an adjacent uncovered enemy. Costs the spreader 1 power — all the way to burnout.</span>
+                    </div>
+                </div>
+            </details>
+
             <button id="start-game-btn">Start Game</button>
         </div>
 
@@ -74,11 +139,17 @@
         <div id="game-screen" style="display:none">
             <div id="turn-indicator">Player 1's Turn</div>
             <div id="board"></div>
+            <div id="skill-tray">
+                <button class="skill-slot" disabled></button>
+                <button class="skill-slot" disabled></button>
+                <button class="skill-slot" disabled></button>
+                <button class="skill-slot" disabled></button>
+                <button class="skill-slot" disabled></button>
+            </div>
             <div id="controls">
                 <button id="resign-button">Resign</button>
-                <button id="copy-log-btn" onclick="gameLog.copyToClipboard()">📋 Copy Log</button>
             </div>
-            <details id="debug-log">
+            <details id="debug-log" style="display:none">
                 <summary>Dev Log</summary>
                 <div id="debug-content"></div>
             </details>
@@ -87,8 +158,10 @@
         <!-- ── Winner overlay ── -->
         <div id="winner-message" style="display:none">
             <div id="winner-text"></div>
+            <div id="winner-score"></div>
             <button id="restart-btn">Play Again</button>
             <button id="new-game-btn">New Game</button>
+            <button id="copy-log-btn" onclick="gameLog.copyToClipboard()">📋 Copy Game Log</button>
         </div>
     </div>
 
@@ -97,6 +170,7 @@
     <script src="js/no-modules/utils.js"></script>
     <script src="js/no-modules/constants.js"></script>
     <script src="js/no-modules/state.js"></script>
+    <script src="js/no-modules/rules.js"></script>
     <script src="js/no-modules/ai-learning.js"></script>
     <script src="js/no-modules/board.js"></script>
     <script src="js/no-modules/minimax.js"></script>
