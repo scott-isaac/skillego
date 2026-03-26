@@ -3,50 +3,25 @@
 const SkillMinimax = (function () {
     'use strict';
 
-    // ─── State Representation ─────────────────────────────────────────────────
-    // Captures the real game state but MASKS covered pieces — the AI does not
-    // know what is under face-down cells, same as a human player.
-    function captureCurrentState() {
-        const board = [];
-        const covered = [];
-        for (let r = 0; r < BOARD_SIZE; r++) {
-            board.push(new Array(BOARD_SIZE));
-            covered.push(new Array(BOARD_SIZE));
-            for (let c = 0; c < BOARD_SIZE; c++) {
-                const p = gameState.board[r][c];
-                covered[r][c] = gameState.covered[r][c];
-                if (!p) {
-                    board[r][c] = null;
-                } else if (gameState.covered[r][c]) {
-                    board[r][c] = { type: 'unknown', power: 0, player: 0 };
-                } else {
-                    board[r][c] = { type: p.type, power: p.power, player: p.player, burning: p.burning || false };
-                }
-            }
-        }
-        return { board, covered };
-    }
-
     // ─── Move Generation ──────────────────────────────────────────────────────
     // Returns true if transform move places a mouse adjacent to an enemy dragon,
     // or if the enemy dragon is nearly the last piece and we have no mice.
     function transformIsWorthIt(state, move, player) {
-        const opPlayer = player === 1 ? 2 : 1;
-        for (let r = 0; r < BOARD_SIZE; r++) {
-            for (let c = 0; c < BOARD_SIZE; c++) {
+        for (let r = 0; r < BOARD_ROWS; r++) {
+            for (let c = 0; c < BOARD_COLS; c++) {
                 const p = state.board[r][c];
-                if (!p || p.player !== opPlayer || p.type !== 'dragon' || state.covered[r][c]) continue;
+                if (!p || p.player === player || p.player === 0 || p.type !== 'dragon' || state.covered[r][c]) continue;
                 // Does any mouse cell land adjacent to the dragon?
                 for (const { r: mr, c: mc } of move.cells) {
                     if (Math.abs(mr - r) + Math.abs(mc - c) === 1) return true;
                 }
                 // Fallback: dragon is one of very few remaining pieces and we have no mice
                 let opCount = 0, ownMice = 0;
-                for (let pr = 0; pr < BOARD_SIZE; pr++)
-                    for (let pc = 0; pc < BOARD_SIZE; pc++) {
+                for (let pr = 0; pr < BOARD_ROWS; pr++)
+                    for (let pc = 0; pc < BOARD_COLS; pc++) {
                         const pp = state.board[pr][pc];
                         if (!pp || pp.player === 0) continue;
-                        if (pp.player === opPlayer) opCount++;
+                        if (pp.player !== player && pp.player !== 0) opCount++;
                         if (pp.player === player && pp.type === 'mouse' && !state.covered[pr][pc]) ownMice++;
                     }
                 if (opCount <= 3 && ownMice === 0) return true;
@@ -56,13 +31,13 @@ const SkillMinimax = (function () {
     }
 
     // All legal moves for a player: captures first, then moves/abilities, then uncovers.
-    function getAllMoves(state, player) {
+    function getAllMoves(state, player, enabledAbilities) {
         const captures = [];
         const moves    = [];
         const uncovers = [];
 
-        for (let r = 0; r < BOARD_SIZE; r++) {
-            for (let c = 0; c < BOARD_SIZE; c++) {
+        for (let r = 0; r < BOARD_ROWS; r++) {
+            for (let c = 0; c < BOARD_COLS; c++) {
                 const piece = state.board[r][c];
                 if (!piece) continue;
 
@@ -79,12 +54,12 @@ const SkillMinimax = (function () {
                         }
                     }
                     // Ability moves
-                    for (const m of getPushMoves(state, r, c))    moves.push(m);
-                    for (const m of getHopMoves(state, r, c))     moves.push(m);
-                    for (const m of getEngulfMoves(state, r, c))  moves.push(m);
-                    for (const m of getSnipeMoves(state, r, c))   captures.push(m);  // snipe removes a piece
-                    for (const m of getPyroMoves(state, r, c))    moves.push(m);
-                    for (const m of getTransformMoves(state, r, c)) {
+                    for (const m of getPushMoves(state, r, c, enabledAbilities))    moves.push(m);
+                    for (const m of getHopMoves(state, r, c, enabledAbilities))     moves.push(m);
+                    for (const m of getEngulfMoves(state, r, c, enabledAbilities))  moves.push(m);
+                    for (const m of getSnipeMoves(state, r, c, enabledAbilities))   captures.push(m);  // snipe removes a piece
+                    for (const m of getPyroMoves(state, r, c, enabledAbilities))    moves.push(m);
+                    for (const m of getTransformMoves(state, r, c, enabledAbilities)) {
                         if (transformIsWorthIt(state, m, player)) moves.push(m);
                     }
                 }
@@ -102,13 +77,12 @@ const SkillMinimax = (function () {
 
     // ─── Evaluation ───────────────────────────────────────────────────────────
     function evaluate(state, cpuPlayer) {
-        const opPlayer = cpuPlayer === 1 ? 2 : 1;
         let score = 0;
         let cpuDragon = null, opDragon = null;
         let cpuPieces = 0, opPieces = 0;
 
-        for (let r = 0; r < BOARD_SIZE; r++) {
-            for (let c = 0; c < BOARD_SIZE; c++) {
+        for (let r = 0; r < BOARD_ROWS; r++) {
+            for (let c = 0; c < BOARD_COLS; c++) {
                 const p = state.board[r][c];
                 if (!p || p.player === 0) continue; // skip empty and covered (identity unknown)
                 // Burning pieces are worth less — they will continue to degrade
@@ -120,7 +94,7 @@ const SkillMinimax = (function () {
                 } else {
                     score -= val;
                     opPieces++;
-                    if (p.type === 'dragon') opDragon = { r, c, burning: p.burning };
+                    if (p.type === 'dragon' && !opDragon) opDragon = { r, c, burning: p.burning };
                 }
             }
         }
@@ -134,8 +108,8 @@ const SkillMinimax = (function () {
 
         // Mobility
         let cpuMobility = 0, opMobility = 0;
-        for (let r = 0; r < BOARD_SIZE; r++) {
-            for (let c = 0; c < BOARD_SIZE; c++) {
+        for (let r = 0; r < BOARD_ROWS; r++) {
+            for (let c = 0; c < BOARD_COLS; c++) {
                 const p = state.board[r][c];
                 if (!p || p.player === 0 || state.covered[r][c]) continue;
                 const cnt = getValidMoves(state, r, c).length;
@@ -147,10 +121,10 @@ const SkillMinimax = (function () {
 
         // Dragon-mouse proximity threat (suppressed when dragon is burning — immune to mice)
         if (cpuDragon && !cpuDragon.burning) {
-            for (let r = 0; r < BOARD_SIZE; r++) {
-                for (let c = 0; c < BOARD_SIZE; c++) {
+            for (let r = 0; r < BOARD_ROWS; r++) {
+                for (let c = 0; c < BOARD_COLS; c++) {
                     const p = state.board[r][c];
-                    if (p && p.type === 'mouse' && p.player === opPlayer && !state.covered[r][c]) {
+                    if (p && p.type === 'mouse' && p.player !== cpuPlayer && p.player !== 0 && !state.covered[r][c]) {
                         const d = Math.abs(r - cpuDragon.r) + Math.abs(c - cpuDragon.c);
                         if (d === 1) score -= 45;
                         else if (d === 2) score -= 18;
@@ -160,8 +134,8 @@ const SkillMinimax = (function () {
             }
         }
         if (opDragon && !opDragon.burning) {
-            for (let r = 0; r < BOARD_SIZE; r++) {
-                for (let c = 0; c < BOARD_SIZE; c++) {
+            for (let r = 0; r < BOARD_ROWS; r++) {
+                for (let c = 0; c < BOARD_COLS; c++) {
                     const p = state.board[r][c];
                     if (p && p.type === 'mouse' && p.player === cpuPlayer && !state.covered[r][c]) {
                         const d = Math.abs(r - opDragon.r) + Math.abs(c - opDragon.c);
@@ -174,8 +148,8 @@ const SkillMinimax = (function () {
         }
 
         // Attack pressure: adjacent capturable opponents
-        for (let r = 0; r < BOARD_SIZE; r++) {
-            for (let c = 0; c < BOARD_SIZE; c++) {
+        for (let r = 0; r < BOARD_ROWS; r++) {
+            for (let c = 0; c < BOARD_COLS; c++) {
                 const p = state.board[r][c];
                 if (!p || p.player === 0 || state.covered[r][c]) continue;
                 for (const [dr, dc] of DIRS) {
@@ -192,26 +166,32 @@ const SkillMinimax = (function () {
             }
         }
 
-        // Endgame hunt
+        // Endgame hunt — 1 opponent piece left, no covered pieces
         if (opPieces === 1 && !hasCovered) {
             let lastR = -1, lastC = -1, lastPiece = null;
-            outer: for (let r = 0; r < BOARD_SIZE; r++)
-                for (let c = 0; c < BOARD_SIZE; c++) {
+            outer: for (let r = 0; r < BOARD_ROWS; r++)
+                for (let c = 0; c < BOARD_COLS; c++) {
                     const p = state.board[r][c];
-                    if (p && p.player === opPlayer && !state.covered[r][c]) {
+                    if (p && p.player !== cpuPlayer && p.player !== 0 && !state.covered[r][c]) {
                         lastR = r; lastC = c; lastPiece = p; break outer;
                     }
                 }
             if (lastR >= 0) {
-                for (let r = 0; r < BOARD_SIZE; r++)
-                    for (let c = 0; c < BOARD_SIZE; c++) {
+                for (let r = 0; r < BOARD_ROWS; r++)
+                    for (let c = 0; c < BOARD_COLS; c++) {
                         const p = state.board[r][c];
                         if (!p || p.player !== cpuPlayer || state.covered[r][c]) continue;
-                        if (!canCapture(p, lastPiece)) continue;
                         const dist = Math.abs(r - lastR) + Math.abs(c - lastC);
-                        score += Math.max(0, 8 - dist) * 12;
+                        if (canCapture(p, lastPiece)) {
+                            // Primary hunter: strongly reward closing distance
+                            score += Math.max(0, 12 - dist) * 18;
+                        } else {
+                            // Supporting piece: reward cornering — reduce opponent escape routes
+                            score += Math.max(0, 8 - dist) * 6;
+                        }
                     }
-                score -= opMobility * 12;
+                // Heavily penalise opponent mobility — the goal is to leave them no moves
+                score -= opMobility * 20;
             }
         }
 
@@ -219,11 +199,11 @@ const SkillMinimax = (function () {
     }
 
     // ─── Minimax with Alpha-Beta Pruning ──────────────────────────────────────
-    function minimax(state, depth, alpha, beta, isMaxPlayer, cpuPlayer) {
+    function minimax(state, depth, alpha, beta, isMaxPlayer, cpuPlayer, enabledAbilities) {
         if (!state.covered.some(row => row.some(v => v))) {
             let cpuCount = 0, opCount = 0;
-            for (let r = 0; r < BOARD_SIZE; r++)
-                for (let c = 0; c < BOARD_SIZE; c++) {
+            for (let r = 0; r < BOARD_ROWS; r++)
+                for (let c = 0; c < BOARD_COLS; c++) {
                     const p = state.board[r][c];
                     if (!p || p.player === 0) continue;
                     p.player === cpuPlayer ? cpuCount++ : opCount++;
@@ -234,8 +214,9 @@ const SkillMinimax = (function () {
 
         if (depth === 0) return evaluate(state, cpuPlayer);
 
-        const currentPlayer = isMaxPlayer ? cpuPlayer : (cpuPlayer === 1 ? 2 : 1);
-        const moves = getAllMoves(state, currentPlayer);
+        const numP = (typeof gameState !== 'undefined' && gameState.numPlayers) || 2;
+        const currentPlayer = isMaxPlayer ? cpuPlayer : (cpuPlayer % numP) + 1;
+        const moves = getAllMoves(state, currentPlayer, enabledAbilities);
 
         if (moves.length === 0) return isMaxPlayer ? -900 : 900;
 
@@ -244,7 +225,7 @@ const SkillMinimax = (function () {
         if (isMaxPlayer) {
             let best = -Infinity;
             for (const move of movesToSearch) {
-                const val = minimax(applyMove(state, move), depth - 1, alpha, beta, false, cpuPlayer);
+                const val = minimax(applyMove(state, move), depth - 1, alpha, beta, false, cpuPlayer, enabledAbilities);
                 if (val > best) best = val;
                 if (val > alpha) alpha = val;
                 if (beta <= alpha) break;
@@ -253,7 +234,7 @@ const SkillMinimax = (function () {
         } else {
             let best = Infinity;
             for (const move of movesToSearch) {
-                const val = minimax(applyMove(state, move), depth - 1, alpha, beta, true, cpuPlayer);
+                const val = minimax(applyMove(state, move), depth - 1, alpha, beta, true, cpuPlayer, enabledAbilities);
                 if (val < best) best = val;
                 if (val < beta) beta = val;
                 if (beta <= alpha) break;
@@ -263,31 +244,35 @@ const SkillMinimax = (function () {
     }
 
     // ─── Public API ───────────────────────────────────────────────────────────
-    function getBestMove() {
-        const state = captureCurrentState();
-
+    // state      — pre-built masked board (caller is responsible for masking covered pieces)
+    // depth      — search depth override; null = auto-select by game phase (expert behaviour)
+    // noise      — score jitter ±noise applied per move (simulates lower-difficulty mistakes)
+    function getBestMove({ state, cpuPlayer, cpuRecentSquares, cpuLastMoveFrom, cpuLastMoveTo, enabledAbilities, depth, noise }) {
+        const NUM_PLAYERS = (typeof gameState !== 'undefined' && gameState.numPlayers) || 2;
         let coveredCount = 0;
-        for (let r = 0; r < BOARD_SIZE; r++)
-            for (let c = 0; c < BOARD_SIZE; c++)
+        for (let r = 0; r < BOARD_ROWS; r++)
+            for (let c = 0; c < BOARD_COLS; c++)
                 if (state.board[r][c] && state.covered[r][c]) coveredCount++;
 
         let opUncoveredCount = 0;
-        for (let r = 0; r < BOARD_SIZE; r++)
-            for (let c = 0; c < BOARD_SIZE; c++) {
+        for (let r = 0; r < BOARD_ROWS; r++)
+            for (let c = 0; c < BOARD_COLS; c++) {
                 const p = state.board[r][c];
-                if (p && p.player !== gameState.cpuPlayer && !state.covered[r][c]) opUncoveredCount++;
+                if (p && p.player !== cpuPlayer && !state.covered[r][c]) opUncoveredCount++;
             }
 
         const isEndgameHunt = coveredCount === 0 && opUncoveredCount === 1;
-        const depth = coveredCount > 16 ? 3 : coveredCount > 6 ? 4 : isEndgameHunt ? 7 : 5;
+        if (depth == null) {
+            depth = coveredCount > 16 ? 3 : coveredCount > 6 ? 4 : isEndgameHunt ? 7 : 5;
+        }
         debugLog(`Minimax: depth=${depth}, covered=${coveredCount}, opUncovered=${opUncoveredCount}`);
 
-        const moves = getAllMoves(state, gameState.cpuPlayer);
+        const moves = getAllMoves(state, cpuPlayer, enabledAbilities);
         if (moves.length === 0) return null;
 
-        const recentSquares = gameState.cpuRecentSquares || {};
-        const lastFrom = gameState.cpuLastMoveFrom;
-        const lastTo   = gameState.cpuLastMoveTo;
+        const recentSquares = cpuRecentSquares || {};
+        const lastFrom = cpuLastMoveFrom;
+        const lastTo   = cpuLastMoveTo;
 
         const scoredMoves = [];
         let alpha = -Infinity;
@@ -295,9 +280,13 @@ const SkillMinimax = (function () {
 
         for (const move of moves) {
             const newState = applyMove(state, move);
-            let score = minimax(newState, depth - 1, alpha, beta, false, gameState.cpuPlayer);
+            let score = minimax(newState, depth - 1, alpha, beta, false, cpuPlayer, enabledAbilities);
 
-            if (move.type !== 'uncover') {
+            if (noise) score += (Math.random() - 0.5) * 2 * noise;
+
+            // Oscillation penalty — suppressed during endgame hunt so the AI can freely
+            // manoeuvre for zugzwang without being blocked by its own visit history.
+            if (move.type !== 'uncover' && !isEndgameHunt) {
                 if (lastFrom && lastTo &&
                     move.fromR === lastTo.row   && move.fromC === lastTo.col &&
                     move.toR   === lastFrom.row  && move.toC  === lastFrom.col) {

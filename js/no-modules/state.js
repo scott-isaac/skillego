@@ -21,6 +21,9 @@ const gameState = {
     cpuLastMoveFrom: null,        // { row, col } — where the CPU moved FROM last turn (to detect oscillation)
     cpuLastMoveTo: null,          // { row, col } — where the CPU moved TO last turn
     cpuRecentSquares: {},         // per-piece-type history of recent destination squares, for oscillation detection
-    cpuJustUncoveredHighValue: null, // { row, col } — position of eagle/dragon just uncovered, cleared after it moves
-    enabledAbilities: new Set(['push', 'hop', 'transform'])
+    enabledAbilities: new Set(['push', 'hop', 'transform']),
+    numPlayers: 2,
+    player3: { type: 'cpu', difficulty: 'expert' },
+    player4: { type: 'cpu', difficulty: 'expert' },
+    eliminatedPlayers: new Set(),
 };
