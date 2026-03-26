@@ -7,6 +7,7 @@ const gameLog = {
     reset() {
         this.entries = [];
         this.turnNumber = 0;
+        this.initialBoard = null;
         localStorage.removeItem('skillego_last_game_log');
     },
 
@@ -18,11 +19,29 @@ const gameLog = {
         return `(${row},${col})`;
     },
 
+    recordInitialBoard() {
+        const colHeader = '     ' + [0,1,2,3,4,5].join('    ');
+        const rows = [colHeader];
+        for (let r = 0; r < BOARD_SIZE; r++) {
+            let row = `${r}  `;
+            for (let c = 0; c < BOARD_SIZE; c++) {
+                const p = gameState.board[r][c];
+                if (!p) { row += ' .   '; }
+                else {
+                    const t = p.type[0].toUpperCase();
+                    row += `${t}${p.power}P${p.player} `;
+                }
+            }
+            rows.push(row);
+        }
+        this.initialBoard = rows.join('\n');
+    },
+
     recordUncover(player, row, col, piece) {
         this.turnNumber++;
         const cfg = player === 1 ? gameState.player1 : gameState.player2;
         const who = cfg && cfg.type === 'cpu' ? `CPU` : `P${player}`;
-        this.entries.push(`T${this.turnNumber} ${who}: UNCOVER ${this._coord(row, col)} → ${this._pieceLabel(piece)}`);
+        this.entries.push(`T${this.turnNumber} ${who}: UNCOVER ${this._coord(row, col)} → P${piece.player} ${this._pieceLabel(piece)}`);
     },
 
     recordMove(player, fromRow, fromCol, toRow, toCol, piece, capturedPiece) {
@@ -53,6 +72,27 @@ const gameLog = {
         const cfg = player === 1 ? gameState.player1 : gameState.player2;
         const who = cfg && cfg.type === 'cpu' ? `CPU` : `P${player}`;
         this.entries.push(`T${this.turnNumber} ${who}: mouse[1] HOP ${this._coord(fromRow, fromCol)} → ${this._coord(destRow, destCol)}`);
+    },
+
+    recordSnipe(player, robotRow, robotCol, targetRow, targetCol, captured) {
+        this.turnNumber++;
+        const cfg = player === 1 ? gameState.player1 : gameState.player2;
+        const who = cfg && cfg.type === 'cpu' ? `CPU` : `P${player}`;
+        this.entries.push(`T${this.turnNumber} ${who}: robot[5] ${this._coord(robotRow, robotCol)} SNIPES ${this._pieceLabel(captured)} ${this._coord(targetRow, targetCol)}`);
+    },
+
+    recordPyromania(player, fromRow, fromCol, targetRow, targetCol, targetPiece) {
+        this.turnNumber++;
+        const cfg = player === 1 ? gameState.player1 : gameState.player2;
+        const who = cfg && cfg.type === 'cpu' ? `CPU` : `P${player}`;
+        this.entries.push(`T${this.turnNumber} ${who}: burning ${this._coord(fromRow, fromCol)} IGNITES ${this._pieceLabel(targetPiece)} ${this._coord(targetRow, targetCol)}`);
+    },
+
+    recordEngulf(player, row, col) {
+        this.turnNumber++;
+        const cfg = player === 1 ? gameState.player1 : gameState.player2;
+        const who = cfg && cfg.type === 'cpu' ? `CPU` : `P${player}`;
+        this.entries.push(`T${this.turnNumber} ${who}: dragon[6] ENGULFS ${this._coord(row, col)} — on fire!`);
     },
 
     recordPush(player, dragonRow, dragonCol, enemyRow, enemyCol, destRow, destCol, pushedPiece) {
@@ -91,6 +131,7 @@ const gameLog = {
         const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
         const logText = [
             `=== Game Log ${timestamp} ===`,
+            ...(this.initialBoard ? ['--- Initial Board ---', this.initialBoard, ''] : []),
             ...this.entries,
             '',
             '--- Final Board (piece[power]Player, ? = covered) ---',
@@ -150,6 +191,9 @@ const gameLog = {
         navigator.clipboard.writeText(text).then(() => {
             const btn = document.getElementById('copy-log-btn');
             if (btn) { btn.textContent = '✓ Copied!'; setTimeout(() => btn.textContent = '📋 Copy Game Log', 1500); }
+        }).catch(() => {
+            const btn = document.getElementById('copy-log-btn');
+            if (btn) { btn.textContent = '✗ Failed'; setTimeout(() => btn.textContent = '📋 Copy Game Log', 1500); }
         });
     }
 };

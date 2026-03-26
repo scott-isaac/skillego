@@ -3,7 +3,7 @@
 function initializeBoard() {
     console.log("Initializing board...");
     debugLog("Initializing game board");
-    gameState.board = Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(null));
+    gameState.board   = Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(null));
     gameState.covered = Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(true));
     const board = document.getElementById('board');
     if (!board) {
@@ -97,35 +97,54 @@ function clearValidMoves() {
 function movePiece(fromRow, fromCol, toRow, toCol) {
     const fromPiece = gameState.board[fromRow][fromCol];
     const toPiece = gameState.board[toRow][toCol];
-    
-    // Update the board state
-    gameState.board[toRow][toCol] = fromPiece;
+
+    // Update board state
+    gameState.board[toRow][toCol]     = fromPiece;
     gameState.board[fromRow][fromCol] = null;
-    
-    // Update the visual representation
+    gameState.covered[toRow][toCol]   = false;
+
+    // Visual: clear source cell
     const fromCell = document.querySelector(`.cell[data-row="${fromRow}"][data-col="${fromCol}"]`);
-    const toCell = document.querySelector(`.cell[data-row="${toRow}"][data-col="${toCol}"]`);
-    
-    // Clear source cell
+    const toCell   = document.querySelector(`.cell[data-row="${toRow}"][data-col="${toCol}"]`);
     fromCell.textContent = '';
-    fromCell.style.backgroundColor = '#e0c9a6';  // Reset to board cell color
-    
-    // Update target cell
+    fromCell.style.backgroundColor = '#e0c9a6';
+    fromCell.classList.remove('burning');
+
+    // Burn-down: burning piece loses 1 power on every move
+    if (fromPiece.burning) {
+        fromPiece.power--;
+        if (fromPiece.power <= 0) {
+            // Burns out — the piece captured anything on the destination then vanishes
+            gameState.board[toRow][toCol] = null;
+            toCell.textContent = '';
+            toCell.style.backgroundColor = '#e0c9a6';
+            toCell.classList.remove('covered', 'valid-move', 'valid-capture', 'burning');
+            if (toPiece) debugLog(`P${fromPiece.player} burning piece captured ${toPiece.type} then burned out`);
+            if (typeof gameLog !== 'undefined') {
+                gameLog.recordMove(fromPiece.player, fromRow, fromCol, toRow, toCol, fromPiece, toPiece || null);
+            }
+            checkGameOver();
+            return;
+        }
+        // Step down to next power level
+        const lvl = BURN_LEVEL[fromPiece.power];
+        fromPiece.type  = lvl.type;
+        fromPiece.emoji = lvl.emoji;
+    }
+
+    // Visual: update destination cell
     toCell.textContent = fromPiece.emoji;
     toCell.style.backgroundColor = PLAYER_COLORS[fromPiece.player];
-    toCell.classList.remove('covered', 'valid-move', 'valid-capture');
-    gameState.covered[toRow][toCol] = false;
-    
-    // Log capture if applicable
+    toCell.classList.remove('covered', 'valid-move', 'valid-capture', 'burning');
+    if (fromPiece.burning) toCell.classList.add('burning');
+
     if (toPiece) {
         debugLog(`Player ${fromPiece.player} captured Player ${toPiece.player}'s ${toPiece.type} with a ${fromPiece.type}`);
     }
-
     if (typeof gameLog !== 'undefined') {
         gameLog.recordMove(fromPiece.player, fromRow, fromCol, toRow, toCol, fromPiece, toPiece || null);
     }
 
-    // Check if the game is over after the move
     checkGameOver();
 }
 

@@ -8,11 +8,11 @@ const gameState = {
     validMoves: [],
     playerColors: PLAYER_COLORS,
     // Per-player config (source of truth for setup screen)
-    player1: { type: 'human', difficulty: 'hard' },
-    player2: { type: 'cpu',   difficulty: 'hard' },
+    player1: { type: 'human', difficulty: 'expert' },
+    player2: { type: 'cpu',   difficulty: 'expert' },
     // Derived at game start from player configs — used by cpu.js
     cpuEnabled: false,
-    cpuDifficulty: 'hard',
+    cpuDifficulty: 'expert',
     cpuPlayer: 2,
     cpuVsCpu: false,
     cpuMoveDelay: 800,
@@ -21,5 +21,6 @@ const gameState = {
     cpuLastMoveFrom: null,        // { row, col } — where the CPU moved FROM last turn (to detect oscillation)
     cpuLastMoveTo: null,          // { row, col } — where the CPU moved TO last turn
     cpuRecentSquares: {},         // per-piece-type history of recent destination squares, for oscillation detection
-    cpuJustUncoveredHighValue: null // { row, col } — position of eagle/dragon just uncovered, cleared after it moves
+    cpuJustUncoveredHighValue: null, // { row, col } — position of eagle/dragon just uncovered, cleared after it moves
+    enabledAbilities: new Set(['push', 'hop', 'transform'])
 };
