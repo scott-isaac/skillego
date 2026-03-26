@@ -194,12 +194,7 @@ function uncoverRandomPiece() {
         element.style.backgroundColor = PLAYER_COLORS[piece.player];
         element.textContent = piece.emoji;
         if (typeof gameLog !== 'undefined') gameLog.recordUncover(piece.player, row, col, piece);
-
-        // Switch to next player
-        debugLog("CPU's turn complete, switching turns");
-        gameState.currentPlayer = gameState.currentPlayer === 1 ? 2 : 1;
-        updateTurnIndicator();
-        scheduleNextCpuMoveIfNeeded();
+        endTurn();
     } else {
         debugLog("Error: Failed to directly uncover piece - missing element or board data");
     }
@@ -660,12 +655,8 @@ function moveStrategically() {
                     el.textContent = piece.emoji;
                     if (typeof gameLog !== 'undefined') gameLog.recordUncover(piece.player, r, c, piece);
                     checkGameOver();
-                    if (!gameState.gameOver) {
-                        gameState.currentPlayer = gameState.currentPlayer === 1 ? 2 : 1;
-                        updateTurnIndicator();
-                        scheduleNextCpuMoveIfNeeded();
-                    }
-                    return; // Done — no need to go through executeCpuMove
+                    endTurn();
+                    return;
                 }
             }
         }
@@ -1336,9 +1327,7 @@ function moveStrategically() {
             element.style.backgroundColor = PLAYER_COLORS[piece.player];
             element.textContent = piece.emoji;
             if (typeof gameLog !== 'undefined') gameLog.recordUncover(piece.player, row, col, piece);
-            gameState.currentPlayer = gameState.currentPlayer === 1 ? 2 : 1;
-            updateTurnIndicator();
-            scheduleNextCpuMoveIfNeeded();
+            endTurn();
             return;
         }
     }
@@ -1414,14 +1403,7 @@ function executeCpuMove(fromRow, fromCol, toRow, toCol) {
 
     // Delegate board state, visuals, burn-down, logging, and checkGameOver to shared movePiece
     movePiece(fromRow, fromCol, toRow, toCol);
-
-    // Switch to next player (only if game is still going)
-    if (!gameState.gameOver) {
-        debugLog("CPU's turn complete, switching turns");
-        gameState.currentPlayer = gameState.currentPlayer === 1 ? 2 : 1;
-        updateTurnIndicator();
-        scheduleNextCpuMoveIfNeeded();
-    }
+    endTurn();
 }
 
 // Expert difficulty: use minimax with alpha-beta pruning
@@ -1457,11 +1439,7 @@ function makeExpertMove() {
                 debugLog(`Expert: flagged ${piece.type} for immediate activation`);
             }
             checkGameOver();
-            if (!gameState.gameOver) {
-                gameState.currentPlayer = gameState.currentPlayer === 1 ? 2 : 1;
-                updateTurnIndicator();
-                scheduleNextCpuMoveIfNeeded();
-            }
+            endTurn();
         }
     } else if (move.type === 'move' || move.type === 'capture') {
         executeCpuMove(move.fromR, move.fromC, move.toR, move.toC);
@@ -1610,11 +1588,7 @@ function uncoverStrategically() {
             debugLog(`Flagged high-value piece ${piece.type} at (${row},${col}) for immediate activation`);
         }
 
-        // Switch to next player
-        debugLog("CPU's turn complete, switching turns");
-        gameState.currentPlayer = gameState.currentPlayer === 1 ? 2 : 1;
-        updateTurnIndicator();
-        scheduleNextCpuMoveIfNeeded();
+        endTurn();
     } else {
         debugLog("Error: Failed to directly uncover piece - missing element or board data");
     }

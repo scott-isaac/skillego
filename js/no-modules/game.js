@@ -44,20 +44,7 @@ function handleCellClick(row, col, cellElement) {
         if (isValidMove(gameState.selectedCell.row, gameState.selectedCell.col, row, col)) {
             // Move the piece
             movePiece(gameState.selectedCell.row, gameState.selectedCell.col, row, col);
-            
-            // checkGameOver is now called inside movePiece function
-            // Only continue normal turn flow if game is not over
-            if (!gameState.gameOver) {
-                // Switch turn
-                gameState.currentPlayer = gameState.currentPlayer === 1 ? 2 : 1;
-                updateTurnIndicator();
-                
-                // If CPU is enabled and it's CPU's turn, make a move
-                if (gameState.cpuEnabled && gameState.currentPlayer === gameState.cpuPlayer) {
-                    debugLog("Scheduling CPU move after human's move");
-                    setTimeout(makeCpuMove, 800);
-                }
-            }
+            endTurn();
         }
         
         // Clear selection, valid moves, and skill tray
@@ -75,22 +62,8 @@ function handleCellClick(row, col, cellElement) {
         cellElement.style.backgroundColor = gameState.playerColors[cell.player];
         cellElement.textContent = cell.emoji;
         if (typeof gameLog !== 'undefined') gameLog.recordUncover(gameState.currentPlayer, row, col, cell);
-        
-        // Check if the game is over after uncovering
         checkGameOver();
-        
-        // If game is not over, continue with next turn
-        if (!gameState.gameOver) {
-            // Switch turn
-            gameState.currentPlayer = gameState.currentPlayer === 1 ? 2 : 1;
-            updateTurnIndicator();
-            
-            // If CPU is enabled and it's CPU's turn, make a move
-            if (gameState.cpuEnabled && gameState.currentPlayer === gameState.cpuPlayer) {
-                debugLog("Scheduling CPU move after human uncovered a piece");
-                setTimeout(makeCpuMove, 800);
-            }
-        }
+        endTurn();
     }
 }
 
@@ -305,6 +278,16 @@ function clearSkillTray() {
         .forEach(el => el.classList.remove('push-destination-preview'));
 }
 
+// ── Turn engine ───────────────────────────────────────────────────────────────
+// Single point of truth for advancing the game after any move (human or CPU).
+// execute* functions handle mechanics then call endTurn(); no turn logic elsewhere.
+function endTurn() {
+    if (gameState.gameOver) return;
+    gameState.currentPlayer = gameState.currentPlayer === 1 ? 2 : 1;
+    updateTurnIndicator();
+    scheduleNextCpuMoveIfNeeded();
+}
+
 function executeHop(mouseRow, mouseCol, destRow, destCol) {
     const mouse = gameState.board[mouseRow][mouseCol];
 
@@ -328,13 +311,7 @@ function executeHop(mouseRow, mouseCol, destRow, destCol) {
     gameState.selectedCell = null;
 
     checkGameOver();
-    if (!gameState.gameOver) {
-        gameState.currentPlayer = gameState.currentPlayer === 1 ? 2 : 1;
-        updateTurnIndicator();
-        if (gameState.cpuEnabled && gameState.currentPlayer === gameState.cpuPlayer) {
-            setTimeout(makeCpuMove, gameState.cpuMoveDelay);
-        }
-    }
+    endTurn();
 }
 
 function executeTransform(wizRow, wizCol, mouseCells, isExplosion = false) {
@@ -365,13 +342,7 @@ function executeTransform(wizRow, wizCol, mouseCells, isExplosion = false) {
     gameState.selectedCell = null;
 
     checkGameOver();
-    if (!gameState.gameOver) {
-        gameState.currentPlayer = gameState.currentPlayer === 1 ? 2 : 1;
-        updateTurnIndicator();
-        if (gameState.cpuEnabled && gameState.currentPlayer === gameState.cpuPlayer) {
-            setTimeout(makeCpuMove, gameState.cpuMoveDelay);
-        }
-    }
+    endTurn();
 }
 
 function executePush(dragonRow, dragonCol, enemyRow, enemyCol, destRow, destCol) {
@@ -400,13 +371,7 @@ function executePush(dragonRow, dragonCol, enemyRow, enemyCol, destRow, destCol)
     gameState.selectedCell = null;
 
     checkGameOver();
-    if (!gameState.gameOver) {
-        gameState.currentPlayer = gameState.currentPlayer === 1 ? 2 : 1;
-        updateTurnIndicator();
-        if (gameState.cpuEnabled && gameState.currentPlayer === gameState.cpuPlayer) {
-            setTimeout(makeCpuMove, gameState.cpuMoveDelay);
-        }
-    }
+    endTurn();
 }
 
 function flyRobot(fromEl, toEl, playerColor, emoji, onComplete) {
@@ -482,13 +447,7 @@ function executeRobotKitty(robotRow, robotCol, targetRow, targetCol) {
             targetEl.classList.remove('covered', 'valid-move', 'valid-capture', 'burning');
         }
         checkGameOver();
-        if (!gameState.gameOver) {
-            gameState.currentPlayer = gameState.currentPlayer === 1 ? 2 : 1;
-            updateTurnIndicator();
-            if (gameState.cpuEnabled && gameState.currentPlayer === gameState.cpuPlayer) {
-                setTimeout(makeCpuMove, gameState.cpuMoveDelay);
-            }
-        }
+        endTurn();
     });
 }
 
@@ -505,13 +464,7 @@ function executeEngulf(row, col) {
     clearSkillTray();
     gameState.selectedCell = null;
 
-    if (!gameState.gameOver) {
-        gameState.currentPlayer = gameState.currentPlayer === 1 ? 2 : 1;
-        updateTurnIndicator();
-        if (gameState.cpuEnabled && gameState.currentPlayer === gameState.cpuPlayer) {
-            setTimeout(makeCpuMove, gameState.cpuMoveDelay);
-        }
-    }
+    endTurn();
 }
 
 function executePyromania(burnerRow, burnerCol, targetRow, targetCol) {
@@ -548,15 +501,8 @@ function executePyromania(burnerRow, burnerCol, targetRow, targetCol) {
     gameState.selectedCell = null;
 
     checkGameOver();
-    if (!gameState.gameOver) {
-        gameState.currentPlayer = gameState.currentPlayer === 1 ? 2 : 1;
-        updateTurnIndicator();
-        if (gameState.cpuEnabled && gameState.currentPlayer === gameState.cpuPlayer) {
-            setTimeout(makeCpuMove, gameState.cpuMoveDelay);
-        }
-    }
+    endTurn();
 }
-
 
 function checkGameOver() {
     // Check if any player has no pieces left or no legal moves
