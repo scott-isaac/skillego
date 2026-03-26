@@ -3,8 +3,8 @@
 function initializeBoard() {
     console.log("Initializing board...");
     debugLog("Initializing game board");
-    gameState.board   = Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(null));
-    gameState.covered = Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(true));
+    gameState.board   = Array.from({ length: BOARD_ROWS }, () => Array(BOARD_COLS).fill(null));
+    gameState.covered = Array.from({ length: BOARD_ROWS }, () => Array(BOARD_COLS).fill(true));
     const board = document.getElementById('board');
     if (!board) {
         console.error("Board element not found!");
@@ -12,9 +12,11 @@ function initializeBoard() {
         return;
     }
     board.innerHTML = '';
-    
-    for (let row = 0; row < BOARD_SIZE; row++) {
-        for (let col = 0; col < BOARD_SIZE; col++) {
+    board.style.gridTemplateColumns = `repeat(${BOARD_COLS}, 60px)`;
+    board.style.gridTemplateRows    = `repeat(${BOARD_ROWS}, 60px)`;
+
+    for (let row = 0; row < BOARD_ROWS; row++) {
+        for (let col = 0; col < BOARD_COLS; col++) {
             const cell = document.createElement('div');
             cell.classList.add('cell', 'covered');
             cell.dataset.row = row;
@@ -47,7 +49,7 @@ function assignPieces() {
     const allPieces = [];
 
     // Add pieces for both players
-    for (let player = 1; player <= 2; player++) {
+    for (let player = 1; player <= gameState.numPlayers; player++) {
         PIECES.forEach(piece => {
             for (let i = 0; i < piece.quantity; i++) {
                 allPieces.push({ ...piece, player });
@@ -60,8 +62,8 @@ function assignPieces() {
 
     // Place pieces on the board
     let index = 0;
-    for (let row = 0; row < BOARD_SIZE; row++) {
-        for (let col = 0; col < BOARD_SIZE; col++) {
+    for (let row = 0; row < BOARD_ROWS; row++) {
+        for (let col = 0; col < BOARD_COLS; col++) {
             if (index < allPieces.length) {
                 gameState.board[row][col] = allPieces[index];
                 index++;
@@ -73,7 +75,8 @@ function assignPieces() {
 function updateTurnIndicator() {
     const turnIndicator = document.getElementById('turn-indicator');
     if (!turnIndicator) return;
-    const config = gameState.currentPlayer === 1 ? gameState.player1 : gameState.player2;
+    const playerKey = `player${gameState.currentPlayer}`;
+    const config = gameState[playerKey];
     const isCpu  = config && config.type === 'cpu';
     const label  = isCpu ? `CPU (P${gameState.currentPlayer})` : `Player ${gameState.currentPlayer}`;
     turnIndicator.textContent = `${label}'s Turn`;
@@ -148,47 +151,3 @@ function movePiece(fromRow, fromCol, toRow, toCol) {
     checkGameOver();
 }
 
-/**
- * Checks if the game is over (a player has no pieces left)
- * Sets gameState.gameOver to true if a player has no pieces left
- * and displays a message indicating which player won
- */
-function checkGameOver() {
-    // Check if each player has any pieces left
-    let player1HasPieces = false;
-    let player2HasPieces = false;
-    
-    // Loop through the board to find pieces
-    for (let row = 0; row < BOARD_SIZE; row++) {
-        for (let col = 0; col < BOARD_SIZE; col++) {
-            const piece = gameState.board[row][col];
-            if (piece) {
-                if (piece.player === 1) {
-                    player1HasPieces = true;
-                } else if (piece.player === 2) {
-                    player2HasPieces = true;
-                }
-            }
-            
-            // Early exit if we found pieces for both players
-            if (player1HasPieces && player2HasPieces) {
-                return;
-            }
-        }
-    }
-      // If one player has no pieces, game is over
-    if (!player1HasPieces || !player2HasPieces) {
-        gameState.gameOver = true;
-        
-        // Determine winner
-        const winner = !player1HasPieces ? 2 : 1;
-        const winnerMessage = document.getElementById('winner-message');
-        
-        if (winnerMessage) {
-            winnerMessage.textContent = `Player ${winner} wins!`;
-            winnerMessage.style.display = 'block';
-        }
-        
-        debugLog(`Game over! Player ${winner} wins!`);
-    }
-}

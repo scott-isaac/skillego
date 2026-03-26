@@ -20,6 +20,14 @@ function handleCellClick(row, col, cellElement) {
         debugLog("Ignoring click during CPU turn");
         return;
     }
+    // In 4-player mode, ignore clicks when it's a CPU player's turn
+    if (gameState.numPlayers > 2) {
+        const cfg = gameState[`player${gameState.currentPlayer}`];
+        if (cfg && cfg.type === 'cpu') {
+            debugLog("Ignoring click during CPU turn (4P)");
+            return;
+        }
+    }
     
     const cell = gameState.board[row][col];
     
@@ -79,7 +87,7 @@ const SKILL_TRAY_SLOTS = 5;
 
 function getPushButtons(dragonRow, dragonCol) {
     const SPELL_ICON = '💨';
-    const pushMoves = getPushMoves(gameState, dragonRow, dragonCol);
+    const pushMoves = getPushMoves(gameState, dragonRow, dragonCol, gameState.enabledAbilities);
     return [
         { dr: -1, dc:  0, icon: '↑', label: 'Push Up' },
         { dr:  1, dc:  0, icon: '↓', label: 'Push Down' },
@@ -99,7 +107,7 @@ function getPushButtons(dragonRow, dragonCol) {
 
 function getHopButtons(row, col) {
     const SPELL_ICON = '🐾';
-    const hopMoves = getHopMoves(gameState, row, col);
+    const hopMoves = getHopMoves(gameState, row, col, gameState.enabledAbilities);
     return [
         { dr: -1, dc:  0, icon: '↑', label: 'Hop Up' },
         { dr:  1, dc:  0, icon: '↓', label: 'Hop Down' },
@@ -118,7 +126,7 @@ function getHopButtons(row, col) {
 
 function getRobotKittyButtons(row, col) {
     const SPELL_ICON = '🎯';
-    const snipeMoves = getSnipeMoves(gameState, row, col);
+    const snipeMoves = getSnipeMoves(gameState, row, col, gameState.enabledAbilities);
     return [
         { dr: -1, dc:  0, icon: '↑', label: 'Snipe Up' },
         { dr:  1, dc:  0, icon: '↓', label: 'Snipe Down' },
@@ -140,7 +148,7 @@ function getRobotKittyButtons(row, col) {
 
 function getPyromaniaButtons(row, col) {
     const SPELL_ICON = '🔥';
-    const pyroMoves = getPyroMoves(gameState, row, col);
+    const pyroMoves = getPyroMoves(gameState, row, col, gameState.enabledAbilities);
     return [
         { dr: -1, dc:  0, icon: '↑', label: 'Ignite Up' },
         { dr:  1, dc:  0, icon: '↓', label: 'Ignite Down' },
@@ -162,7 +170,7 @@ function getEngulfButtons(row, col) {
     if (piece && piece.burning) {
         return [{ icon: '🔥', label: 'Already burning', spellIcon: '🔥', enabled: false, action: null }];
     }
-    const enabled = getEngulfMoves(gameState, row, col).length > 0;
+    const enabled = getEngulfMoves(gameState, row, col, gameState.enabledAbilities).length > 0;
     return [{
         icon: '🔥', label: 'Engulf — go up in flames',
         spellIcon: '🔥',
@@ -173,7 +181,7 @@ function getEngulfButtons(row, col) {
 
 function getTransformButtons(row, col) {
     const SPELL_ICON = '🧙‍♂️';
-    const transformMoves = getTransformMoves(gameState, row, col);
+    const transformMoves = getTransformMoves(gameState, row, col, gameState.enabledAbilities);
     const toRowCol = cells => cells.map(({ r, c }) => ({ row: r, col: c }));
     const buttons = [
         { dr: -1, dc:  0, icon: '↑', label: 'Transform Line Up' },
@@ -283,7 +291,13 @@ function clearSkillTray() {
 // execute* functions handle mechanics then call endTurn(); no turn logic elsewhere.
 function endTurn() {
     if (gameState.gameOver) return;
-    gameState.currentPlayer = gameState.currentPlayer === 1 ? 2 : 1;
+    const n = gameState.numPlayers || 2;
+    let next = (gameState.currentPlayer % n) + 1;
+    let safety = 0;
+    while (gameState.eliminatedPlayers && gameState.eliminatedPlayers.has(next) && safety++ < n) {
+        next = (next % n) + 1;
+    }
+    gameState.currentPlayer = next;
     updateTurnIndicator();
     scheduleNextCpuMoveIfNeeded();
 }
@@ -505,76 +519,76 @@ function executePyromania(burnerRow, burnerCol, targetRow, targetCol) {
 }
 
 function checkGameOver() {
-    // Check if any player has no pieces left or no legal moves
-    let player1Pieces = 0;
-    let player2Pieces = 0;
-    let player1HasMoves = false;
-    let player2HasMoves = false;
-    
+    // Any covered piece means game still in progress
+    for (let row = 0; row < BOARD_ROWS; row++)
+        for (let col = 0; col < BOARD_COLS; col++)
+            if (gameState.covered[row][col]) return false;
 
-    // Count pieces and check for legal moves
-    for (let row = 0; row < BOARD_SIZE; row++) {
-        for (let col = 0; col < BOARD_SIZE; col++) {
+    const n = gameState.numPlayers || 2;
+    const pieceCounts = {};
+    const hasMoves = {};
+    for (let p = 1; p <= n; p++) {
+        if (gameState.eliminatedPlayers.has(p)) continue;
+        pieceCounts[p] = 0;
+        hasMoves[p] = false;
+    }
+
+    for (let row = 0; row < BOARD_ROWS; row++) {
+        for (let col = 0; col < BOARD_COLS; col++) {
             const piece = gameState.board[row][col];
-            if (piece) {
-                    if (!gameState.covered[row][col]) {
-                    if (piece.player === 1) {
-                        player1Pieces++;
-                        if (!player1HasMoves) {
-                            const validMoves = getValidMoves(gameState, row, col);
-                            player1HasMoves = validMoves.length > 0;
-                        }
-                    } else {
-                        player2Pieces++;
-                        if (!player2HasMoves) {
-                            const validMoves = getValidMoves(gameState, row, col);
-                            player2HasMoves = validMoves.length > 0;
-                        }
-                    }
-                } else {
-                    // If there are covered pieces, the game is not over
-                    return false;
-                }
+            if (!piece) continue;
+            const p = piece.player;
+            if (pieceCounts[p] !== undefined) {
+                pieceCounts[p]++;
+                if (!hasMoves[p] && getValidMoves(gameState, row, col).length > 0)
+                    hasMoves[p] = true;
             }
         }
     }
 
-    let winner = null;
-
-    // Check winning conditions
-    if (player1Pieces === 0 || !player1HasMoves) {
-        winner = 2;
-    } else if (player2Pieces === 0 || !player2HasMoves) {
-        winner = 1;
-    }
-
-    if (winner) {
-        gameState.gameOver = true;
-
-        let resultText, scoreText;
-        if (gameState.cpuVsCpu) {
-            resultText = `Player ${winner} Wins! (CPU vs CPU)`;
-            scoreText = `Score: ${calcPowerScore(winner)}`;
-        } else if (gameState.cpuEnabled) {
-            const humanPlayer = gameState.cpuPlayer === 1 ? 2 : 1;
-            const diff = gameState.cpuDifficulty;
-            const diffLabel = diff.charAt(0).toUpperCase() + diff.slice(1);
-            const humanWon = winner === humanPlayer;
-            if (typeof aiLearning !== 'undefined') {
-                aiLearning.recordGameResult(winner);
-            }
-            resultText = humanWon ? 'You Win!' : 'CPU Wins!';
-            scoreText = `Score: ${humanWon ? calcPowerScore(humanPlayer) : 0} · vs ${diffLabel} CPU`;
-        } else {
-            resultText = `Player ${winner} Wins!`;
-            scoreText = `Score: ${calcPowerScore(winner)}`;
+    // Eliminate players with no pieces or no moves
+    for (let p = 1; p <= n; p++) {
+        if (gameState.eliminatedPlayers.has(p)) continue;
+        if (pieceCounts[p] === 0 || !hasMoves[p]) {
+            gameState.eliminatedPlayers.add(p);
+            debugLog(`Player ${p} eliminated`);
         }
-        debugLog(`Game over! Player ${winner} wins.`);
-        showResult(resultText, scoreText);
-        return true;
     }
 
-    return false;
+    // Count survivors
+    const survivors = [];
+    for (let p = 1; p <= n; p++) {
+        if (!gameState.eliminatedPlayers.has(p)) survivors.push(p);
+    }
+
+    if (survivors.length > 1) return false;
+
+    gameState.gameOver = true;
+    const winner = survivors[0] ?? null;
+
+    let resultText, scoreText;
+    if (!winner) {
+        resultText = 'Draw!';
+        scoreText = 'Score: 0';
+    } else if (n === 4) {
+        resultText = `Player ${winner} Wins!`;
+        scoreText  = `Score: ${calcPowerScore(winner)}`;
+    } else if (gameState.cpuEnabled) {
+        const humanPlayer = gameState.cpuPlayer === 1 ? 2 : 1;
+        const diff = gameState.cpuDifficulty;
+        const diffLabel = diff.charAt(0).toUpperCase() + diff.slice(1);
+        const humanWon = winner === humanPlayer;
+        if (typeof aiLearning !== 'undefined') aiLearning.recordGameResult(winner);
+        resultText = humanWon ? 'You Win!' : 'CPU Wins!';
+        scoreText  = `Score: ${humanWon ? calcPowerScore(humanPlayer) : 0} · vs ${diffLabel} CPU`;
+    } else {
+        resultText = `Player ${winner} Wins!`;
+        scoreText  = `Score: ${calcPowerScore(winner)}`;
+    }
+
+    debugLog(`Game over! Player ${winner} wins.`);
+    showResult(resultText, scoreText);
+    return true;
 }
 
 function initGame() {
@@ -605,6 +619,23 @@ function syncSetupUI() {
     if (p2Diff) { p2Diff.value = gameState.player2.difficulty; p2Diff.disabled = gameState.player2.type !== 'cpu'; }
     if (speedSlider) speedSlider.value = gameState.cpuMoveDelay;
     if (speedLabel)  speedLabel.textContent = gameState.cpuMoveDelay === 0 ? '0ms' : `${(gameState.cpuMoveDelay / 1000).toFixed(1)}s`;
+
+    const numPlayersSelect = document.getElementById('num-players-select');
+    if (numPlayersSelect) numPlayersSelect.value = gameState.numPlayers;
+
+    const p3TypeEl = document.getElementById('p3-type-select');
+    const p3DiffEl = document.getElementById('p3-diff-select');
+    const p4TypeEl = document.getElementById('p4-type-select');
+    const p4DiffEl = document.getElementById('p4-diff-select');
+    if (p3TypeEl) p3TypeEl.value = gameState.player3.type;
+    if (p3DiffEl) p3DiffEl.value = gameState.player3.difficulty;
+    if (p4TypeEl) p4TypeEl.value = gameState.player4.type;
+    if (p4DiffEl) p4DiffEl.value = gameState.player4.difficulty;
+
+    const p3Row = document.getElementById('player3-row');
+    const p4Row = document.getElementById('player4-row');
+    if (p3Row) p3Row.style.display = gameState.numPlayers >= 3 ? '' : 'none';
+    if (p4Row) p4Row.style.display = gameState.numPlayers >= 4 ? '' : 'none';
 }
 
 function startGame() {
@@ -616,17 +647,42 @@ function startGame() {
     gameState.player1 = { type: p1Type, difficulty: p1Diff };
     gameState.player2 = { type: p2Type, difficulty: p2Diff };
 
+    // Read numPlayers
+    const numPlayersEl = document.getElementById('num-players-select');
+    if (numPlayersEl) gameState.numPlayers = parseInt(numPlayersEl.value) || 2;
+
+    // Read P3/P4 configs
+    if (gameState.numPlayers >= 3) {
+        gameState.player3 = {
+            type: document.getElementById('p3-type-select')?.value || 'cpu',
+            difficulty: document.getElementById('p3-diff-select')?.value || 'expert',
+        };
+    }
+    if (gameState.numPlayers >= 4) {
+        gameState.player4 = {
+            type: document.getElementById('p4-type-select')?.value || 'cpu',
+            difficulty: document.getElementById('p4-diff-select')?.value || 'expert',
+        };
+    }
+
     // Read ability toggles
     gameState.enabledAbilities = new Set(
         Array.from(document.querySelectorAll('.ability-toggle:checked')).map(cb => cb.value)
     );
 
-    // Derive legacy CPU state flags used by cpu.js
+    // Derive legacy CPU state flags used by cpu.js (2-player path)
     const bothCpu = p1Type === 'cpu' && p2Type === 'cpu';
     gameState.cpuVsCpu   = bothCpu;
     gameState.cpuEnabled = p1Type === 'cpu' || p2Type === 'cpu';
     gameState.cpuPlayer  = p2Type === 'cpu' ? 2 : 1;
     gameState.cpuDifficulty = p2Type === 'cpu' ? p2Diff : p1Diff;
+
+    // 4-player mode bypasses legacy cpuEnabled/cpuVsCpu paths
+    if (gameState.numPlayers > 2) {
+        gameState.cpuEnabled = false;
+        gameState.cpuVsCpu = false;
+        // scheduleNextCpuMoveIfNeeded uses per-player config instead
+    }
 
     // Reset game state
     gameState.currentPlayer = 1;
@@ -637,24 +693,33 @@ function startGame() {
     gameState.cpuLastMoveFrom         = null;
     gameState.cpuLastMoveTo           = null;
     gameState.cpuRecentSquares        = {};
-    gameState.cpuJustUncoveredHighValue = null;
+    gameState.eliminatedPlayers = new Set();
     if (typeof gameLog !== 'undefined') gameLog.reset();
+
+    const boardCfg = BOARD_CONFIG[gameState.numPlayers] || BOARD_CONFIG[2];
+    BOARD_ROWS = boardCfg.rows;
+    BOARD_COLS = boardCfg.cols;
 
     initializeBoard();
     if (typeof gameLog !== 'undefined') gameLog.recordInitialBoard();
     updateTurnIndicator();
 
     const resignBtn = document.getElementById('resign-button');
-    if (resignBtn) resignBtn.textContent = bothCpu ? 'Stop' : 'Resign';
+    const allCpu = Array.from({ length: gameState.numPlayers }, (_, i) => gameState[`player${i + 1}`]?.type === 'cpu').every(Boolean);
+    if (resignBtn) resignBtn.textContent = allCpu ? 'Stop' : 'Resign';
 
     document.getElementById('setup-screen').style.display = 'none';
     document.getElementById('game-screen').style.display  = '';
 
-    debugLog(`Game started: P1=${p1Type}${p1Type === 'cpu' ? ' ('+p1Diff+')' : ''} vs P2=${p2Type}${p2Type === 'cpu' ? ' ('+p2Diff+')' : ''}`);
+    // Show in-game speed control whenever >1 CPU is playing
+    const activeCpuCount = [gameState.player1, gameState.player2, gameState.player3, gameState.player4]
+        .filter((p, i) => i < gameState.numPlayers && p && p.type === 'cpu').length;
+    const gameSpeedRow = document.getElementById('game-speed-row');
+    if (gameSpeedRow) gameSpeedRow.style.display = activeCpuCount > 1 ? '' : 'none';
 
-    if (gameState.cpuVsCpu || (gameState.cpuEnabled && gameState.currentPlayer === gameState.cpuPlayer)) {
-        setTimeout(makeCpuMove, 500);
-    }
+    debugLog(`Game started: ${gameState.numPlayers}P mode`);
+
+    scheduleNextCpuMoveIfNeeded();
 }
 
 function resignGame() {
@@ -683,8 +748,8 @@ function resignGame() {
 
 function calcPowerScore(player) {
     let score = 0;
-    for (let r = 0; r < BOARD_SIZE; r++)
-        for (let c = 0; c < BOARD_SIZE; c++) {
+    for (let r = 0; r < BOARD_ROWS; r++)
+        for (let c = 0; c < BOARD_COLS; c++) {
             const p = gameState.board[r][c];
             if (p && p.player === player) score += p.power;
         }
@@ -694,7 +759,9 @@ function calcPowerScore(player) {
 function showResult(text, scoreText) {
     document.getElementById('winner-text').textContent = text;
     const scoreEl = document.getElementById('winner-score');
-    if (scoreEl) scoreEl.textContent = scoreText || '';
+    const moves = typeof gameLog !== 'undefined' ? Math.ceil(gameLog.turnNumber / 2) : 0;
+    const movesLabel = moves > 0 ? ` · ${moves} moves` : '';
+    if (scoreEl) scoreEl.textContent = (scoreText || '') + movesLabel;
     document.getElementById('winner-message').style.display = 'flex';
     if (typeof gameLog !== 'undefined') gameLog.saveToStorage();
     clearValidMoves();
@@ -706,10 +773,14 @@ function restartGame() {
     const p1 = gameState.player1;
     const p2 = gameState.player2;
     const bothCpu = p1.type === 'cpu' && p2.type === 'cpu';
-    gameState.cpuVsCpu   = bothCpu;
-    gameState.cpuEnabled = p1.type === 'cpu' || p2.type === 'cpu';
+    gameState.cpuVsCpu   = bothCpu && gameState.numPlayers === 2;
+    gameState.cpuEnabled = (p1.type === 'cpu' || p2.type === 'cpu') && gameState.numPlayers === 2;
     gameState.cpuPlayer  = p2.type === 'cpu' ? 2 : 1;
     gameState.cpuDifficulty = p2.type === 'cpu' ? p2.difficulty : p1.difficulty;
+    if (gameState.numPlayers > 2) {
+        gameState.cpuEnabled = false;
+        gameState.cpuVsCpu = false;
+    }
     gameState.currentPlayer = 1;
     gameState.gameOver      = false;
     gameState.selectedCell  = null;
@@ -718,16 +789,22 @@ function restartGame() {
     gameState.cpuLastMoveFrom         = null;
     gameState.cpuLastMoveTo           = null;
     gameState.cpuRecentSquares        = {};
-    gameState.cpuJustUncoveredHighValue = null;
+    gameState.eliminatedPlayers = new Set();
     if (typeof gameLog !== 'undefined') gameLog.reset();
+    const boardCfg = BOARD_CONFIG[gameState.numPlayers] || BOARD_CONFIG[2];
+    BOARD_ROWS = boardCfg.rows;
+    BOARD_COLS = boardCfg.cols;
     initializeBoard();
     if (typeof gameLog !== 'undefined') gameLog.recordInitialBoard();
     updateTurnIndicator();
     const resignBtn = document.getElementById('resign-button');
-    if (resignBtn) resignBtn.textContent = bothCpu ? 'Stop' : 'Resign';
-    if (gameState.cpuVsCpu || (gameState.cpuEnabled && gameState.currentPlayer === gameState.cpuPlayer)) {
-        setTimeout(makeCpuMove, 500);
-    }
+    const allCpu = Array.from({ length: gameState.numPlayers }, (_, i) => gameState[`player${i + 1}`]?.type === 'cpu').every(Boolean);
+    if (resignBtn) resignBtn.textContent = allCpu ? 'Stop' : 'Resign';
+    const activeCpuCount2 = [gameState.player1, gameState.player2, gameState.player3, gameState.player4]
+        .filter((p, i) => i < gameState.numPlayers && p && p.type === 'cpu').length;
+    const gameSpeedRow2 = document.getElementById('game-speed-row');
+    if (gameSpeedRow2) gameSpeedRow2.style.display = activeCpuCount2 > 1 ? '' : 'none';
+    scheduleNextCpuMoveIfNeeded();
 }
 
 // ── Event listeners ───────────────────────────────────────────────────────────
@@ -738,12 +815,20 @@ function setupEventListeners() {
     document.getElementById('new-game-btn').addEventListener('click', showSetupScreen);
     document.getElementById('resign-button').addEventListener('click', resignGame);
 
-    // Enable/disable difficulty selects based on player type; show speed row only for CPU vs CPU
+    // Enable/disable difficulty selects based on player type; show speed row when >1 CPU configured
     const speedRow = document.getElementById('speed-row');
+    function countSetupCpus() {
+        let n = 0;
+        if (document.getElementById('p1-type')?.value === 'cpu') n++;
+        if (document.getElementById('p2-type')?.value === 'cpu') n++;
+        const p3Row = document.getElementById('player3-row');
+        if (p3Row && p3Row.style.display !== 'none' && document.getElementById('p3-type-select')?.value === 'cpu') n++;
+        const p4Row = document.getElementById('player4-row');
+        if (p4Row && p4Row.style.display !== 'none' && document.getElementById('p4-type-select')?.value === 'cpu') n++;
+        return n;
+    }
     function updateSpeedRow() {
-        const bothCpu = document.getElementById('p1-type').value === 'cpu' &&
-                        document.getElementById('p2-type').value === 'cpu';
-        speedRow.style.display = bothCpu ? '' : 'none';
+        speedRow.style.display = countSetupCpus() > 1 ? '' : 'none';
     }
     ['p1', 'p2'].forEach(p => {
         const typeEl = document.getElementById(`${p}-type`);
@@ -755,14 +840,31 @@ function setupEventListeners() {
     });
     updateSpeedRow();
 
-    // Speed slider
-    const speedSlider = document.getElementById('cpu-speed');
-    const speedLabel  = document.getElementById('cpu-speed-label');
-    speedSlider.addEventListener('input', () => {
-        gameState.cpuMoveDelay = parseInt(speedSlider.value, 10);
-        speedLabel.textContent = gameState.cpuMoveDelay === 0
-            ? '0ms'
-            : `${(gameState.cpuMoveDelay / 1000).toFixed(1)}s`;
+    const numPlayersSelect = document.getElementById('num-players-select');
+    if (numPlayersSelect) {
+        numPlayersSelect.addEventListener('change', () => {
+            const n = parseInt(numPlayersSelect.value);
+            document.getElementById('player3-row').style.display = n >= 3 ? '' : 'none';
+            document.getElementById('player4-row').style.display = n >= 4 ? '' : 'none';
+            updateSpeedRow();
+            if (typeof updateAbilitiesCount === 'function') updateAbilitiesCount();
+        });
+    }
+
+    // Wire P3/P4 type selects to updateSpeedRow
+    ['p3-type-select', 'p4-type-select'].forEach(id => {
+        document.getElementById(id)?.addEventListener('change', updateSpeedRow);
+    });
+
+    // Speed sliders — setup screen + in-game share the same cpuMoveDelay
+    function applySpeed(val) {
+        gameState.cpuMoveDelay = parseInt(val, 10);
+        const label = gameState.cpuMoveDelay === 0 ? '0ms' : `${(gameState.cpuMoveDelay / 1000).toFixed(1)}s`;
+        document.querySelectorAll('.cpu-speed-label').forEach(el => el.textContent = label);
+        document.querySelectorAll('.cpu-speed-slider').forEach(el => el.value = val);
+    }
+    document.querySelectorAll('.cpu-speed-slider').forEach(slider => {
+        slider.addEventListener('input', () => applySpeed(slider.value));
     });
 
     // Abilities count in collapsed summary

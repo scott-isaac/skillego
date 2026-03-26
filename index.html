@@ -44,6 +44,13 @@
             </details>
 
             <div class="player-config">
+                <div class="player-row" style="justify-content:center; padding-bottom:8px; border-bottom:1px solid #d2c1a3; margin-bottom:4px;">
+                    <label style="font-weight:bold; color:#6e583b; margin-right:10px;">Players:</label>
+                    <select id="num-players-select">
+                        <option value="2" selected>2 Players</option>
+                        <option value="4">4 Players</option>
+                    </select>
+                </div>
                 <div class="player-row">
                     <span class="player-label">Player 1</span>
                     <select id="p1-type">
@@ -70,10 +77,36 @@
                         <option value="expert" selected>Expert</option>
                     </select>
                 </div>
+                <div class="player-row" id="player3-row" style="display:none">
+                    <span class="player-label" style="color:#a08020;">Player 3:</span>
+                    <select id="p3-type-select">
+                        <option value="human">Human</option>
+                        <option value="cpu" selected>CPU</option>
+                    </select>
+                    <select id="p3-diff-select" class="diff-select">
+                        <option value="easy">Easy</option>
+                        <option value="medium">Medium</option>
+                        <option value="hard">Hard</option>
+                        <option value="expert" selected>Expert</option>
+                    </select>
+                </div>
+                <div class="player-row" id="player4-row" style="display:none">
+                    <span class="player-label" style="color:#3a8048;">Player 4:</span>
+                    <select id="p4-type-select">
+                        <option value="human">Human</option>
+                        <option value="cpu" selected>CPU</option>
+                    </select>
+                    <select id="p4-diff-select" class="diff-select">
+                        <option value="easy">Easy</option>
+                        <option value="medium">Medium</option>
+                        <option value="hard">Hard</option>
+                        <option value="expert" selected>Expert</option>
+                    </select>
+                </div>
                 <div class="speed-row" id="speed-row" style="display:none">
                     <label>CPU Speed:
-                        <input type="range" id="cpu-speed" min="0" max="3000" value="800" step="100">
-                        <span id="cpu-speed-label">0.8s</span>
+                        <input type="range" id="cpu-speed" class="cpu-speed-slider" min="0" max="3000" value="800" step="100">
+                        <span id="cpu-speed-label" class="cpu-speed-label">0.8s</span>
                     </label>
                 </div>
             </div>
@@ -147,6 +180,11 @@
                 <button class="skill-slot" disabled></button>
             </div>
             <div id="controls">
+                <div class="speed-row" id="game-speed-row" style="display:none">
+                    CPU Speed:
+                    <input type="range" class="cpu-speed-slider" id="game-cpu-speed" min="0" max="3000" value="800" step="100">
+                    <span class="cpu-speed-label">0.8s</span>
+                </div>
                 <button id="resign-button">Resign</button>
             </div>
             <details id="debug-log" style="display:none">

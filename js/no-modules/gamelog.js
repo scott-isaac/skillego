@@ -3,12 +3,19 @@
 const gameLog = {
     entries: [],
     turnNumber: 0,
+    totalMoves: 0,
 
     reset() {
         this.entries = [];
         this.turnNumber = 0;
+        this.totalMoves = 0;
         this.initialBoard = null;
         localStorage.removeItem('skillego_last_game_log');
+    },
+
+    _advanceTurn() {
+        this.totalMoves++;
+        this.turnNumber = Math.ceil(this.totalMoves / ((typeof gameState !== 'undefined' && gameState.numPlayers) || 2));
     },
 
     _pieceLabel(piece) {
@@ -20,11 +27,12 @@ const gameLog = {
     },
 
     recordInitialBoard() {
-        const colHeader = '     ' + [0,1,2,3,4,5].join('    ');
+        const cols = Array.from({ length: BOARD_COLS }, (_, i) => i);
+        const colHeader = '     ' + cols.join('    ');
         const rows = [colHeader];
-        for (let r = 0; r < BOARD_SIZE; r++) {
+        for (let r = 0; r < BOARD_ROWS; r++) {
             let row = `${r}  `;
-            for (let c = 0; c < BOARD_SIZE; c++) {
+            for (let c = 0; c < BOARD_COLS; c++) {
                 const p = gameState.board[r][c];
                 if (!p) { row += ' .   '; }
                 else {
@@ -37,79 +45,68 @@ const gameLog = {
         this.initialBoard = rows.join('\n');
     },
 
+    _who(player) {
+        return `P${player}`;
+    },
+
     recordUncover(player, row, col, piece) {
-        this.turnNumber++;
-        const cfg = player === 1 ? gameState.player1 : gameState.player2;
-        const who = cfg && cfg.type === 'cpu' ? `CPU` : `P${player}`;
-        this.entries.push(`T${this.turnNumber} ${who}: UNCOVER ${this._coord(row, col)} → P${piece.player} ${this._pieceLabel(piece)}`);
+        this._advanceTurn();
+        this.entries.push(`T${this.turnNumber} ${this._who(player)}: UNCOVER ${this._coord(row, col)} → P${piece.player} ${this._pieceLabel(piece)}`);
     },
 
     recordMove(player, fromRow, fromCol, toRow, toCol, piece, capturedPiece) {
-        this.turnNumber++;
-        const cfg = player === 1 ? gameState.player1 : gameState.player2;
-        const who = cfg && cfg.type === 'cpu' ? `CPU` : `P${player}`;
+        this._advanceTurn();
         if (capturedPiece) {
             this.entries.push(
-                `T${this.turnNumber} ${who}: ${this._pieceLabel(piece)} ${this._coord(fromRow, fromCol)} → ${this._coord(toRow, toCol)}  CAPTURES ${this._pieceLabel(capturedPiece)}`
+                `T${this.turnNumber} ${this._who(player)}: ${this._pieceLabel(piece)} ${this._coord(fromRow, fromCol)} → ${this._coord(toRow, toCol)}  CAPTURES ${this._pieceLabel(capturedPiece)}`
             );
         } else {
             this.entries.push(
-                `T${this.turnNumber} ${who}: ${this._pieceLabel(piece)} ${this._coord(fromRow, fromCol)} → ${this._coord(toRow, toCol)}`
+                `T${this.turnNumber} ${this._who(player)}: ${this._pieceLabel(piece)} ${this._coord(fromRow, fromCol)} → ${this._coord(toRow, toCol)}`
             );
         }
     },
 
     recordTransform(player, wizRow, wizCol, mouseCells) {
-        this.turnNumber++;
-        const cfg = player === 1 ? gameState.player1 : gameState.player2;
-        const who = cfg && cfg.type === 'cpu' ? `CPU` : `P${player}`;
+        this._advanceTurn();
         const positions = mouseCells.map(c => this._coord(c.row, c.col)).join(' ');
-        this.entries.push(`T${this.turnNumber} ${who}: wizard[4] ${this._coord(wizRow, wizCol)} TRANSFORMS → mice at ${positions}`);
+        this.entries.push(`T${this.turnNumber} ${this._who(player)}: wizard[4] ${this._coord(wizRow, wizCol)} TRANSFORMS → mice at ${positions}`);
     },
 
     recordHop(player, fromRow, fromCol, destRow, destCol) {
-        this.turnNumber++;
-        const cfg = player === 1 ? gameState.player1 : gameState.player2;
-        const who = cfg && cfg.type === 'cpu' ? `CPU` : `P${player}`;
-        this.entries.push(`T${this.turnNumber} ${who}: mouse[1] HOP ${this._coord(fromRow, fromCol)} → ${this._coord(destRow, destCol)}`);
+        this._advanceTurn();
+        this.entries.push(`T${this.turnNumber} ${this._who(player)}: mouse[1] HOP ${this._coord(fromRow, fromCol)} → ${this._coord(destRow, destCol)}`);
     },
 
     recordSnipe(player, robotRow, robotCol, targetRow, targetCol, captured) {
-        this.turnNumber++;
-        const cfg = player === 1 ? gameState.player1 : gameState.player2;
-        const who = cfg && cfg.type === 'cpu' ? `CPU` : `P${player}`;
-        this.entries.push(`T${this.turnNumber} ${who}: robot[5] ${this._coord(robotRow, robotCol)} SNIPES ${this._pieceLabel(captured)} ${this._coord(targetRow, targetCol)}`);
+        this._advanceTurn();
+        this.entries.push(`T${this.turnNumber} ${this._who(player)}: robot[5] ${this._coord(robotRow, robotCol)} SNIPES ${this._pieceLabel(captured)} ${this._coord(targetRow, targetCol)}`);
     },
 
     recordPyromania(player, fromRow, fromCol, targetRow, targetCol, targetPiece) {
-        this.turnNumber++;
-        const cfg = player === 1 ? gameState.player1 : gameState.player2;
-        const who = cfg && cfg.type === 'cpu' ? `CPU` : `P${player}`;
-        this.entries.push(`T${this.turnNumber} ${who}: burning ${this._coord(fromRow, fromCol)} IGNITES ${this._pieceLabel(targetPiece)} ${this._coord(targetRow, targetCol)}`);
+        this._advanceTurn();
+        this.entries.push(`T${this.turnNumber} ${this._who(player)}: burning ${this._coord(fromRow, fromCol)} IGNITES ${this._pieceLabel(targetPiece)} ${this._coord(targetRow, targetCol)}`);
     },
 
     recordEngulf(player, row, col) {
-        this.turnNumber++;
-        const cfg = player === 1 ? gameState.player1 : gameState.player2;
-        const who = cfg && cfg.type === 'cpu' ? `CPU` : `P${player}`;
-        this.entries.push(`T${this.turnNumber} ${who}: dragon[6] ENGULFS ${this._coord(row, col)} — on fire!`);
+        this._advanceTurn();
+        this.entries.push(`T${this.turnNumber} ${this._who(player)}: dragon[6] ENGULFS ${this._coord(row, col)} — on fire!`);
     },
 
     recordPush(player, dragonRow, dragonCol, enemyRow, enemyCol, destRow, destCol, pushedPiece) {
-        this.turnNumber++;
-        const cfg = player === 1 ? gameState.player1 : gameState.player2;
-        const who = cfg && cfg.type === 'cpu' ? `CPU` : `P${player}`;
+        this._advanceTurn();
         this.entries.push(
-            `T${this.turnNumber} ${who}: dragon[6] PUSHES ${this._pieceLabel(pushedPiece)} ${this._coord(enemyRow, enemyCol)} → ${this._coord(destRow, destCol)}`
+            `T${this.turnNumber} ${this._who(player)}: dragon[6] PUSHES ${this._pieceLabel(pushedPiece)} ${this._coord(enemyRow, enemyCol)} → ${this._coord(destRow, destCol)}`
         );
     },
 
     boardSnapshot() {
-        const colHeader = '     ' + [0,1,2,3,4,5].join('    ');
+        const cols = Array.from({ length: BOARD_COLS }, (_, i) => i);
+        const colHeader = '     ' + cols.join('    ');
         const rows = [colHeader];
-        for (let r = 0; r < BOARD_SIZE; r++) {
+        for (let r = 0; r < BOARD_ROWS; r++) {
             let row = `${r}  `;
-            for (let c = 0; c < BOARD_SIZE; c++) {
+            for (let c = 0; c < BOARD_COLS; c++) {
                 const piece = gameState.board[r][c];
                 const cell = document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
                 const covered = cell && cell.classList.contains('covered');
@@ -127,10 +124,25 @@ const gameLog = {
         return rows.join('\n');
     },
 
+    _playerHeader() {
+        const n = gameState.numPlayers || 2;
+        const parts = [];
+        for (let p = 1; p <= n; p++) {
+            const cfg = gameState[`player${p}`];
+            if (!cfg) continue;
+            const label = cfg.type === 'cpu'
+                ? `CPU/${cfg.difficulty.charAt(0).toUpperCase() + cfg.difficulty.slice(1)}`
+                : 'Human';
+            parts.push(`P${p}: ${label}`);
+        }
+        return parts.join('  |  ');
+    },
+
     saveToStorage() {
         const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
         const logText = [
             `=== Game Log ${timestamp} ===`,
+            this._playerHeader(),
             ...(this.initialBoard ? ['--- Initial Board ---', this.initialBoard, ''] : []),
             ...this.entries,
             '',
@@ -144,8 +156,8 @@ const gameLog = {
 
     _pieceSummary() {
         const p1 = [], p2 = [], p1cov = [], p2cov = [];
-        for (let r = 0; r < BOARD_SIZE; r++) {
-            for (let c = 0; c < BOARD_SIZE; c++) {
+        for (let r = 0; r < BOARD_ROWS; r++) {
+            for (let c = 0; c < BOARD_COLS; c++) {
                 const piece = gameState.board[r][c];
                 if (!piece) continue;
                 const el = document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);

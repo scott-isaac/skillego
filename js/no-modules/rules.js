@@ -1,11 +1,11 @@
 // rules.js — Pure game logic. No DOM. No gameState mutation.
 // All functions take: state = { board: 6×6 piece|null, covered: 6×6 bool }
-// gameState.enabledAbilities is read globally (read-only during play).
+// Ability generators take enabledAbilities (Set) as an explicit parameter.
 
 const DIRS = [[-1,0],[1,0],[0,-1],[0,1]];
 
 function inBounds(r, c) {
-    return r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE;
+    return r >= 0 && r < BOARD_ROWS && c >= 0 && c < BOARD_COLS;
 }
 
 // ─── Capture Rules ────────────────────────────────────────────────────────
@@ -44,8 +44,8 @@ function getValidMoves(state, r, c) {
 
 // ─── Ability Move Generation ──────────────────────────────────────────────
 
-function getPushMoves(state, r, c) {
-    if (!gameState.enabledAbilities.has('push')) return [];
+function getPushMoves(state, r, c, enabledAbilities) {
+    if (!enabledAbilities.has('push')) return [];
     const piece = state.board[r][c];
     if (!piece || piece.burning || piece.type !== 'dragon') return [];
     const result = [];
@@ -61,8 +61,8 @@ function getPushMoves(state, r, c) {
     return result;
 }
 
-function getHopMoves(state, r, c) {
-    if (!gameState.enabledAbilities.has('hop')) return [];
+function getHopMoves(state, r, c, enabledAbilities) {
+    if (!enabledAbilities.has('hop')) return [];
     const piece = state.board[r][c];
     if (!piece || piece.burning || piece.type !== 'mouse') return [];
     const result = [];
@@ -77,8 +77,8 @@ function getHopMoves(state, r, c) {
     return result;
 }
 
-function getEngulfMoves(state, r, c) {
-    if (!gameState.enabledAbilities.has('engulf')) return [];
+function getEngulfMoves(state, r, c, enabledAbilities) {
+    if (!enabledAbilities.has('engulf')) return [];
     const piece = state.board[r][c];
     if (!piece || piece.burning || piece.type !== 'dragon') return [];
     // Only when an enemy mouse is adjacent
@@ -93,8 +93,8 @@ function getEngulfMoves(state, r, c) {
     return [];
 }
 
-function getTransformMoves(state, r, c) {
-    if (!gameState.enabledAbilities.has('transform')) return [];
+function getTransformMoves(state, r, c, enabledAbilities) {
+    if (!enabledAbilities.has('transform')) return [];
     const piece = state.board[r][c];
     if (!piece || piece.burning || piece.type !== 'wizard') return [];
     const result = [];
@@ -118,8 +118,8 @@ function getTransformMoves(state, r, c) {
     return result;
 }
 
-function getSnipeMoves(state, r, c) {
-    if (!gameState.enabledAbilities.has('snipe')) return [];
+function getSnipeMoves(state, r, c, enabledAbilities) {
+    if (!enabledAbilities.has('snipe')) return [];
     const piece = state.board[r][c];
     if (!piece || piece.burning || piece.type !== 'robot') return [];
     const result = [];
@@ -150,8 +150,8 @@ function getSnipeMoves(state, r, c) {
     return result;
 }
 
-function getPyroMoves(state, r, c) {
-    if (!gameState.enabledAbilities.has('pyromania')) return [];
+function getPyroMoves(state, r, c, enabledAbilities) {
+    if (!enabledAbilities.has('pyromania')) return [];
     const piece = state.board[r][c];
     if (!piece || !piece.burning) return [];
     const result = [];
@@ -169,10 +169,10 @@ function getPyroMoves(state, r, c) {
 function cloneState(state) {
     const board = [];
     const covered = [];
-    for (let r = 0; r < BOARD_SIZE; r++) {
-        board.push(new Array(BOARD_SIZE));
-        covered.push(new Array(BOARD_SIZE));
-        for (let c = 0; c < BOARD_SIZE; c++) {
+    for (let r = 0; r < BOARD_ROWS; r++) {
+        board.push(new Array(BOARD_COLS));
+        covered.push(new Array(BOARD_COLS));
+        for (let c = 0; c < BOARD_COLS; c++) {
             const p = state.board[r][c];
             board[r][c] = p ? { ...p } : null;
             covered[r][c] = state.covered[r][c];

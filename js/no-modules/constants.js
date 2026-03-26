@@ -1,6 +1,13 @@
 // constants.js - Game constants
 
-const BOARD_SIZE = 6;
+// Board dimensions — set by game mode at start
+let BOARD_ROWS = 6;
+let BOARD_COLS = 6;
+
+const BOARD_CONFIG = {
+    2: { rows: 6, cols: 6 },
+    4: { rows: 9, cols: 8 },
+};
 const PIECES = [
     { type: 'mouse', power: 1, quantity: 6, emoji: '🐭' },
     { type: 'cat', power: 2, quantity: 4, emoji: '😸' },
@@ -39,6 +46,8 @@ const ALL_ABILITIES = [
 ];
 
 const PLAYER_COLORS = {
-    1: '#ff9999', // Softer red
-    2: '#9999ff'  // Softer blue
+    1: '#ff9999',
+    2: '#9999ff',
+    3: '#d4b84a',
+    4: '#5cb87a',
 };
