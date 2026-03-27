@@ -166,6 +166,21 @@
             </details>
 
             <button id="start-game-btn">Start Game</button>
+
+            <!-- Shown only in server mode (socket.io available) -->
+            <div id="join-game-section" style="display:none">
+                <hr style="border:none;border-top:1px solid #d2c1a3;margin:14px 0">
+                <p style="text-align:center;margin:0 0 8px;font-size:14px;color:#6e583b">
+                    Have a friend's game code?
+                </p>
+                <div style="display:flex;gap:8px;justify-content:center">
+                    <input id="join-code-input" type="text" placeholder="ABCD1234" maxlength="8"
+                           style="text-transform:uppercase;letter-spacing:3px;width:110px;
+                                  text-align:center;padding:6px;font-size:15px;
+                                  border:1px solid #c0a882;border-radius:4px">
+                    <button id="join-game-btn">Join</button>
+                </div>
+            </div>
         </div>
 
         <!-- ── Game screen (hidden until Start Game) ── -->
@@ -204,6 +219,9 @@
     </div>
 
     <!-- Load scripts in the correct order (no modules) -->
+    <!-- socket.io is auto-served by the Node server. On GitHub Pages it 404s
+         silently and the game runs in standalone mode — no change needed. -->
+    <script src="/socket.io/socket.io.js"></script>
     <script src="js/no-modules/gamelog.js"></script>
     <script src="js/no-modules/utils.js"></script>
     <script src="js/no-modules/constants.js"></script>
@@ -214,6 +232,7 @@
     <script src="js/no-modules/minimax.js"></script>
     <script src="js/no-modules/cpu.js"></script>
     <script src="js/no-modules/game.js"></script>
+    <script src="js/no-modules/socket-client.js"></script>
     <script src="js/no-modules/main.js"></script>
 </body>
 </html>
