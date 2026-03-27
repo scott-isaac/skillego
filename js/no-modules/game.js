@@ -9,23 +9,28 @@ function handleCellClick(row, col, cellElement) {
         return;
     }
 
-    // In CPU vs CPU mode, all clicks are ignored
-    if (gameState.cpuVsCpu) {
-        debugLog("Ignoring click - CPU vs CPU mode active");
-        return;
-    }
-
-    // If it's CPU's turn and CPU is enabled, ignore human clicks
-    if (gameState.cpuEnabled && gameState.currentPlayer === gameState.cpuPlayer) {
-        debugLog("Ignoring click during CPU turn");
-        return;
-    }
-    // In 4-player mode, ignore clicks when it's a CPU player's turn
-    if (gameState.numPlayers > 2) {
-        const cfg = gameState[`player${gameState.currentPlayer}`];
-        if (cfg && cfg.type === 'cpu') {
-            debugLog("Ignoring click during CPU turn (4P)");
+    // In server mode: only allow clicks when it's our player's turn
+    if (typeof serverMode !== 'undefined' && serverMode.active) {
+        if (gameState.currentPlayer !== serverMode.playerNumber) return;
+    } else {
+        // In CPU vs CPU mode, all clicks are ignored
+        if (gameState.cpuVsCpu) {
+            debugLog("Ignoring click - CPU vs CPU mode active");
             return;
+        }
+
+        // If it's CPU's turn and CPU is enabled, ignore human clicks
+        if (gameState.cpuEnabled && gameState.currentPlayer === gameState.cpuPlayer) {
+            debugLog("Ignoring click during CPU turn");
+            return;
+        }
+        // In 4-player mode, ignore clicks when it's a CPU player's turn
+        if (gameState.numPlayers > 2) {
+            const cfg = gameState[`player${gameState.currentPlayer}`];
+            if (cfg && cfg.type === 'cpu') {
+                debugLog("Ignoring click during CPU turn (4P)");
+                return;
+            }
         }
     }
     
@@ -50,9 +55,17 @@ function handleCellClick(row, col, cellElement) {
     else if (gameState.selectedCell) {
         // Check if the clicked cell is a valid move
         if (isValidMove(gameState.selectedCell.row, gameState.selectedCell.col, row, col)) {
-            // Move the piece
-            movePiece(gameState.selectedCell.row, gameState.selectedCell.col, row, col);
-            endTurn();
+            if (typeof serverMode !== 'undefined' && serverMode.active) {
+                const target = gameState.board[row][col];
+                serverMode.sendMove({
+                    type:  target ? 'capture' : 'move',
+                    fromR: gameState.selectedCell.row, fromC: gameState.selectedCell.col,
+                    toR:   row, toC: col,
+                });
+            } else {
+                movePiece(gameState.selectedCell.row, gameState.selectedCell.col, row, col);
+                endTurn();
+            }
         }
         
         // Clear selection, valid moves, and skill tray
@@ -64,14 +77,18 @@ function handleCellClick(row, col, cellElement) {
     }
     // If no cell is selected and clicked on a covered piece
     else if (cell && gameState.covered[row][col]) {
-        // Uncover the piece
-        gameState.covered[row][col] = false;
-        cellElement.classList.remove('covered');
-        cellElement.style.backgroundColor = gameState.playerColors[cell.player];
-        cellElement.textContent = cell.emoji;
-        if (typeof gameLog !== 'undefined') gameLog.recordUncover(gameState.currentPlayer, row, col, cell);
-        checkGameOver();
-        endTurn();
+        if (typeof serverMode !== 'undefined' && serverMode.active) {
+            serverMode.sendMove({ type: 'uncover', r: row, c: col });
+        } else {
+            // Uncover the piece
+            gameState.covered[row][col] = false;
+            cellElement.classList.remove('covered');
+            cellElement.style.backgroundColor = gameState.playerColors[cell.player];
+            cellElement.textContent = cell.emoji;
+            if (typeof gameLog !== 'undefined') gameLog.recordUncover(gameState.currentPlayer, row, col, cell);
+            checkGameOver();
+            endTurn();
+        }
     }
 }
 
@@ -303,6 +320,10 @@ function endTurn() {
 }
 
 function executeHop(mouseRow, mouseCol, destRow, destCol) {
+    if (typeof serverMode !== 'undefined' && serverMode.active) {
+        serverMode.sendMove({ type: 'hop', fromR: mouseRow, fromC: mouseCol, toR: destRow, toC: destCol });
+        return;
+    }
     const mouse = gameState.board[mouseRow][mouseCol];
 
     gameState.board[destRow][destCol] = mouse;
@@ -329,6 +350,11 @@ function executeHop(mouseRow, mouseCol, destRow, destCol) {
 }
 
 function executeTransform(wizRow, wizCol, mouseCells, isExplosion = false) {
+    if (typeof serverMode !== 'undefined' && serverMode.active) {
+        serverMode.sendMove({ type: 'transform', wizR: wizRow, wizC: wizCol,
+            cells: mouseCells.map(({ row, col }) => ({ r: row, c: col })), isExplosion: !!isExplosion });
+        return;
+    }
     const player = gameState.board[wizRow][wizCol].player;
     const newMouse = () => ({ type: 'mouse', power: 1, player, emoji: '🐭' });
 
@@ -360,6 +386,11 @@ function executeTransform(wizRow, wizCol, mouseCells, isExplosion = false) {
 }
 
 function executePush(dragonRow, dragonCol, enemyRow, enemyCol, destRow, destCol) {
+    if (typeof serverMode !== 'undefined' && serverMode.active) {
+        serverMode.sendMove({ type: 'push', drR: dragonRow, drC: dragonCol,
+            enemyR: enemyRow, enemyC: enemyCol, destR: destRow, destC: destCol });
+        return;
+    }
     const enemy = gameState.board[enemyRow][enemyCol];
 
     gameState.board[destRow][destCol] = enemy;
@@ -433,6 +464,11 @@ function flyRobot(fromEl, toEl, playerColor, emoji, onComplete) {
 }
 
 function executeRobotKitty(robotRow, robotCol, targetRow, targetCol) {
+    if (typeof serverMode !== 'undefined' && serverMode.active) {
+        serverMode.sendMove({ type: 'snipe', robotR: robotRow, robotC: robotCol,
+            targetR: targetRow, targetC: targetCol });
+        return;
+    }
     const robot    = gameState.board[robotRow][robotCol];
     const captured = gameState.board[targetRow][targetCol];
 
@@ -466,6 +502,10 @@ function executeRobotKitty(robotRow, robotCol, targetRow, targetCol) {
 }
 
 function executeEngulf(row, col) {
+    if (typeof serverMode !== 'undefined' && serverMode.active) {
+        serverMode.sendMove({ type: 'engulf', r: row, c: col });
+        return;
+    }
     const piece = gameState.board[row][col];
     piece.burning = true;
 
@@ -482,6 +522,11 @@ function executeEngulf(row, col) {
 }
 
 function executePyromania(burnerRow, burnerCol, targetRow, targetCol) {
+    if (typeof serverMode !== 'undefined' && serverMode.active) {
+        serverMode.sendMove({ type: 'pyro', fromR: burnerRow, fromC: burnerCol,
+            targetR: targetRow, targetC: targetCol });
+        return;
+    }
     const burner = gameState.board[burnerRow][burnerCol];
     const target = gameState.board[targetRow][targetCol];
 
@@ -700,6 +745,23 @@ function startGame() {
     BOARD_ROWS = boardCfg.rows;
     BOARD_COLS = boardCfg.cols;
 
+    // In server mode: send config to server, create the DOM board shell, then wait.
+    // The server will send back game-started with the authoritative board state.
+    if (typeof serverMode !== 'undefined' && serverMode.active) {
+        initializeBoard();  // creates DOM cells; state overwritten by server on game-started
+        const playerConfigs = {};
+        for (let p = 1; p <= gameState.numPlayers; p++) {
+            playerConfigs[p] = { ...gameState[`player${p}`] };
+        }
+        serverMode.createGame({
+            numPlayers:       gameState.numPlayers,
+            playerConfigs,
+            enabledAbilities: [...gameState.enabledAbilities],
+        });
+        return; // _showGameScreen() is called when server emits game-started
+    }
+
+    // ── Local / standalone mode ───────────────────────────────────────────────
     initializeBoard();
     if (typeof gameLog !== 'undefined') gameLog.recordInitialBoard();
     updateTurnIndicator();
