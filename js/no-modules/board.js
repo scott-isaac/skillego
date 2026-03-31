@@ -41,6 +41,15 @@ function initializeBoard() {
         }
     }
 
+    // Preload emoji fonts — on iOS/mobile, emoji glyphs are rasterized lazily and can
+    // appear blank for one frame if encountered for the first time during a CSS transition.
+    // Rendering them invisibly at game start warms the font cache before any piece uncovers.
+    const emojiPreload = document.createElement('div');
+    emojiPreload.style.cssText = 'position:absolute;opacity:0;pointer-events:none;font-size:30px;';
+    emojiPreload.setAttribute('aria-hidden', 'true');
+    emojiPreload.textContent = PIECES.map(p => p.emoji).join('');
+    document.body.appendChild(emojiPreload);
+
     // Assign pieces to players randomly
     assignPieces();
 }
