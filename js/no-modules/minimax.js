@@ -166,6 +166,46 @@ const SkillMinimax = (function () {
             }
         }
 
+        // Robot threat dynamics
+        // Locate both robots (only uncovered ones are known)
+        let cpuRobotPos = null, opRobotPos = null;
+        for (let r = 0; r < BOARD_ROWS; r++) {
+            for (let c = 0; c < BOARD_COLS; c++) {
+                const p = state.board[r][c];
+                if (!p || state.covered[r][c]) continue;
+                if (p.player === cpuPlayer && p.type === 'robot') cpuRobotPos = { r, c };
+                else if (p.player !== cpuPlayer && p.player !== 0 && p.type === 'robot') opRobotPos = { r, c };
+            }
+        }
+        const robotEngageScale = hasCovered ? 0.5 : 1.0;
+        if (opRobotPos) {
+            // CPU pieces near enemy robot are in danger — mirrors dragon-mouse proximity logic
+            for (let r = 0; r < BOARD_ROWS; r++) {
+                for (let c = 0; c < BOARD_COLS; c++) {
+                    const p = state.board[r][c];
+                    if (!p || p.player !== cpuPlayer || state.covered[r][c] || p.type === 'robot') continue;
+                    const dist = Math.abs(r - opRobotPos.r) + Math.abs(c - opRobotPos.c);
+                    if (dist <= 4) score -= Math.max(0, 5 - dist) * p.power * 1.2 * robotEngageScale;
+                }
+            }
+            // CPU robot should close on enemy robot to contest/corner it
+            if (cpuRobotPos) {
+                const rrDist = Math.abs(cpuRobotPos.r - opRobotPos.r) + Math.abs(cpuRobotPos.c - opRobotPos.c);
+                score += Math.max(0, 7 - rrDist) * 6 * robotEngageScale;
+            }
+        }
+        // CPU robot draws toward high-value enemy targets — prevents dormancy
+        if (cpuRobotPos) {
+            for (let r = 0; r < BOARD_ROWS; r++) {
+                for (let c = 0; c < BOARD_COLS; c++) {
+                    const p = state.board[r][c];
+                    if (!p || p.player === cpuPlayer || p.player === 0 || state.covered[r][c]) continue;
+                    const dist = Math.abs(r - cpuRobotPos.r) + Math.abs(c - cpuRobotPos.c);
+                    score += Math.max(0, 7 - dist) * p.power * 0.6 * robotEngageScale;
+                }
+            }
+        }
+
         // Endgame hunt — 1 opponent piece left, no covered pieces
         if (opPieces === 1 && !hasCovered) {
             let lastR = -1, lastC = -1, lastPiece = null;
