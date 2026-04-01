@@ -80,13 +80,18 @@ function handleCellClick(row, col, cellElement) {
         if (typeof serverMode !== 'undefined' && serverMode.active) {
             serverMode.sendMove({ type: 'uncover', r: row, c: col });
         } else {
-            // Uncover the piece — set text FIRST (hidden by color:transparent while covered),
-            // then remove class. This ensures the emoji is in the DOM before the CSS transition
-            // creates a GPU compositor layer, preventing blank-emoji on iOS.
+            // Uncover the piece. Suppress the CSS transition during the reveal so iOS
+            // doesn't take a GPU compositor snapshot before the emoji is included.
+            // Two rAFs: first ensures a paint with transition:none (emoji visible),
+            // second restores transition for future interactions (select, valid-capture).
+            cellElement.style.transition = 'none';
             cellElement.textContent = cell.emoji;
             cellElement.style.backgroundColor = gameState.playerColors[cell.player];
             gameState.covered[row][col] = false;
             cellElement.classList.remove('covered');
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                cellElement.style.transition = '';
+            }));
             if (typeof gameLog !== 'undefined') gameLog.recordUncover(gameState.currentPlayer, row, col, cell);
             checkGameOver();
             endTurn();
