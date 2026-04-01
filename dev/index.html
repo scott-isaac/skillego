@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skillego</title>
+    <meta name="description" content="Skillego — a hidden-information strategy board game with AI opponents ranging from Easy to Expert (minimax with alpha-beta pruning).">
+    <link rel="stylesheet" href="styles.css?v=3">
+</head>
+<body>
+    <div id="game-container">
+        <h1>Skillego</h1>
+
+        <!-- ── Setup screen ── -->
+        <div id="setup-screen">
+            <p class="tagline">Hidden-information strategy · Capture all enemy pieces to win</p>
+
+            <details class="rules-toggle">
+                <summary>How to Play</summary>
+                <div class="rules-body">
+                    <p>All 18 pieces per side start <strong>face-down</strong> on a 6×6 board. On your turn, either <strong>flip a covered piece</strong> to reveal it, or <strong>move an uncovered piece</strong> one step (orthogonal).</p>
+                    <p><strong>Piece hierarchy</strong> (higher captures lower):</p>
+                    <table class="piece-table">
+                        <tr><td>🐉</td><td>Dragon</td><td>×1</td></tr>
+                        <tr><td>🤖</td><td>Robot</td><td>×1</td></tr>
+                        <tr><td>🧙‍♂️</td><td>Wizard</td><td>×2</td></tr>
+                        <tr><td>🐶</td><td>Dog</td><td>×4</td></tr>
+                        <tr><td>😸</td><td>Cat</td><td>×4</td></tr>
+                        <tr><td>🐭</td><td>Mouse</td><td>×6</td></tr>
+                    </table>
+                    <p><strong>Special rules:</strong> 🐭 Mouse captures 🐉 Dragon — but Dragon beats everything else.</p>
+                    <p><strong>Abilities</strong> (can be toggled on/off in setup):</p>
+                    <table class="piece-table">
+                        <tr><td>🐉</td><td><strong>Dragon — Push:</strong> Push an adjacent enemy one square away (space behind must be clear).</td></tr>
+                        <tr><td>🐉</td><td><strong>Dragon — Enflame:</strong> Go up in flames. Burning Dragon is immune to Mice and can kill them — but loses 1 power every time it moves, cycling down through the piece hierarchy until it burns out.</td></tr>
+                        <tr><td>🐭</td><td><strong>Mouse — Hop:</strong> Jump over any adjacent piece to the empty square beyond it.</td></tr>
+                        <tr><td>🧙‍♂️</td><td><strong>Wizard — Transform:</strong> Permanently become 4 Mice — line (Wizard stays + 3 extend in a direction) or explosion (Wizard vanishes, 4 Mice surround it).</td></tr>
+                        <tr><td>🤖</td><td><strong>Robot Wants Kitty:</strong> If a Robot sees a friendly Kitty in danger from another piece, it can race to help — capturing any enemy along a clear orthogonal line if a friendly (non-burning) Cat is adjacent to the target. The Robot moves to the target's square. A burning Robot cannot snipe.</td></tr>
+                        <tr><td>🔥</td><td><strong>Pyromania:</strong> Any burning piece can spread fire to an adjacent uncovered enemy, setting it ablaze. Costs the spreader 1 power level — all the way to burnout.</td></tr>
+                    </table>
+                    <p>When a piece with an ability is selected, action buttons appear in the skill tray below the board.</p>
+                    <p>Eliminate all opponent pieces to win.</p>
+                </div>
+            </details>
+
+            <div class="player-config">
+                <div class="player-row" style="justify-content:center; padding-bottom:8px; border-bottom:1px solid #d2c1a3; margin-bottom:4px;">
+                    <label style="font-weight:bold; color:#6e583b; margin-right:10px;">Players:</label>
+                    <select id="num-players-select">
+                        <option value="2" selected>2 Players</option>
+                        <option value="4">4 Players</option>
+                    </select>
+                </div>
+                <div class="player-row">
+                    <span class="player-label">Player 1</span>
+                    <select id="p1-type">
+                        <option value="human">Human</option>
+                        <option value="cpu">CPU</option>
+                    </select>
+                    <select id="p1-difficulty" disabled>
+                        <option value="easy">Easy</option>
+                        <option value="medium">Medium</option>
+                        <option value="hard" selected>Hard</option>
+                        <option value="expert">Expert</option>
+                    </select>
+                </div>
+                <div class="player-row">
+                    <span class="player-label">Player 2</span>
+                    <select id="p2-type">
+                        <option value="human">Human</option>
+                        <option value="cpu" selected>CPU</option>
+                    </select>
+                    <select id="p2-difficulty">
+                        <option value="easy">Easy</option>
+                        <option value="medium">Medium</option>
+                        <option value="hard">Hard</option>
+                        <option value="expert" selected>Expert</option>
+                    </select>
+                </div>
+                <div class="player-row" id="player3-row" style="display:none">
+                    <span class="player-label" style="color:#a08020;">Player 3:</span>
+                    <select id="p3-type-select">
+                        <option value="human">Human</option>
+                        <option value="cpu" selected>CPU</option>
+                    </select>
+                    <select id="p3-diff-select" class="diff-select">
+                        <option value="easy">Easy</option>
+                        <option value="medium">Medium</option>
+                        <option value="hard">Hard</option>
+                        <option value="expert" selected>Expert</option>
+                    </select>
+                </div>
+                <div class="player-row" id="player4-row" style="display:none">
+                    <span class="player-label" style="color:#3a8048;">Player 4:</span>
+                    <select id="p4-type-select">
+                        <option value="human">Human</option>
+                        <option value="cpu" selected>CPU</option>
+                    </select>
+                    <select id="p4-diff-select" class="diff-select">
+                        <option value="easy">Easy</option>
+                        <option value="medium">Medium</option>
+                        <option value="hard">Hard</option>
+                        <option value="expert" selected>Expert</option>
+                    </select>
+                </div>
+                <div class="speed-row" id="speed-row" style="display:none">
+                    <label>CPU Speed:
+                        <input type="range" id="cpu-speed" class="cpu-speed-slider" min="0" max="3000" value="800" step="100">
+                        <span id="cpu-speed-label" class="cpu-speed-label">0.8s</span>
+                    </label>
+                </div>
+            </div>
+            <details class="abilities-toggle">
+                <summary>Abilities <span id="abilities-count" style="font-weight:normal;color:#888;font-size:12px"></span></summary>
+                <div class="abilities-body">
+                    <p class="abilities-hint">Choose which special abilities are available in this game.</p>
+                    <div class="ability-row">
+                        <label class="ability-label">
+                            <input type="checkbox" class="ability-toggle" value="push" checked>
+                            <span class="ability-emoji">🐉</span>
+                            <span class="ability-name">Dragon — Push</span>
+                        </label>
+                        <span class="ability-desc">Push an adjacent enemy one square away (space behind must be clear).</span>
+                    </div>
+                    <div class="ability-row">
+                        <label class="ability-label">
+                            <input type="checkbox" class="ability-toggle" value="engulf" checked>
+                            <span class="ability-emoji">🐉</span>
+                            <span class="ability-name">Dragon — Enflame 🔥</span>
+                        </label>
+                        <span class="ability-desc">Go up in flames. Immune to Mice, can kill Mice — but loses 1 power on every move, cycling down through all pieces until it burns out.</span>
+                    </div>
+                    <div class="ability-row">
+                        <label class="ability-label">
+                            <input type="checkbox" class="ability-toggle" value="hop" checked>
+                            <span class="ability-emoji">🐭</span>
+                            <span class="ability-name">Mouse — Hop</span>
+                        </label>
+                        <span class="ability-desc">Jump over any adjacent piece to the empty square beyond it.</span>
+                    </div>
+                    <div class="ability-row">
+                        <label class="ability-label">
+                            <input type="checkbox" class="ability-toggle" value="snipe" checked>
+                            <span class="ability-emoji">🤖</span>
+                            <span class="ability-name">Robot Wants Kitty</span>
+                        </label>
+                        <span class="ability-desc">Robot captures any enemy along a clear line if a friendly Cat is spotting it. Hover a direction button to see target + spotter highlighted.</span>
+                    </div>
+                    <div class="ability-row">
+                        <label class="ability-label">
+                            <input type="checkbox" class="ability-toggle" value="transform" checked>
+                            <span class="ability-emoji">🧙‍♂️</span>
+                            <span class="ability-name">Wizard — Transform</span>
+                        </label>
+                        <span class="ability-desc">Permanently become 4 Mice — line direction or 4-way explosion.</span>
+                    </div>
+                    <div class="ability-row">
+                        <label class="ability-label">
+                            <input type="checkbox" class="ability-toggle" value="pyromania" checked>
+                            <span class="ability-emoji">🔥</span>
+                            <span class="ability-name">Pyromania</span>
+                        </label>
+                        <span class="ability-desc">Any burning piece can spread fire to an adjacent uncovered enemy. Costs the spreader 1 power — all the way to burnout.</span>
+                    </div>
+                </div>
+            </details>
+
+            <button id="start-game-btn">Start Game</button>
+
+            <!-- Shown only in server mode (socket.io available) -->
+            <div id="join-game-section" style="display:none">
+                <hr style="border:none;border-top:1px solid #d2c1a3;margin:14px 0">
+                <p style="text-align:center;margin:0 0 8px;font-size:14px;color:#6e583b">
+                    Have a friend's game code?
+                </p>
+                <div style="display:flex;gap:8px;justify-content:center">
+                    <input id="join-code-input" type="text" placeholder="ABCD1234" maxlength="8"
+                           style="text-transform:uppercase;letter-spacing:3px;width:110px;
+                                  text-align:center;padding:6px;font-size:15px;
+                                  border:1px solid #c0a882;border-radius:4px">
+                    <button id="join-game-btn">Join</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Game screen (hidden until Start Game) ── -->
+        <div id="game-screen" style="display:none">
+            <div id="turn-indicator">Player 1's Turn</div>
+            <div id="board"></div>
+            <div id="skill-tray">
+                <button class="skill-slot" disabled></button>
+                <button class="skill-slot" disabled></button>
+                <button class="skill-slot" disabled></button>
+                <button class="skill-slot" disabled></button>
+                <button class="skill-slot" disabled></button>
+            </div>
+            <div id="controls">
+                <div class="speed-row" id="game-speed-row" style="display:none">
+                    CPU Speed:
+                    <input type="range" class="cpu-speed-slider" id="game-cpu-speed" min="0" max="3000" value="800" step="100">
+                    <span class="cpu-speed-label">0.8s</span>
+                </div>
+                <button id="resign-button">Resign</button>
+            </div>
+            <details id="debug-log" style="display:none">
+                <summary>Dev Log</summary>
+                <div id="debug-content"></div>
+            </details>
+        </div>
+
+        <!-- ── Winner overlay ── -->
+        <div id="winner-message" style="display:none">
+            <div id="winner-text"></div>
+            <div id="winner-score"></div>
+            <button id="restart-btn">Play Again</button>
+            <button id="new-game-btn">New Game</button>
+            <button id="copy-log-btn" onclick="gameLog.copyToClipboard()">📋 Copy Game Log</button>
+        </div>
+    </div>
+
+    <!-- Load scripts in the correct order (no modules) -->
+    <!-- socket.io is auto-served by the Node server. On GitHub Pages it 404s
+         silently and the game runs in standalone mode — no change needed. -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="js/no-modules/gamelog.js?v=2"></script>
+    <script src="js/no-modules/utils.js?v=2"></script>
+    <script src="js/no-modules/constants.js?v=2"></script>
+    <script src="js/no-modules/state.js?v=2"></script>
+    <script src="js/no-modules/rules.js?v=2"></script>
+    <script src="js/no-modules/ai-learning.js?v=2"></script>
+    <script src="js/no-modules/board.js?v=2"></script>
+    <script src="js/no-modules/minimax.js?v=2"></script>
+    <script src="js/no-modules/cpu.js?v=3"></script>
+    <script src="js/no-modules/game.js?v=3"></script>
+    <script src="js/no-modules/socket-client.js?v=2"></script>
+    <script src="js/no-modules/main.js?v=2"></script>
+</body>
+</html>
