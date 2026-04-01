@@ -1,0 +1,16 @@
+# Personal game logs (debug/dev use only)
+gamelogs/
+
+# Legacy / build artifacts
+script.js
+js/module_js.zip
+js/*.zip
+
+# Node.js
+node_modules/
+.env
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
