@@ -91,10 +91,13 @@ function makeCpuMove() {
         const el    = document.querySelector(`.cell[data-row="${move.r}"][data-col="${move.c}"]`);
         const piece = gameState.board[move.r][move.c];
         if (el && piece) {
+            // Set text FIRST (hidden by color:transparent while covered), then remove class.
+            // Ensures emoji is in the DOM before the CSS transition creates a GPU compositor
+            // layer — prevents blank-emoji on iOS after heavy minimax computation.
+            el.textContent = piece.emoji;
+            el.style.backgroundColor = PLAYER_COLORS[piece.player];
             gameState.covered[move.r][move.c] = false;
             el.classList.remove('covered');
-            el.style.backgroundColor = PLAYER_COLORS[piece.player];
-            el.textContent = piece.emoji;
             if (typeof gameLog !== 'undefined') gameLog.recordUncover(piece.player, move.r, move.c, piece);
             checkGameOver();
             endTurn();
