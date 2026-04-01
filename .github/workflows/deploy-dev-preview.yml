@@ -20,3 +20,4 @@ jobs:
           publish_branch: gh-pages
           destination_dir: dev
           exclude_assets: '.github,node_modules,gamelogs'
+          keep_files: true
