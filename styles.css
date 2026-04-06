@@ -662,6 +662,6 @@ button, .cell, input[type="range"] {
         margin-bottom: 0 !important;
     }
     #board-frame {
-        transform-origin: top center;
+        transform-origin: top left;
     }
 }
