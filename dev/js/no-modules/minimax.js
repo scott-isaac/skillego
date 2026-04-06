@@ -227,7 +227,9 @@ const SkillMinimax = (function () {
             }
         }
 
-        // Piece safety: penalize pieces that are adjacent to enemies that can capture them
+        // Piece safety: penalize pieces in danger they can't fight back from.
+        // Only applies when the piece CANNOT capture its attacker (pure loss threat).
+        // Mutual-capture situations (trades) are left to the search tree to evaluate.
         for (let r = 0; r < BOARD_ROWS; r++) {
             for (let c = 0; c < BOARD_COLS; c++) {
                 const p = state.board[r][c];
@@ -237,12 +239,12 @@ const SkillMinimax = (function () {
                     if (!inBounds(nr, nc)) continue;
                     const t = state.board[nr][nc];
                     if (!t || t.player === 0 || state.covered[nr][nc] || t.player === p.player) continue;
-                    if (canCapture(t, p)) {
-                        // p is in danger from t — penalize by p's value
+                    if (canCapture(t, p) && !canCapture(p, t)) {
+                        // p is in danger and can't fight back — penalize
                         const penalty = p.power * 8;
                         if (p.player === cpuPlayer) score -= penalty;
                         else score += penalty;
-                        break; // one threat is enough to flag this piece
+                        break;
                     }
                 }
             }
