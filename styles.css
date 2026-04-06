@@ -166,8 +166,9 @@ button, .cell, input[type="range"] {
     position: absolute;
     left: 112px;
     width: 800px;
-    top: 230px;
-    max-height: 920px;
+    top: 659px;
+    transform: translateY(-50%);
+    max-height: 800px;
     overflow-y: auto;
     overflow-x: hidden;
     box-sizing: border-box;
