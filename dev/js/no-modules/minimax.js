@@ -3,6 +3,17 @@
 const SkillMinimax = (function () {
     'use strict';
 
+    // ─── Piece-set constants (lazily cached) ──────────────────────────────────
+    // PIECES is a global defined before this file loads.
+    let _startPower = null, _startCount = null;
+    function startStats() {
+        if (_startPower === null) {
+            _startPower = PIECES.reduce((s, p) => s + p.quantity * p.power, 0);
+            _startCount = PIECES.reduce((s, p) => s + p.quantity, 0);
+        }
+        return { power: _startPower, count: _startCount };
+    }
+
     // ─── Move Generation ──────────────────────────────────────────────────────
     // Returns true if transform move places a mouse adjacent to an enemy dragon,
     // or if the enemy dragon is nearly the last piece and we have no mice.
@@ -56,7 +67,40 @@ const SkillMinimax = (function () {
                     // Ability moves
                     for (const m of getPushMoves(state, r, c, enabledAbilities))    moves.push(m);
                     for (const m of getHopMoves(state, r, c, enabledAbilities))     moves.push(m);
-                    for (const m of getEngulfMoves(state, r, c, enabledAbilities))  moves.push(m);
+                    for (const m of getEngulfMoves(state, r, c, enabledAbilities)) {
+                        // Engulf is a last resort: only when an enemy mouse is adjacent AND the
+                        // dragon has no safe escape square AND cannot push the mouse away.
+                        let adjacentMouseDir = null;
+                        for (const [dr, dc] of DIRS) {
+                            const t = state.board[r + dr]?.[c + dc];
+                            if (t && t.type === 'mouse' && t.player !== player && !state.covered[r + dr]?.[c + dc]) {
+                                adjacentMouseDir = [dr, dc]; break;
+                            }
+                        }
+                        if (!adjacentMouseDir) continue; // no adjacent threat — don't engulf
+
+                        // Can the dragon push the mouse away?
+                        const [adr, adc] = adjacentMouseDir;
+                        const pushDestR = r + 2 * adr, pushDestC = c + 2 * adc;
+                        const canPush = inBounds(pushDestR, pushDestC) &&
+                                        state.board[pushDestR]?.[pushDestC] === null &&
+                                        enabledAbilities.has('push');
+
+                        // Can the dragon move to a square not adjacent to any enemy mouse?
+                        let canEscape = false;
+                        for (const { row: mr, col: mc } of getValidMoves(state, r, c)) {
+                            let threatened = false;
+                            for (const [dr2, dc2] of DIRS) {
+                                const t = state.board[mr + dr2]?.[mc + dc2];
+                                if (t && t.type === 'mouse' && t.player !== player && !state.covered[mr + dr2]?.[mc + dc2]) {
+                                    threatened = true; break;
+                                }
+                            }
+                            if (!threatened) { canEscape = true; break; }
+                        }
+
+                        if (!canEscape) moves.push(m);
+                    }
                     for (const m of getSnipeMoves(state, r, c, enabledAbilities))   captures.push(m);  // snipe removes a piece
                     for (const m of getPyroMoves(state, r, c, enabledAbilities))    moves.push(m);
                     for (const m of getTransformMoves(state, r, c, enabledAbilities)) {
@@ -80,27 +124,44 @@ const SkillMinimax = (function () {
         let score = 0;
         let cpuDragon = null, opDragon = null;
         let cpuPieces = 0, opPieces = 0;
+        let cpuVisiblePower = 0, opVisiblePower = 0;
+        let coveredCount = 0;
 
         for (let r = 0; r < BOARD_ROWS; r++) {
             for (let c = 0; c < BOARD_COLS; c++) {
                 const p = state.board[r][c];
-                if (!p || p.player === 0) continue; // skip empty and covered (identity unknown)
+                if (!p) continue;
+                if (p.player === 0) { coveredCount++; continue; } // covered — identity unknown
                 // Burning pieces are worth less — they will continue to degrade
                 const val = p.power * (p.burning ? 7.5 : 10);
                 if (p.player === cpuPlayer) {
                     score += val;
                     cpuPieces++;
+                    cpuVisiblePower += p.power;
                     if (p.type === 'dragon') cpuDragon = { r, c, burning: p.burning };
                 } else {
                     score -= val;
                     opPieces++;
+                    opVisiblePower += p.power;
                     if (p.type === 'dragon' && !opDragon) opDragon = { r, c, burning: p.burning };
                 }
             }
         }
 
+        // Expected material value of covered cells.
+        // Each player's "unaccounted" power = starting power - visible power (covers both still-covered
+        // and already-captured pieces). Scaling by coveredCount/totalRemainingCount discounts for the
+        // fraction of unaccounted pieces that are actually on the board vs already gone.
+        if (coveredCount > 0) {
+            const { power: startPower, count: startCount } = startStats();
+            const cpuUnaccounted = Math.max(0, startPower - cpuVisiblePower);
+            const opUnaccounted  = Math.max(0, startPower - opVisiblePower);
+            const totalRemaining = Math.max(1, (startCount - cpuPieces) + (startCount - opPieces));
+            score += (cpuUnaccounted - opUnaccounted) * 10 * coveredCount / totalRemaining * 0.6;
+        }
+
         // Crude terminal detection (all pieces known, one side wiped out)
-        const hasCovered = state.covered.some(row => row.some(v => v));
+        const hasCovered = coveredCount > 0;
         if (!hasCovered) {
             if (cpuPieces === 0) return -1000;
             if (opPieces  === 0) return  1000;
@@ -140,8 +201,8 @@ const SkillMinimax = (function () {
                     if (p && p.type === 'mouse' && p.player === cpuPlayer && !state.covered[r][c]) {
                         const d = Math.abs(r - opDragon.r) + Math.abs(c - opDragon.c);
                         if (d === 1) score += 45;
-                        else if (d === 2) score += 18;
-                        else if (d === 3) score += 7;
+                        else if (d === 2) score += 25;
+                        else if (d === 3) score += 10;
                     }
                 }
             }
@@ -354,5 +415,37 @@ const SkillMinimax = (function () {
         return best.move;
     }
 
-    return { getBestMove };
+    // ─── Analysis API ─────────────────────────────────────────────────────────
+    // Like getBestMove but returns ALL scored moves (no oscillation/noise) so
+    // the replay analyser can show what the engine considered at any position.
+    function getScoredMoves({ state, cpuPlayer, enabledAbilities, depth }) {
+        let coveredCount = 0;
+        for (let r = 0; r < BOARD_ROWS; r++)
+            for (let c = 0; c < BOARD_COLS; c++)
+                if (state.board[r][c] && state.covered[r][c]) coveredCount++;
+
+        if (depth == null) {
+            let opUncovered = 0;
+            for (let r = 0; r < BOARD_ROWS; r++)
+                for (let c = 0; c < BOARD_COLS; c++) {
+                    const p = state.board[r][c];
+                    if (p && p.player !== cpuPlayer && !state.covered[r][c]) opUncovered++;
+                }
+            const hunt = coveredCount === 0 && opUncovered === 1;
+            depth = coveredCount > 16 ? 3 : coveredCount > 6 ? 4 : hunt ? 7 : 5;
+        }
+
+        const moves = getAllMoves(state, cpuPlayer, enabledAbilities);
+        const scored = [];
+        let alpha = -Infinity;
+        for (const move of moves) {
+            const score = minimax(applyMove(state, move), depth - 1, alpha, Infinity, false, cpuPlayer, enabledAbilities);
+            scored.push({ move, score });
+            if (score > alpha) alpha = score;
+        }
+        scored.sort((a, b) => b.score - a.score);
+        return scored;
+    }
+
+    return { getBestMove, getScoredMoves };
 })();

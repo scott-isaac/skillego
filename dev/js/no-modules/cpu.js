@@ -93,10 +93,8 @@ function makeCpuMove() {
         if (el && piece) {
             // Suppress CSS transition during reveal — same fix as human uncover in game.js.
             el.style.transition = 'none';
-            el.textContent = piece.emoji;
-            el.style.backgroundColor = PLAYER_COLORS[piece.player];
             gameState.covered[move.r][move.c] = false;
-            el.classList.remove('covered');
+            renderCell(el, piece, false);
             requestAnimationFrame(() => requestAnimationFrame(() => {
                 el.style.transition = '';
             }));

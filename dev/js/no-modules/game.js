@@ -81,14 +81,10 @@ function handleCellClick(row, col, cellElement) {
             serverMode.sendMove({ type: 'uncover', r: row, c: col });
         } else {
             // Uncover the piece. Suppress the CSS transition during the reveal so iOS
-            // doesn't take a GPU compositor snapshot before the emoji is included.
-            // Two rAFs: first ensures a paint with transition:none (emoji visible),
-            // second restores transition for future interactions (select, valid-capture).
+            // doesn't take a GPU compositor snapshot before the image is composited.
             cellElement.style.transition = 'none';
-            cellElement.textContent = cell.emoji;
-            cellElement.style.backgroundColor = gameState.playerColors[cell.player];
             gameState.covered[row][col] = false;
-            cellElement.classList.remove('covered');
+            renderCell(cellElement, cell, false);
             requestAnimationFrame(() => requestAnimationFrame(() => {
                 cellElement.style.transition = '';
             }));
@@ -339,10 +335,8 @@ function executeHop(mouseRow, mouseCol, destRow, destCol) {
 
     const fromEl = document.querySelector(`.cell[data-row="${mouseRow}"][data-col="${mouseCol}"]`);
     const toEl   = document.querySelector(`.cell[data-row="${destRow}"][data-col="${destCol}"]`);
-    fromEl.textContent = '';
-    fromEl.style.backgroundColor = '#e0c9a6';
-    toEl.textContent = mouse.emoji;
-    toEl.style.backgroundColor = PLAYER_COLORS[mouse.player];
+    renderCell(fromEl, null, false);
+    hopPiece(fromEl, toEl, mouse, () => renderCell(toEl, mouse, false));
 
     if (typeof gameLog !== 'undefined') gameLog.recordHop(gameState.currentPlayer, mouseRow, mouseCol, destRow, destCol);
 
@@ -368,18 +362,15 @@ function executeTransform(wizRow, wizCol, mouseCells, isExplosion = false) {
     // Clear wizard cell
     gameState.board[wizRow][wizCol] = null;
     const wizEl = document.querySelector(`.cell[data-row="${wizRow}"][data-col="${wizCol}"]`);
-    wizEl.textContent = '';
-    wizEl.style.backgroundColor = '#e0c9a6';
     wizEl.classList.remove('selected');
+    renderCell(wizEl, null, false);
 
     // Place mice
     for (const { row, col } of mouseCells) {
         gameState.board[row][col] = newMouse();
         gameState.covered[row][col] = false;
         const el = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
-        el.textContent = '🐭';
-        el.style.backgroundColor = PLAYER_COLORS[player];
-        el.classList.remove('covered');
+        renderCell(el, gameState.board[row][col], false);
     }
 
     if (typeof gameLog !== 'undefined') gameLog.recordTransform(gameState.currentPlayer, wizRow, wizCol, mouseCells);
@@ -406,10 +397,8 @@ function executePush(dragonRow, dragonCol, enemyRow, enemyCol, destRow, destCol)
 
     const fromEl = document.querySelector(`.cell[data-row="${enemyRow}"][data-col="${enemyCol}"]`);
     const toEl   = document.querySelector(`.cell[data-row="${destRow}"][data-col="${destCol}"]`);
-    fromEl.textContent = '';
-    fromEl.style.backgroundColor = '#e0c9a6';
-    toEl.textContent = enemy.emoji;
-    toEl.style.backgroundColor = PLAYER_COLORS[enemy.player];
+    renderCell(fromEl, null, false);
+    renderCell(toEl, enemy, false);
 
     if (typeof gameLog !== 'undefined') {
         gameLog.recordPush(gameState.currentPlayer, dragonRow, dragonCol,
@@ -426,35 +415,32 @@ function executePush(dragonRow, dragonCol, enemyRow, enemyCol, destRow, destCol)
     endTurn();
 }
 
-function flyRobot(fromEl, toEl, playerColor, emoji, onComplete) {
+function flyRobot(fromEl, toEl, piece, onComplete) {
     if (!fromEl || !toEl) { onComplete(); return; }
 
     const rRect = fromEl.getBoundingClientRect();
     const tRect = toEl.getBoundingClientRect();
+    const color = PLAYER_ART[piece.player];
 
-    // Clone that flies across the screen
     const flyer = document.createElement('div');
-    flyer.textContent = emoji;
     Object.assign(flyer.style, {
-        position:       'fixed',
-        left:           rRect.left + 'px',
-        top:            rRect.top  + 'px',
-        width:          rRect.width  + 'px',
-        height:         rRect.height + 'px',
-        fontSize:       '30px',
-        display:        'flex',
-        alignItems:     'center',
-        justifyContent: 'center',
-        backgroundColor: playerColor,
-        borderRadius:   '4px',
-        zIndex:         '1000',
-        pointerEvents:  'none',
+        position:           'fixed',
+        left:               rRect.left + 'px',
+        top:                rRect.top  + 'px',
+        width:              rRect.width  + 'px',
+        height:             rRect.height + 'px',
+        backgroundImage:    `url('art/piece_${piece.type}.png'), url('art/player_${color}.png')`,
+        backgroundSize:     '65% 65%, 85% 85%',
+        backgroundRepeat:   'no-repeat',
+        backgroundPosition: 'center',
+        zIndex:             '1000',
+        pointerEvents:      'none',
+        willChange:         'transform',
     });
     document.body.appendChild(flyer);
 
     // Immediately clear the source cell
-    fromEl.textContent = '';
-    fromEl.style.backgroundColor = '#e0c9a6';
+    renderCell(fromEl, null, false);
 
     const dx = tRect.left - rRect.left;
     const dy = tRect.top  - rRect.top;
@@ -496,12 +482,11 @@ function executeRobotKitty(robotRow, robotCol, targetRow, targetCol) {
     if (robotEl) robotEl.classList.remove('selected');
 
     // Fly the robot — enemy piece stays visible until robot lands
-    flyRobot(robotEl, targetEl, PLAYER_COLORS[robot.player], robot.emoji, () => {
+    flyRobot(robotEl, targetEl, robot, () => {
         // Land: replace captured piece with robot
         if (targetEl) {
-            targetEl.textContent = robot.emoji;
-            targetEl.style.backgroundColor = PLAYER_COLORS[robot.player];
-            targetEl.classList.remove('covered', 'valid-move', 'valid-capture', 'burning');
+            targetEl.classList.remove('valid-move', 'valid-capture');
+            renderCell(targetEl, robot, false);
         }
         checkGameOver();
         endTurn();
@@ -517,7 +502,7 @@ function executeEngulf(row, col) {
     piece.burning = true;
 
     const el = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
-    if (el) { el.classList.add('burning'); el.classList.remove('selected'); }
+    if (el) { el.classList.remove('selected'); renderCell(el, piece, false); }
 
     if (typeof gameLog !== 'undefined') gameLog.recordEngulf(gameState.currentPlayer, row, col);
 
@@ -540,7 +525,7 @@ function executePyromania(burnerRow, burnerCol, targetRow, targetCol) {
     // Set target on fire (must already be uncovered)
     target.burning = true;
     const targetEl = document.querySelector(`.cell[data-row="${targetRow}"][data-col="${targetCol}"]`);
-    if (targetEl) targetEl.classList.add('burning');
+    if (targetEl) renderCell(targetEl, target, false);
 
     // Spreading fire costs the burner 1 power
     burner.power--;
@@ -548,15 +533,14 @@ function executePyromania(burnerRow, burnerCol, targetRow, targetCol) {
     if (burner.power <= 0) {
         gameState.board[burnerRow][burnerCol] = null;
         if (burnerEl) {
-            burnerEl.textContent = '';
-            burnerEl.style.backgroundColor = '#e0c9a6';
-            burnerEl.classList.remove('burning', 'selected');
+            burnerEl.classList.remove('selected');
+            renderCell(burnerEl, null, false);
         }
     } else {
         const lvl = BURN_LEVEL[burner.power];
         burner.type  = lvl.type;
         burner.emoji = lvl.emoji;
-        if (burnerEl) burnerEl.textContent = burner.emoji;
+        if (burnerEl) renderCell(burnerEl, burner, false);
     }
 
     if (typeof gameLog !== 'undefined') gameLog.recordPyromania(gameState.currentPlayer, burnerRow, burnerCol, targetRow, targetCol, target);

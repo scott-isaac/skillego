@@ -5,7 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Skillego</title>
     <meta name="description" content="Skillego — a hidden-information strategy board game with AI opponents ranging from Easy to Expert (minimax with alpha-beta pruning).">
-    <link rel="stylesheet" href="styles.css?v=3">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=5">
 </head>
 <body>
     <div id="game-container">
@@ -166,6 +169,10 @@
             </details>
 
             <button id="start-game-btn">Start Game</button>
+            <div style="display:flex; gap:10px; justify-content:center; margin-top:4px;">
+                <button id="load-replay-btn" class="secondary-btn">Load Replay</button>
+                <input type="file" id="replay-file-input" accept=".txt" style="display:none">
+            </div>
 
             <!-- Shown only in server mode (socket.io available) -->
             <div id="join-game-section" style="display:none">
@@ -185,28 +192,39 @@
 
         <!-- ── Game screen (hidden until Start Game) ── -->
         <div id="game-screen" style="display:none">
-            <div id="turn-indicator">Player 1's Turn</div>
-            <div id="board"></div>
-            <div id="skill-tray">
-                <button class="skill-slot" disabled></button>
-                <button class="skill-slot" disabled></button>
-                <button class="skill-slot" disabled></button>
-                <button class="skill-slot" disabled></button>
-                <button class="skill-slot" disabled></button>
-            </div>
-            <div id="controls">
-                <div class="speed-row" id="game-speed-row" style="display:none">
-                    CPU Speed:
-                    <input type="range" class="cpu-speed-slider" id="game-cpu-speed" min="0" max="3000" value="800" step="100">
-                    <span class="cpu-speed-label">0.8s</span>
+            <div id="board-frame">
+                <div id="turn-indicator">Player 1's Turn</div>
+                <div id="board"></div>
+                <div id="skill-tray">
+                    <button class="skill-slot" disabled></button>
+                    <button class="skill-slot" disabled></button>
+                    <button class="skill-slot" disabled></button>
+                    <button class="skill-slot" disabled></button>
+                    <button class="skill-slot" disabled></button>
                 </div>
-                <button id="resign-button">Resign</button>
+                <div id="replay-controls" style="display:none">
+                    <button id="replay-start"   class="replay-btn" title="Go to start">&#9198;</button>
+                    <button id="replay-prev"    class="replay-btn" title="Previous move">&#9664;</button>
+                    <span id="replay-step-counter">0 / 0</span>
+                    <button id="replay-next"    class="replay-btn" title="Next move">&#9654;</button>
+                    <button id="replay-end"     class="replay-btn" title="Go to end">&#9197;</button>
+                    <button id="replay-analyze" class="replay-btn" title="Analyze this position" disabled>🔍</button>
+                </div>
+                <div id="controls">
+                    <div class="speed-row" id="game-speed-row" style="display:none">
+                        CPU Speed:
+                        <input type="range" class="cpu-speed-slider" id="game-cpu-speed" min="0" max="3000" value="800" step="100">
+                        <span class="cpu-speed-label">0.8s</span>
+                    </div>
+                    <button id="resign-button">Resign</button>
+                    <button id="exit-replay-btn" style="display:none">Exit Replay</button>
+                </div>
             </div>
-            <details id="debug-log" style="display:none">
-                <summary>Dev Log</summary>
-                <div id="debug-content"></div>
-            </details>
         </div>
+        <details id="debug-log" style="display:none">
+            <summary>Dev Log</summary>
+            <div id="debug-content"></div>
+        </details>
 
         <!-- ── Winner overlay ── -->
         <div id="winner-message" style="display:none">
@@ -215,6 +233,7 @@
             <button id="restart-btn">Play Again</button>
             <button id="new-game-btn">New Game</button>
             <button id="copy-log-btn" onclick="gameLog.copyToClipboard()">📋 Copy Game Log</button>
+            <button id="watch-replay-btn">Watch Replay</button>
         </div>
     </div>
 
@@ -228,11 +247,47 @@
     <script src="js/no-modules/state.js?v=2"></script>
     <script src="js/no-modules/rules.js?v=2"></script>
     <script src="js/no-modules/ai-learning.js?v=2"></script>
-    <script src="js/no-modules/board.js?v=2"></script>
+    <script src="js/no-modules/board.js?v=3"></script>
     <script src="js/no-modules/minimax.js?v=2"></script>
-    <script src="js/no-modules/cpu.js?v=4"></script>
-    <script src="js/no-modules/game.js?v=4"></script>
+    <script src="js/no-modules/cpu.js?v=5"></script>
+    <script src="js/no-modules/game.js?v=5"></script>
     <script src="js/no-modules/socket-client.js?v=2"></script>
     <script src="js/no-modules/main.js?v=2"></script>
+    <script src="js/no-modules/replay.js"></script>
+    <script>
+        (function() {
+            document.getElementById('watch-replay-btn').addEventListener('click', function() {
+                const text = gameLog.getText();
+                if (GameReplay.load(text)) {
+                    GameReplay.enter();
+                } else {
+                    alert('No game to replay yet.');
+                }
+            });
+            document.getElementById('load-replay-btn').addEventListener('click', function() {
+                document.getElementById('replay-file-input').click();
+            });
+            document.getElementById('replay-file-input').addEventListener('change', function() {
+                const file = this.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    if (GameReplay.load(e.target.result)) {
+                        GameReplay.enter();
+                    } else {
+                        alert('Could not parse game log — check the file format.');
+                    }
+                };
+                reader.readAsText(file);
+                this.value = '';
+            });
+            document.getElementById('exit-replay-btn').addEventListener('click', function() { GameReplay.exit(); });
+            document.getElementById('replay-start')  .addEventListener('click', function() { GameReplay.goToStart(); });
+            document.getElementById('replay-prev')   .addEventListener('click', function() { GameReplay.goBack(); });
+            document.getElementById('replay-next')   .addEventListener('click', function() { GameReplay.goForward(); });
+            document.getElementById('replay-end')    .addEventListener('click', function() { GameReplay.goToEnd(); });
+            document.getElementById('replay-analyze').addEventListener('click', function() { GameReplay.analyze(); });
+        })();
+    </script>
 </body>
 </html>

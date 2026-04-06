@@ -198,6 +198,10 @@ const gameLog = {
         if (btn) { btn.textContent = '✓ Saved!'; setTimeout(() => btn.textContent = '📝 Add Note', 1500); }
     },
 
+    getText() {
+        return this.saveToStorage();
+    },
+
     copyToClipboard() {
         const text = localStorage.getItem('skillego_last_game_log') || '(no game log saved yet — play a game first)';
         navigator.clipboard.writeText(text).then(() => {
