@@ -429,7 +429,7 @@ function flyRobot(fromEl, toEl, piece, onComplete) {
         top:                rRect.top  + 'px',
         width:              rRect.width  + 'px',
         height:             rRect.height + 'px',
-        backgroundImage:    `url('art/piece_${piece.type}.png'), url('art/player_${color}.png')`,
+        backgroundImage:    `url('assets/piece_${piece.type}.png'), url('assets/player_${color}.png')`,
         backgroundSize:     '65% 65%, 85% 85%',
         backgroundRepeat:   'no-repeat',
         backgroundPosition: 'center',
