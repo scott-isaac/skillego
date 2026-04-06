@@ -166,17 +166,16 @@ const PLAYER_ART = ['', 'red', 'blue', 'yellow', 'green'];
 // onLand fires when the ghost arrives; ghost fades out and is removed shortly after.
 function slidePiece(fromEl, toEl, piece, onLand) {
     if (!fromEl || !toEl) { if (onLand) onLand(); return; }
-    const fromRect = fromEl.getBoundingClientRect();
-    const toRect   = toEl.getBoundingClientRect();
-    const color    = PLAYER_ART[piece.player];
+    const board = document.getElementById('board');
+    const color = PLAYER_ART[piece.player];
 
     const ghost = document.createElement('div');
     ghost.style.cssText = [
-        'position:fixed',
-        `left:${fromRect.left}px`,
-        `top:${fromRect.top}px`,
-        `width:${fromRect.width}px`,
-        `height:${fromRect.height}px`,
+        'position:absolute',
+        `left:${fromEl.offsetLeft}px`,
+        `top:${fromEl.offsetTop}px`,
+        `width:${fromEl.offsetWidth}px`,
+        `height:${fromEl.offsetHeight}px`,
         `background-image:url('assets/piece_${piece.type}.png'),url('assets/player_${color}.png')`,
         'background-size:65% 65%,85% 85%',
         'background-repeat:no-repeat',
@@ -185,10 +184,10 @@ function slidePiece(fromEl, toEl, piece, onLand) {
         'z-index:1000',
         'will-change:transform,opacity',
     ].join(';');
-    document.body.appendChild(ghost);
+    board.appendChild(ghost);
 
-    const dx = toRect.left - fromRect.left;
-    const dy = toRect.top  - fromRect.top;
+    const dx = toEl.offsetLeft - fromEl.offsetLeft;
+    const dy = toEl.offsetTop  - fromEl.offsetTop;
     const SLIDE_MS = 140;
 
     requestAnimationFrame(() => {
@@ -204,17 +203,16 @@ function slidePiece(fromEl, toEl, piece, onLand) {
 // Flip the mouse ghost from source over the piece in the middle, landing at destination.
 function hopPiece(fromEl, toEl, piece, onLand) {
     if (!fromEl || !toEl) { if (onLand) onLand(); return; }
-    const fromRect = fromEl.getBoundingClientRect();
-    const toRect   = toEl.getBoundingClientRect();
-    const color    = PLAYER_ART[piece.player];
+    const board = document.getElementById('board');
+    const color = PLAYER_ART[piece.player];
 
     const ghost = document.createElement('div');
     ghost.style.cssText = [
-        'position:fixed',
-        `left:${fromRect.left}px`,
-        `top:${fromRect.top}px`,
-        `width:${fromRect.width}px`,
-        `height:${fromRect.height}px`,
+        'position:absolute',
+        `left:${fromEl.offsetLeft}px`,
+        `top:${fromEl.offsetTop}px`,
+        `width:${fromEl.offsetWidth}px`,
+        `height:${fromEl.offsetHeight}px`,
         `background-image:url('assets/piece_${piece.type}.png'),url('assets/player_${color}.png')`,
         'background-size:65% 65%,85% 85%',
         'background-repeat:no-repeat',
@@ -222,10 +220,10 @@ function hopPiece(fromEl, toEl, piece, onLand) {
         'pointer-events:none',
         'z-index:1000',
     ].join(';');
-    document.body.appendChild(ghost);
+    board.appendChild(ghost);
 
-    const dx  = toRect.left - fromRect.left;
-    const dy  = toRect.top  - fromRect.top;
+    const dx  = toEl.offsetLeft - fromEl.offsetLeft;
+    const dy  = toEl.offsetTop  - fromEl.offsetTop;
     const DUR = 260;
 
     // Use rotateY for left/right hops, rotateX for up/down hops
