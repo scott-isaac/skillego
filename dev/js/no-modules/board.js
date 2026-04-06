@@ -177,7 +177,7 @@ function slidePiece(fromEl, toEl, piece, onLand) {
         `top:${fromRect.top}px`,
         `width:${fromRect.width}px`,
         `height:${fromRect.height}px`,
-        `background-image:url('art/piece_${piece.type}.png'),url('art/player_${color}.png')`,
+        `background-image:url('assets/piece_${piece.type}.png'),url('assets/player_${color}.png')`,
         'background-size:65% 65%,85% 85%',
         'background-repeat:no-repeat',
         'background-position:center',
@@ -215,7 +215,7 @@ function hopPiece(fromEl, toEl, piece, onLand) {
         `top:${fromRect.top}px`,
         `width:${fromRect.width}px`,
         `height:${fromRect.height}px`,
-        `background-image:url('art/piece_${piece.type}.png'),url('art/player_${color}.png')`,
+        `background-image:url('assets/piece_${piece.type}.png'),url('assets/player_${color}.png')`,
         'background-size:65% 65%,85% 85%',
         'background-repeat:no-repeat',
         'background-position:center',
@@ -247,7 +247,7 @@ function hopPiece(fromEl, toEl, piece, onLand) {
 // Call with (el, piece, covered). Always pass the current board state values.
 function renderCell(el, piece, covered) {
     el.textContent = '';
-    const tile = `url('art/tile_${el.dataset.tile || '1'}.png')`;
+    const tile = `url('assets/tile_${el.dataset.tile || '1'}.png')`;
     if (!piece) {
         // Empty square — just the stone tile
         el.style.backgroundImage = tile;
@@ -256,7 +256,7 @@ function renderCell(el, piece, covered) {
         el.classList.remove('covered', 'burning');
     } else if (covered) {
         // Covered piece — ? overlay on stone tile
-        el.style.backgroundImage = `url('art/piece_uncovered.png'), ${tile}`;
+        el.style.backgroundImage = `url('assets/piece_uncovered.png'), ${tile}`;
         el.style.backgroundSize  = '75% 75%, 100% 100%';
         el.style.backgroundColor = '';
         el.classList.add('covered');
@@ -265,10 +265,10 @@ function renderCell(el, piece, covered) {
         // Revealed: piece + [fire gif if burning] + player colour + stone tile
         const color = PLAYER_ART[piece.player];
         if (piece.burning) {
-            el.style.backgroundImage = `url('art/piece_${piece.type}.png'), url('art/gifs/fire_${color}.gif'), url('art/player_${color}.png'), ${tile}`;
+            el.style.backgroundImage = `url('assets/piece_${piece.type}.png'), url('assets/gifs/fire_${color}.gif'), url('assets/player_${color}.png'), ${tile}`;
             el.style.backgroundSize  = '63% 63%, 107% 72%, 85% 85%, 100% 100%';
         } else {
-            el.style.backgroundImage = `url('art/piece_${piece.type}.png'), url('art/player_${color}.png'), ${tile}`;
+            el.style.backgroundImage = `url('assets/piece_${piece.type}.png'), url('assets/player_${color}.png'), ${tile}`;
             el.style.backgroundSize  = '65% 65%, 85% 85%, 100% 100%';
         }
         el.style.backgroundColor = '';
