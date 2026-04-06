@@ -2,50 +2,69 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Skillego</title>
     <meta name="description" content="Skillego — a hidden-information strategy board game with AI opponents ranging from Easy to Expert (minimax with alpha-beta pruning).">
-    <link rel="stylesheet" href="styles.css?v=3">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=5">
 </head>
 <body>
     <div id="game-container">
         <h1>Skillego</h1>
 
-        <!-- ── Setup screen ── -->
-        <div id="setup-screen">
-            <p class="tagline">Hidden-information strategy · Capture all enemy pieces to win</p>
+        <div id="game-screen">
+            <div id="board-frame">
+                <div id="turn-indicator" style="display:none">Player 1's Turn</div>
+                <div id="board"></div>
+
+                <!-- setup-screen is outside board-frame to avoid scaling -->
+
+                <div id="skill-tray">
+                    <button class="skill-slot" disabled></button>
+                    <button class="skill-slot" disabled></button>
+                    <button class="skill-slot" disabled></button>
+                    <button class="skill-slot" disabled></button>
+                    <button class="skill-slot" disabled></button>
+                </div>
+                <div id="replay-controls" style="display:none">
+                    <button id="replay-start"   class="replay-btn" title="Go to start">&#9198;</button>
+                    <button id="replay-prev"    class="replay-btn" title="Previous move">&#9664;</button>
+                    <span id="replay-step-counter">0 / 0</span>
+                    <button id="replay-next"    class="replay-btn" title="Next move">&#9654;</button>
+                    <button id="replay-end"     class="replay-btn" title="Go to end">&#9197;</button>
+                    <button id="replay-analyze" class="replay-btn" title="Analyze this position" disabled>🔍</button>
+                </div>
+                <div id="controls">
+                    <div class="speed-row" id="game-speed-row" style="display:none">
+                        CPU Speed:
+                        <input type="range" class="cpu-speed-slider" id="game-cpu-speed" min="0" max="3000" value="800" step="100">
+                        <span class="cpu-speed-label">0.8s</span>
+                    </div>
+                    <button id="exit-replay-btn" style="display:none">Exit Replay</button>
+                </div>
+                <button id="resign-button" style="display:none">Resign</button>
+                <button id="help-button" style="display:none">?</button>
+
+                <!-- ── Rules overlay (shown by ? button during game) ── -->
+                <div id="rules-overlay" class="board-overlay" style="display:none">
+                    <h2 id="rules-overlay-title">How to Play</h2>
+                    <div id="rules-overlay-content"></div>
+                    <button id="close-rules-btn">Close</button>
+                </div>
+
+                <!-- ── Setup overlay ── -->
+        <div id="setup-screen" class="board-overlay">
 
             <details class="rules-toggle">
                 <summary>How to Play</summary>
-                <div class="rules-body">
-                    <p>All 18 pieces per side start <strong>face-down</strong> on a 6×6 board. On your turn, either <strong>flip a covered piece</strong> to reveal it, or <strong>move an uncovered piece</strong> one step (orthogonal).</p>
-                    <p><strong>Piece hierarchy</strong> (higher captures lower):</p>
-                    <table class="piece-table">
-                        <tr><td>🐉</td><td>Dragon</td><td>×1</td></tr>
-                        <tr><td>🤖</td><td>Robot</td><td>×1</td></tr>
-                        <tr><td>🧙‍♂️</td><td>Wizard</td><td>×2</td></tr>
-                        <tr><td>🐶</td><td>Dog</td><td>×4</td></tr>
-                        <tr><td>😸</td><td>Cat</td><td>×4</td></tr>
-                        <tr><td>🐭</td><td>Mouse</td><td>×6</td></tr>
-                    </table>
-                    <p><strong>Special rules:</strong> 🐭 Mouse captures 🐉 Dragon — but Dragon beats everything else.</p>
-                    <p><strong>Abilities</strong> (can be toggled on/off in setup):</p>
-                    <table class="piece-table">
-                        <tr><td>🐉</td><td><strong>Dragon — Push:</strong> Push an adjacent enemy one square away (space behind must be clear).</td></tr>
-                        <tr><td>🐉</td><td><strong>Dragon — Enflame:</strong> Go up in flames. Burning Dragon is immune to Mice and can kill them — but loses 1 power every time it moves, cycling down through the piece hierarchy until it burns out.</td></tr>
-                        <tr><td>🐭</td><td><strong>Mouse — Hop:</strong> Jump over any adjacent piece to the empty square beyond it.</td></tr>
-                        <tr><td>🧙‍♂️</td><td><strong>Wizard — Transform:</strong> Permanently become 4 Mice — line (Wizard stays + 3 extend in a direction) or explosion (Wizard vanishes, 4 Mice surround it).</td></tr>
-                        <tr><td>🤖</td><td><strong>Robot Wants Kitty:</strong> If a Robot sees a friendly Kitty in danger from another piece, it can race to help — capturing any enemy along a clear orthogonal line if a friendly (non-burning) Cat is adjacent to the target. The Robot moves to the target's square. A burning Robot cannot snipe.</td></tr>
-                        <tr><td>🔥</td><td><strong>Pyromania:</strong> Any burning piece can spread fire to an adjacent uncovered enemy, setting it ablaze. Costs the spreader 1 power level — all the way to burnout.</td></tr>
-                    </table>
-                    <p>When a piece with an ability is selected, action buttons appear in the skill tray below the board.</p>
-                    <p>Eliminate all opponent pieces to win.</p>
-                </div>
+                <div class="rules-body" id="setup-rules-body"></div>
             </details>
 
-            <div class="player-config">
-                <div class="player-row" style="justify-content:center; padding-bottom:8px; border-bottom:1px solid #d2c1a3; margin-bottom:4px;">
-                    <label style="font-weight:bold; color:#6e583b; margin-right:10px;">Players:</label>
+                    <div class="player-config">
+                        <div class="player-row dev-only" style="justify-content:center; padding-bottom:8px; border-bottom:1px solid #4a3520; margin-bottom:4px;">
+                            <label style="font-weight:bold; color:#c8a96e; margin-right:10px;">Players:</label>
                     <select id="num-players-select">
                         <option value="2" selected>2 Players</option>
                         <option value="4">4 Players</option>
@@ -111,13 +130,13 @@
                 </div>
             </div>
             <details class="abilities-toggle">
-                <summary>Abilities <span id="abilities-count" style="font-weight:normal;color:#888;font-size:12px"></span></summary>
+                <summary>Special Abilities <span id="abilities-count" style="font-weight:normal;color:#888"></span></summary>
                 <div class="abilities-body">
                     <p class="abilities-hint">Choose which special abilities are available in this game.</p>
                     <div class="ability-row">
                         <label class="ability-label">
                             <input type="checkbox" class="ability-toggle" value="push" checked>
-                            <span class="ability-emoji">🐉</span>
+                            <img class="ability-emoji" src="assets/piece_dragon.png" alt="Dragon">
                             <span class="ability-name">Dragon — Push</span>
                         </label>
                         <span class="ability-desc">Push an adjacent enemy one square away (space behind must be clear).</span>
@@ -125,15 +144,15 @@
                     <div class="ability-row">
                         <label class="ability-label">
                             <input type="checkbox" class="ability-toggle" value="engulf" checked>
-                            <span class="ability-emoji">🐉</span>
-                            <span class="ability-name">Dragon — Enflame 🔥</span>
+                            <span class="piece-icon-fire ability-emoji"><img class="fire-bg" src="assets/gifs/fire_red.gif" alt=""><img class="piece-fg" src="assets/piece_dragon.png" alt="Dragon"></span>
+                            <span class="ability-name">Dragon — Enflame</span>
                         </label>
                         <span class="ability-desc">Go up in flames. Immune to Mice, can kill Mice — but loses 1 power on every move, cycling down through all pieces until it burns out.</span>
                     </div>
                     <div class="ability-row">
                         <label class="ability-label">
                             <input type="checkbox" class="ability-toggle" value="hop" checked>
-                            <span class="ability-emoji">🐭</span>
+                            <img class="ability-emoji" src="assets/piece_mouse.png" alt="Mouse">
                             <span class="ability-name">Mouse — Hop</span>
                         </label>
                         <span class="ability-desc">Jump over any adjacent piece to the empty square beyond it.</span>
@@ -141,7 +160,7 @@
                     <div class="ability-row">
                         <label class="ability-label">
                             <input type="checkbox" class="ability-toggle" value="snipe" checked>
-                            <span class="ability-emoji">🤖</span>
+                            <img class="ability-emoji" src="assets/piece_robot.png" alt="Robot">
                             <span class="ability-name">Robot Wants Kitty</span>
                         </label>
                         <span class="ability-desc">Robot captures any enemy along a clear line if a friendly Cat is spotting it. Hover a direction button to see target + spotter highlighted.</span>
@@ -149,7 +168,7 @@
                     <div class="ability-row">
                         <label class="ability-label">
                             <input type="checkbox" class="ability-toggle" value="transform" checked>
-                            <span class="ability-emoji">🧙‍♂️</span>
+                            <img class="ability-emoji" src="assets/piece_wizard.png" alt="Wizard">
                             <span class="ability-name">Wizard — Transform</span>
                         </label>
                         <span class="ability-desc">Permanently become 4 Mice — line direction or 4-way explosion.</span>
@@ -157,7 +176,7 @@
                     <div class="ability-row">
                         <label class="ability-label">
                             <input type="checkbox" class="ability-toggle" value="pyromania" checked>
-                            <span class="ability-emoji">🔥</span>
+                            <img class="ability-emoji" src="assets/gifs/fire_red.gif" alt="Fire">
                             <span class="ability-name">Pyromania</span>
                         </label>
                         <span class="ability-desc">Any burning piece can spread fire to an adjacent uncovered enemy. Costs the spreader 1 power — all the way to burnout.</span>
@@ -166,57 +185,84 @@
             </details>
 
             <button id="start-game-btn">Start Game</button>
+            <div class="dev-only" style="display:flex; gap:10px; justify-content:center; margin-top:4px;">
+                <button id="load-replay-btn" class="secondary-btn">Load Replay</button>
+                <input type="file" id="replay-file-input" accept=".txt" style="display:none">
+            </div>
 
             <!-- Shown only in server mode (socket.io available) -->
             <div id="join-game-section" style="display:none">
-                <hr style="border:none;border-top:1px solid #d2c1a3;margin:14px 0">
-                <p style="text-align:center;margin:0 0 8px;font-size:14px;color:#6e583b">
+                <hr style="border:none;border-top:1px solid #4a3520;margin:14px 0">
+                <p style="text-align:center;margin:0 0 8px;font-size:14px;color:#c8a96e">
                     Have a friend's game code?
                 </p>
                 <div style="display:flex;gap:8px;justify-content:center">
                     <input id="join-code-input" type="text" placeholder="ABCD1234" maxlength="8"
                            style="text-transform:uppercase;letter-spacing:3px;width:110px;
                                   text-align:center;padding:6px;font-size:15px;
-                                  border:1px solid #c0a882;border-radius:4px">
+                                  border:1px solid #4a3520;border-radius:4px;
+                                  background:#2a1e10;color:#c8b080">
                     <button id="join-game-btn">Join</button>
                 </div>
             </div>
         </div>
 
-        <!-- ── Game screen (hidden until Start Game) ── -->
-        <div id="game-screen" style="display:none">
-            <div id="turn-indicator">Player 1's Turn</div>
-            <div id="board"></div>
-            <div id="skill-tray">
-                <button class="skill-slot" disabled></button>
-                <button class="skill-slot" disabled></button>
-                <button class="skill-slot" disabled></button>
-                <button class="skill-slot" disabled></button>
-                <button class="skill-slot" disabled></button>
-            </div>
-            <div id="controls">
-                <div class="speed-row" id="game-speed-row" style="display:none">
-                    CPU Speed:
-                    <input type="range" class="cpu-speed-slider" id="game-cpu-speed" min="0" max="3000" value="800" step="100">
-                    <span class="cpu-speed-label">0.8s</span>
-                </div>
-                <button id="resign-button">Resign</button>
-            </div>
-            <details id="debug-log" style="display:none">
-                <summary>Dev Log</summary>
-                <div id="debug-content"></div>
-            </details>
-        </div>
+        <details id="debug-log" style="display:none">
+            <summary>Dev Log</summary>
+            <div id="debug-content"></div>
+        </details>
 
         <!-- ── Winner overlay ── -->
-        <div id="winner-message" style="display:none">
+        <div id="winner-message" class="board-overlay" style="display:none">
             <div id="winner-text"></div>
             <div id="winner-score"></div>
             <button id="restart-btn">Play Again</button>
             <button id="new-game-btn">New Game</button>
-            <button id="copy-log-btn" onclick="gameLog.copyToClipboard()">📋 Copy Game Log</button>
+            <button id="copy-log-btn" class="dev-only" onclick="gameLog.copyToClipboard()">📋 Copy Game Log</button>
+            <button id="watch-replay-btn" class="dev-only">Watch Replay</button>
         </div>
     </div>
+
+    <!-- Dev mode: auto-enabled on /dev/ path, ?dev=1, or local file:// -->
+    <script>
+        window.DEV_MODE = location.search.includes('dev=0') ? false
+            : location.pathname.includes('/dev/')
+            || location.search.includes('dev=1')
+            || location.protocol === 'file:';
+        if (!window.DEV_MODE) {
+            document.addEventListener('DOMContentLoaded', function() {
+                document.querySelectorAll('.dev-only').forEach(function(el) {
+                    el.style.display = 'none';
+                });
+            });
+        }
+    </script>
+
+    <!-- ── Shared rules content (stamped into setup + overlay via JS) ── -->
+    <template id="rules-template">
+        <p>Each player has 18 pieces that are randomly mixed and placed <strong>face-down</strong> on a 6×6 board. On your turn, either <strong>flip a covered piece</strong> to reveal it, or <strong>move an uncovered piece</strong> one step (orthogonal). Capture all enemy pieces to win.</p>
+        <p><strong>Piece hierarchy</strong> (higher captures lower):</p>
+        <table class="piece-table">
+            <tr><td><img class="piece-icon" src="assets/piece_dragon.png" alt="Dragon"></td><td>Dragon</td><td>×1</td></tr>
+            <tr><td><img class="piece-icon" src="assets/piece_robot.png" alt="Robot"></td><td>Robot</td><td>×1</td></tr>
+            <tr><td><img class="piece-icon" src="assets/piece_wizard.png" alt="Wizard"></td><td>Wizard</td><td>×2</td></tr>
+            <tr><td><img class="piece-icon" src="assets/piece_dog.png" alt="Dog"></td><td>Dog</td><td>×4</td></tr>
+            <tr><td><img class="piece-icon" src="assets/piece_cat.png" alt="Cat"></td><td>Cat</td><td>×4</td></tr>
+            <tr><td><img class="piece-icon" src="assets/piece_mouse.png" alt="Mouse"></td><td>Mouse</td><td>×6</td></tr>
+        </table>
+        <p><strong>Exception:</strong> <img class="piece-icon" src="assets/piece_mouse.png" alt="Mouse"> Mouse captures <img class="piece-icon" src="assets/piece_dragon.png" alt="Dragon"> Dragon — but Dragon beats everything else.</p>        
+        <p><strong>Special Abilities</strong> (can be toggled on/off in setup):</p>
+        <table class="piece-table">
+            <tr><td><img class="piece-icon" src="assets/piece_dragon.png" alt="Dragon"></td><td><strong>Dragon — Push:</strong> Push an adjacent enemy one square away (space behind must be clear).</td></tr>
+            <tr><td><span class="piece-icon-fire"><img class="fire-bg" src="assets/gifs/fire_red.gif" alt=""><img class="piece-fg" src="assets/piece_dragon.png" alt="Dragon"></span></td><td><strong>Dragon — Enflame:</strong> Go up in flames. Burning Dragon is immune to Mice and can kill them — but loses 1 power every time it moves, cycling down through the piece hierarchy until it burns out.</td></tr>
+            <tr><td><img class="piece-icon" src="assets/piece_mouse.png" alt="Mouse"></td><td><strong>Mouse — Hop:</strong> Jump over any adjacent piece to the empty square beyond it.</td></tr>
+            <tr><td><img class="piece-icon" src="assets/piece_wizard.png" alt="Wizard"></td><td><strong>Wizard — Transform:</strong> Permanently become 4 Mice — line (Wizard stays + 3 extend in a direction) or explosion (Wizard vanishes, 4 Mice surround it).</td></tr>
+            <tr><td><img class="piece-icon" src="assets/piece_robot.png" alt="Robot"></td><td><strong>Robot Wants Kitty:</strong> If a Robot sees a friendly Kitty in danger from another piece, it can race to help — capturing any enemy along a clear orthogonal line if a friendly (non-burning) Cat is adjacent to the target. The Robot moves to the target's square. A burning Robot cannot snipe.</td></tr>
+            <tr><td><img class="piece-icon" src="assets/gifs/fire_red.gif" alt="Fire"></td><td><strong>Pyromania:</strong> Any burning piece can spread fire to an adjacent uncovered enemy, setting it ablaze. Costs the spreader 1 power level — all the way to burnout.</td></tr>
+        </table>
+        <p>When a piece with an ability is selected, action buttons appear in the skill tray below the board.</p>
+        <p>Eliminate all opponent pieces to win.</p>
+    </template>
 
     <!-- Load scripts in the correct order (no modules) -->
     <!-- socket.io is auto-served by the Node server. On GitHub Pages it 404s
@@ -228,11 +274,109 @@
     <script src="js/no-modules/state.js?v=2"></script>
     <script src="js/no-modules/rules.js?v=2"></script>
     <script src="js/no-modules/ai-learning.js?v=2"></script>
-    <script src="js/no-modules/board.js?v=2"></script>
+    <script src="js/no-modules/board.js?v=3"></script>
     <script src="js/no-modules/minimax.js?v=2"></script>
-    <script src="js/no-modules/cpu.js?v=3"></script>
-    <script src="js/no-modules/game.js?v=3"></script>
+    <script src="js/no-modules/cpu.js?v=5"></script>
+    <script src="js/no-modules/game.js?v=5"></script>
     <script src="js/no-modules/socket-client.js?v=2"></script>
     <script src="js/no-modules/main.js?v=2"></script>
+    <script src="js/no-modules/replay.js"></script>
+    <script>
+        (function() {
+            document.getElementById('watch-replay-btn').addEventListener('click', function() {
+                const text = gameLog.getText();
+                if (GameReplay.load(text)) {
+                    GameReplay.enter();
+                } else {
+                    alert('No game to replay yet.');
+                }
+            });
+            document.getElementById('load-replay-btn').addEventListener('click', function() {
+                document.getElementById('replay-file-input').click();
+            });
+            document.getElementById('replay-file-input').addEventListener('change', function() {
+                const file = this.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    if (GameReplay.load(e.target.result)) {
+                        GameReplay.enter();
+                    } else {
+                        alert('Could not parse game log — check the file format.');
+                    }
+                };
+                reader.readAsText(file);
+                this.value = '';
+            });
+            document.getElementById('exit-replay-btn').addEventListener('click', function() { GameReplay.exit(); });
+            document.getElementById('replay-start')  .addEventListener('click', function() { GameReplay.goToStart(); });
+            document.getElementById('replay-prev')   .addEventListener('click', function() { GameReplay.goBack(); });
+            document.getElementById('replay-next')   .addEventListener('click', function() { GameReplay.goForward(); });
+            document.getElementById('replay-end')    .addEventListener('click', function() { GameReplay.goToEnd(); });
+            document.getElementById('replay-analyze').addEventListener('click', function() { GameReplay.analyze(); });
+
+            // Stamp rules template into setup details + overlay
+            var tpl = document.getElementById('rules-template');
+            document.getElementById('setup-rules-body').appendChild(tpl.content.cloneNode(true));
+            document.getElementById('rules-overlay-content').appendChild(tpl.content.cloneNode(true));
+
+            // ? help button
+            document.getElementById('help-button').addEventListener('click', function() {
+                document.getElementById('rules-overlay').style.display = '';
+            });
+            document.getElementById('close-rules-btn').addEventListener('click', function() {
+                document.getElementById('rules-overlay').style.display = 'none';
+            });
+        })();
+    </script>
+    <script>
+        /* ── Viewport scaling ── */
+        (function() {
+            var gameScreen = document.getElementById('game-screen');
+            var boardFrame = document.getElementById('board-frame');
+            if (!gameScreen || !boardFrame) return;
+
+            function fitToViewport() {
+                var vw = window.innerWidth;
+                var vh = window.innerHeight;
+                var isMobile = vw <= 640;
+
+                // Scale board-frame to fill viewport height
+                var maxRenderedH = vh;
+                var frameScale = maxRenderedH / 1536;
+                if (1024 * frameScale > vw) frameScale = vw / 1024;
+
+                var renderedW = 1024 * frameScale;
+                var renderedH = 1536 * frameScale;
+
+                boardFrame.style.transform = 'scale(' + frameScale + ')';
+                boardFrame.style.transformOrigin = 'top left';
+
+                if (isMobile) {
+                    // On mobile, game-screen is 100vw via CSS; center board inside it
+                    boardFrame.style.marginLeft = ((vw - renderedW) / 2) + 'px';
+                    gameScreen.style.width = '';
+                    gameScreen.style.height = '';
+                    gameScreen.style.margin = '';
+                } else {
+                    // On desktop, size game-screen to rendered board and center via margin auto
+                    boardFrame.style.marginLeft = '0';
+                    gameScreen.style.width  = renderedW + 'px';
+                    gameScreen.style.height = renderedH + 'px';
+                    gameScreen.style.margin = '0 auto';
+                }
+                gameScreen.style.overflow = 'hidden';
+            }
+
+            window.addEventListener('resize', fitToViewport);
+            window.addEventListener('orientationchange', fitToViewport);
+            // Run on game start — observe when game-screen becomes visible
+            var obs = new MutationObserver(function() {
+                if (gameScreen.style.display !== 'none') fitToViewport();
+            });
+            obs.observe(gameScreen, { attributes: true, attributeFilter: ['style'] });
+            fitToViewport();
+        })();
+    </script>
 </body>
 </html>

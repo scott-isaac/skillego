@@ -80,13 +80,14 @@ function handleCellClick(row, col, cellElement) {
         if (typeof serverMode !== 'undefined' && serverMode.active) {
             serverMode.sendMove({ type: 'uncover', r: row, c: col });
         } else {
-            // Uncover the piece — set text FIRST (hidden by color:transparent while covered),
-            // then remove class. This ensures the emoji is in the DOM before the CSS transition
-            // creates a GPU compositor layer, preventing blank-emoji on iOS.
-            cellElement.textContent = cell.emoji;
-            cellElement.style.backgroundColor = gameState.playerColors[cell.player];
+            // Uncover the piece. Suppress the CSS transition during the reveal so iOS
+            // doesn't take a GPU compositor snapshot before the image is composited.
+            cellElement.style.transition = 'none';
             gameState.covered[row][col] = false;
-            cellElement.classList.remove('covered');
+            renderCell(cellElement, cell, false);
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                cellElement.style.transition = '';
+            }));
             if (typeof gameLog !== 'undefined') gameLog.recordUncover(gameState.currentPlayer, row, col, cell);
             checkGameOver();
             endTurn();
@@ -334,10 +335,8 @@ function executeHop(mouseRow, mouseCol, destRow, destCol) {
 
     const fromEl = document.querySelector(`.cell[data-row="${mouseRow}"][data-col="${mouseCol}"]`);
     const toEl   = document.querySelector(`.cell[data-row="${destRow}"][data-col="${destCol}"]`);
-    fromEl.textContent = '';
-    fromEl.style.backgroundColor = '#e0c9a6';
-    toEl.textContent = mouse.emoji;
-    toEl.style.backgroundColor = PLAYER_COLORS[mouse.player];
+    renderCell(fromEl, null, false);
+    hopPiece(fromEl, toEl, mouse, () => renderCell(toEl, mouse, false));
 
     if (typeof gameLog !== 'undefined') gameLog.recordHop(gameState.currentPlayer, mouseRow, mouseCol, destRow, destCol);
 
@@ -363,18 +362,15 @@ function executeTransform(wizRow, wizCol, mouseCells, isExplosion = false) {
     // Clear wizard cell
     gameState.board[wizRow][wizCol] = null;
     const wizEl = document.querySelector(`.cell[data-row="${wizRow}"][data-col="${wizCol}"]`);
-    wizEl.textContent = '';
-    wizEl.style.backgroundColor = '#e0c9a6';
     wizEl.classList.remove('selected');
+    renderCell(wizEl, null, false);
 
     // Place mice
     for (const { row, col } of mouseCells) {
         gameState.board[row][col] = newMouse();
         gameState.covered[row][col] = false;
         const el = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
-        el.textContent = '🐭';
-        el.style.backgroundColor = PLAYER_COLORS[player];
-        el.classList.remove('covered');
+        renderCell(el, gameState.board[row][col], false);
     }
 
     if (typeof gameLog !== 'undefined') gameLog.recordTransform(gameState.currentPlayer, wizRow, wizCol, mouseCells);
@@ -401,10 +397,8 @@ function executePush(dragonRow, dragonCol, enemyRow, enemyCol, destRow, destCol)
 
     const fromEl = document.querySelector(`.cell[data-row="${enemyRow}"][data-col="${enemyCol}"]`);
     const toEl   = document.querySelector(`.cell[data-row="${destRow}"][data-col="${destCol}"]`);
-    fromEl.textContent = '';
-    fromEl.style.backgroundColor = '#e0c9a6';
-    toEl.textContent = enemy.emoji;
-    toEl.style.backgroundColor = PLAYER_COLORS[enemy.player];
+    renderCell(fromEl, null, false);
+    renderCell(toEl, enemy, false);
 
     if (typeof gameLog !== 'undefined') {
         gameLog.recordPush(gameState.currentPlayer, dragonRow, dragonCol,
@@ -421,38 +415,34 @@ function executePush(dragonRow, dragonCol, enemyRow, enemyCol, destRow, destCol)
     endTurn();
 }
 
-function flyRobot(fromEl, toEl, playerColor, emoji, onComplete) {
+function flyRobot(fromEl, toEl, piece, onComplete) {
     if (!fromEl || !toEl) { onComplete(); return; }
 
-    const rRect = fromEl.getBoundingClientRect();
-    const tRect = toEl.getBoundingClientRect();
+    const board = document.getElementById('board');
+    const color = PLAYER_ART[piece.player];
 
-    // Clone that flies across the screen
     const flyer = document.createElement('div');
-    flyer.textContent = emoji;
     Object.assign(flyer.style, {
-        position:       'fixed',
-        left:           rRect.left + 'px',
-        top:            rRect.top  + 'px',
-        width:          rRect.width  + 'px',
-        height:         rRect.height + 'px',
-        fontSize:       '30px',
-        display:        'flex',
-        alignItems:     'center',
-        justifyContent: 'center',
-        backgroundColor: playerColor,
-        borderRadius:   '4px',
-        zIndex:         '1000',
-        pointerEvents:  'none',
+        position:           'absolute',
+        left:               fromEl.offsetLeft + 'px',
+        top:                fromEl.offsetTop  + 'px',
+        width:              fromEl.offsetWidth  + 'px',
+        height:             fromEl.offsetHeight + 'px',
+        backgroundImage:    `url('assets/piece_${piece.type}.png'), url('assets/player_${color}.png')`,
+        backgroundSize:     '65% 65%, 85% 85%',
+        backgroundRepeat:   'no-repeat',
+        backgroundPosition: 'center',
+        zIndex:             '1000',
+        pointerEvents:      'none',
+        willChange:         'transform',
     });
-    document.body.appendChild(flyer);
+    board.appendChild(flyer);
 
     // Immediately clear the source cell
-    fromEl.textContent = '';
-    fromEl.style.backgroundColor = '#e0c9a6';
+    renderCell(fromEl, null, false);
 
-    const dx = tRect.left - rRect.left;
-    const dy = tRect.top  - rRect.top;
+    const dx = toEl.offsetLeft - fromEl.offsetLeft;
+    const dy = toEl.offsetTop  - fromEl.offsetTop;
 
     // Fly: squish narrow at mid-flight, return to normal on landing
     const anim = flyer.animate([
@@ -491,12 +481,11 @@ function executeRobotKitty(robotRow, robotCol, targetRow, targetCol) {
     if (robotEl) robotEl.classList.remove('selected');
 
     // Fly the robot — enemy piece stays visible until robot lands
-    flyRobot(robotEl, targetEl, PLAYER_COLORS[robot.player], robot.emoji, () => {
+    flyRobot(robotEl, targetEl, robot, () => {
         // Land: replace captured piece with robot
         if (targetEl) {
-            targetEl.textContent = robot.emoji;
-            targetEl.style.backgroundColor = PLAYER_COLORS[robot.player];
-            targetEl.classList.remove('covered', 'valid-move', 'valid-capture', 'burning');
+            targetEl.classList.remove('valid-move', 'valid-capture');
+            renderCell(targetEl, robot, false);
         }
         checkGameOver();
         endTurn();
@@ -512,7 +501,7 @@ function executeEngulf(row, col) {
     piece.burning = true;
 
     const el = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
-    if (el) { el.classList.add('burning'); el.classList.remove('selected'); }
+    if (el) { el.classList.remove('selected'); renderCell(el, piece, false); }
 
     if (typeof gameLog !== 'undefined') gameLog.recordEngulf(gameState.currentPlayer, row, col);
 
@@ -535,7 +524,7 @@ function executePyromania(burnerRow, burnerCol, targetRow, targetCol) {
     // Set target on fire (must already be uncovered)
     target.burning = true;
     const targetEl = document.querySelector(`.cell[data-row="${targetRow}"][data-col="${targetCol}"]`);
-    if (targetEl) targetEl.classList.add('burning');
+    if (targetEl) renderCell(targetEl, target, false);
 
     // Spreading fire costs the burner 1 power
     burner.power--;
@@ -543,15 +532,14 @@ function executePyromania(burnerRow, burnerCol, targetRow, targetCol) {
     if (burner.power <= 0) {
         gameState.board[burnerRow][burnerCol] = null;
         if (burnerEl) {
-            burnerEl.textContent = '';
-            burnerEl.style.backgroundColor = '#e0c9a6';
-            burnerEl.classList.remove('burning', 'selected');
+            burnerEl.classList.remove('selected');
+            renderCell(burnerEl, null, false);
         }
     } else {
         const lvl = BURN_LEVEL[burner.power];
         burner.type  = lvl.type;
         burner.emoji = lvl.emoji;
-        if (burnerEl) burnerEl.textContent = burner.emoji;
+        if (burnerEl) renderCell(burnerEl, burner, false);
     }
 
     if (typeof gameLog !== 'undefined') gameLog.recordPyromania(gameState.currentPlayer, burnerRow, burnerCol, targetRow, targetCol, target);
@@ -647,8 +635,13 @@ function initGame() {
 
 function showSetupScreen() {
     document.getElementById('setup-screen').style.display = '';
-    document.getElementById('game-screen').style.display = 'none';
     document.getElementById('winner-message').style.display = 'none';
+    document.getElementById('rules-overlay').style.display = 'none';
+    document.getElementById('resign-button').style.display = 'none';
+    document.getElementById('help-button').style.display = 'none';
+    document.getElementById('turn-indicator').style.display = 'none';
+    // Collapse How to Play and Abilities if they were left open
+    document.querySelectorAll('#setup-screen details[open]').forEach(function(d) { d.removeAttribute('open'); });
     syncSetupUI();
 }
 
@@ -773,7 +766,9 @@ function startGame() {
     if (resignBtn) resignBtn.textContent = allCpu ? 'Stop' : 'Resign';
 
     document.getElementById('setup-screen').style.display = 'none';
-    document.getElementById('game-screen').style.display  = '';
+    document.getElementById('resign-button').style.display = '';
+    document.getElementById('help-button').style.display = '';
+    document.getElementById('turn-indicator').style.display = '';
 
     // Show in-game speed control whenever >1 CPU is playing
     const activeCpuCount = [gameState.player1, gameState.player2, gameState.player3, gameState.player4]
@@ -936,7 +931,7 @@ function setupEventListeners() {
         const total   = document.querySelectorAll('.ability-toggle').length;
         const checked = document.querySelectorAll('.ability-toggle:checked').length;
         const el = document.getElementById('abilities-count');
-        if (el) el.textContent = `(${checked} / ${total})`;
+        if (el) el.textContent = `(${checked} / ${total} selected)`;
     }
     document.querySelectorAll('.ability-toggle').forEach(cb => {
         cb.addEventListener('change', updateAbilitiesCount);

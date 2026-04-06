@@ -163,8 +163,10 @@ function _showGameScreen(state) {
     applyServerState(state);
 
     document.getElementById('setup-screen').style.display   = 'none';
-    document.getElementById('game-screen').style.display    = '';
     document.getElementById('winner-message').style.display = 'none';
+    document.getElementById('resign-button').style.display  = '';
+    document.getElementById('help-button').style.display    = '';
+    document.getElementById('turn-indicator').style.display = '';
 
     const resignBtn = document.getElementById('resign-button');
     if (resignBtn) {

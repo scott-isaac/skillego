@@ -91,13 +91,13 @@ function makeCpuMove() {
         const el    = document.querySelector(`.cell[data-row="${move.r}"][data-col="${move.c}"]`);
         const piece = gameState.board[move.r][move.c];
         if (el && piece) {
-            // Set text FIRST (hidden by color:transparent while covered), then remove class.
-            // Ensures emoji is in the DOM before the CSS transition creates a GPU compositor
-            // layer — prevents blank-emoji on iOS after heavy minimax computation.
-            el.textContent = piece.emoji;
-            el.style.backgroundColor = PLAYER_COLORS[piece.player];
+            // Suppress CSS transition during reveal — same fix as human uncover in game.js.
+            el.style.transition = 'none';
             gameState.covered[move.r][move.c] = false;
-            el.classList.remove('covered');
+            renderCell(el, piece, false);
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                el.style.transition = '';
+            }));
             if (typeof gameLog !== 'undefined') gameLog.recordUncover(piece.player, move.r, move.c, piece);
             checkGameOver();
             endTurn();
