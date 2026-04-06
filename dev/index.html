@@ -311,8 +311,8 @@
                     if (frameH > vh) frameScale = vh / 1536;
 
                     boardFrame.style.transform = 'scale(' + frameScale + ')';
-                    boardFrame.style.transformOrigin = 'top center';
-                    // Center the board-frame horizontally in the viewport
+                    boardFrame.style.transformOrigin = 'top left';
+                    // Center the scaled board in the viewport
                     var renderedW = 1024 * frameScale;
                     boardFrame.style.marginLeft = ((vw - renderedW) / 2) + 'px';
                     // Also hide setup screen elements when game is active
