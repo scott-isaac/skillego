@@ -5,18 +5,21 @@ body {
     align-items: flex-start;
     min-height: 100vh;
     margin: 0;
-    padding: 20px 0;
+    padding: 0;
     box-sizing: border-box;
-    background-color: #f0e6d2;
-    color: #333;
+    background-color: #1a1206;
+    color: #c8b080;
 }
 
 #game-container {
     text-align: center;
-    background-color: #ffffff;
-    border-radius: 10px;
-    box-shadow: 0 0 20px rgba(0,0,0,0.2);
-    padding: 20px;
+    background: none;
+    padding: 0;
+    width: 100%;
+}
+
+#game-container > h1 {
+    display: none;
 }
 
 /* ── Mobile touch responsiveness ── */
@@ -26,8 +29,6 @@ button, .cell, input[type="range"] {
 
 /* ── Art-based game layout ── */
 #game-screen {
-    width: 600px;
-    height: 900px;
     overflow: hidden;
     position: relative;
     margin: 0 auto;
@@ -165,11 +166,12 @@ button, .cell, input[type="range"] {
     flex-direction: column;
     align-items: center;
     gap: 20px;
-    padding: 20px;
+    padding: 30px 20px;
 }
 
 .player-config {
-    background-color: #f0e6d2;
+    background-color: rgba(110, 88, 59, 0.25);
+    border: 1px solid #4a3520;
     border-radius: 8px;
     padding: 16px 24px;
     display: flex;
@@ -188,13 +190,15 @@ button, .cell, input[type="range"] {
     font-weight: bold;
     width: 70px;
     text-align: right;
-    color: #6e583b;
+    color: #c8a96e;
 }
 
 .player-row select {
     padding: 5px 8px;
     border-radius: 4px;
-    border: 1px solid #aaa;
+    border: 1px solid #4a3520;
+    background-color: #2a1e10;
+    color: #c8b080;
     font-size: 14px;
     cursor: pointer;
 }
@@ -210,9 +214,9 @@ button, .cell, input[type="range"] {
     justify-content: center;
     gap: 8px;
     padding-top: 4px;
-    border-top: 1px solid #d2c1a3;
+    border-top: 1px solid #4a3520;
     font-size: 14px;
-    color: #555;
+    color: #a09070;
 }
 
 .speed-row input[type=range] {
@@ -221,20 +225,21 @@ button, .cell, input[type="range"] {
 }
 
 #start-game-btn {
-    background-color: #6e583b;
-    border: none;
-    color: white;
+    background-color: #8a6c3a;
+    border: 1px solid #c8a96e;
+    color: #fff;
     padding: 12px 36px;
+    font-family: 'Cinzel', 'Palatino Linotype', Georgia, serif;
     font-size: 18px;
-    font-weight: bold;
+    font-weight: 700;
     cursor: pointer;
     border-radius: 6px;
     transition: background-color 0.2s;
-    letter-spacing: 0.5px;
+    letter-spacing: 1px;
 }
 
 @media (hover: hover) {
-    #start-game-btn:hover { background-color: #5a4530; }
+    #start-game-btn:hover { background-color: #a0803e; }
 }
 
 /* ── Abilities toggle section ── */
@@ -242,9 +247,9 @@ button, .cell, input[type="range"] {
     min-width: 340px;
     max-width: 380px;
     text-align: left;
-    background-color: #f0e6d2;
+    background-color: rgba(110, 88, 59, 0.2);
     border-radius: 6px;
-    border: 1px solid #d2c1a3;
+    border: 1px solid #4a3520;
 }
 
 .abilities-toggle summary {
@@ -252,7 +257,7 @@ button, .cell, input[type="range"] {
     cursor: pointer;
     font-size: 14px;
     font-weight: bold;
-    color: #6e583b;
+    color: #c8a96e;
     user-select: none;
 }
 
@@ -262,7 +267,7 @@ button, .cell, input[type="range"] {
 
 .abilities-hint {
     font-size: 12px;
-    color: #888;
+    color: #8a7a60;
     margin: 0 0 8px;
 }
 
@@ -280,7 +285,7 @@ button, .cell, input[type="range"] {
     cursor: pointer;
     font-size: 14px;
     font-weight: bold;
-    color: #4a3520;
+    color: #c8b080;
 }
 
 .ability-label input[type=checkbox] {
@@ -297,12 +302,12 @@ button, .cell, input[type="range"] {
 
 .ability-name {
     font-weight: bold;
-    color: #5a3e20;
+    color: #c8a96e;
 }
 
 .ability-desc {
     font-size: 12px;
-    color: #666;
+    color: #8a7a60;
     padding-left: 28px;
     line-height: 1.4;
 }
@@ -391,14 +396,16 @@ button, .cell, input[type="range"] {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background-color: rgba(255, 255, 255, 0.97);
-    border: 3px solid #6e583b;
+    background-color: rgba(26, 18, 6, 0.96);
+    border: 2px solid #c8a96e;
     border-radius: 10px;
     padding: 28px 48px;
+    font-family: 'Cinzel', 'Palatino Linotype', Georgia, serif;
     font-size: 22px;
-    font-weight: bold;
-    color: #6e583b;
-    box-shadow: 0 0 30px rgba(0,0,0,0.35);
+    font-weight: 700;
+    color: #FFD700;
+    text-shadow: 0 0 12px rgba(255, 200, 60, 0.4);
+    box-shadow: 0 0 40px rgba(0,0,0,0.6), inset 0 0 30px rgba(200, 169, 110, 0.08);
     z-index: 100;
     display: flex;
     flex-direction: column;
@@ -408,32 +415,35 @@ button, .cell, input[type="range"] {
 }
 
 #winner-score {
+    font-family: Arial, sans-serif;
     font-size: 15px;
     font-weight: normal;
-    color: #8a6f4e;
+    color: #a09070;
     margin-top: -6px;
+    text-shadow: none;
 }
 
 #restart-btn {
-    background-color: #6e583b;
-    border: none;
+    background-color: #8a6c3a;
+    border: 1px solid #c8a96e;
     color: white;
     padding: 10px 28px;
+    font-family: 'Cinzel', 'Palatino Linotype', Georgia, serif;
     font-size: 15px;
-    font-weight: bold;
+    font-weight: 700;
     cursor: pointer;
     border-radius: 5px;
     transition: background-color 0.2s;
 }
 
 @media (hover: hover) {
-    #restart-btn:hover { background-color: #5a4530; }
+    #restart-btn:hover { background-color: #a0803e; }
 }
 
 #new-game-btn {
     background-color: transparent;
-    border: 1px solid #b0a090;
-    color: #7a6548;
+    border: 1px solid #6e583b;
+    color: #c8a96e;
     padding: 8px 20px;
     font-size: 13px;
     cursor: pointer;
@@ -442,13 +452,13 @@ button, .cell, input[type="range"] {
 }
 
 @media (hover: hover) {
-    #new-game-btn:hover { background-color: #f0e6d2; }
+    #new-game-btn:hover { background-color: rgba(110, 88, 59, 0.3); }
 }
 
 #watch-replay-btn {
     background-color: transparent;
-    border: 1px solid #b0a090;
-    color: #7a6548;
+    border: 1px solid #6e583b;
+    color: #c8a96e;
     padding: 8px 20px;
     font-size: 13px;
     cursor: pointer;
@@ -457,12 +467,12 @@ button, .cell, input[type="range"] {
 }
 
 @media (hover: hover) {
-    #watch-replay-btn:hover { background-color: #f0e6d2; }
+    #watch-replay-btn:hover { background-color: rgba(110, 88, 59, 0.3); }
 }
 
 /* ── Tagline ── */
 .tagline {
-    color: #7a6548;
+    color: #8a7a60;
     font-size: 14px;
     margin: 0;
 }
@@ -471,9 +481,9 @@ button, .cell, input[type="range"] {
 .rules-toggle {
     max-width: 380px;
     text-align: left;
-    background-color: #f0e6d2;
+    background-color: rgba(110, 88, 59, 0.2);
     border-radius: 6px;
-    border: 1px solid #d2c1a3;
+    border: 1px solid #4a3520;
 }
 
 .rules-toggle summary {
@@ -481,14 +491,14 @@ button, .cell, input[type="range"] {
     cursor: pointer;
     font-size: 14px;
     font-weight: bold;
-    color: #6e583b;
+    color: #c8a96e;
     user-select: none;
 }
 
 .rules-body {
     padding: 4px 16px 12px;
     font-size: 13px;
-    color: #444;
+    color: #a09070;
     line-height: 1.6;
 }
 
@@ -513,7 +523,7 @@ button, .cell, input[type="range"] {
 }
 
 .piece-table td:last-child {
-    color: #888;
+    color: #8a7a60;
 }
 
 /* ── Debug log (dev tool, collapsed by default) ── */
@@ -522,16 +532,16 @@ button, .cell, input[type="range"] {
     width: 100%;
     max-width: 360px;
     text-align: left;
-    border: 1px solid #ccc;
+    border: 1px solid #4a3520;
     border-radius: 5px;
-    background-color: #f8f8f8;
+    background-color: #2a1e10;
 }
 
 #debug-log summary {
     padding: 6px 10px;
     cursor: pointer;
     font-size: 13px;
-    color: #888;
+    color: #8a7a60;
     user-select: none;
 }
 
@@ -593,8 +603,8 @@ button, .cell, input[type="range"] {
 
 .secondary-btn {
     background-color: transparent;
-    border: 1px solid #b0a090;
-    color: #7a6548;
+    border: 1px solid #6e583b;
+    color: #c8a96e;
     padding: 8px 18px;
     font-size: 14px;
     cursor: pointer;
@@ -603,7 +613,7 @@ button, .cell, input[type="range"] {
 }
 
 @media (hover: hover) {
-    .secondary-btn:hover { background-color: #f0e6d2; }
+    .secondary-btn:hover { background-color: rgba(110, 88, 59, 0.3); }
 }
 
 #exit-replay-btn {
@@ -637,22 +647,6 @@ button, .cell, input[type="range"] {
 
 /* ── Mobile fullscreen layout ── */
 @media (max-width: 640px) {
-    body {
-        padding: 0;
-        background-color: #1a1206;
-        align-items: flex-start;
-        overflow: hidden;
-    }
-    #game-container {
-        background: none;
-        border-radius: 0;
-        box-shadow: none;
-        padding: 0;
-        width: 100%;
-    }
-    #game-container > h1 {
-        display: none;
-    }
     #game-screen {
         width: 100vw !important;
         height: 100vh !important;
@@ -660,8 +654,5 @@ button, .cell, input[type="range"] {
         margin: 0;
         transform: none !important;
         margin-bottom: 0 !important;
-    }
-    #board-frame {
-        transform-origin: top left;
     }
 }

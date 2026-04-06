@@ -296,47 +296,29 @@
             var boardFrame = document.getElementById('board-frame');
             if (!gameScreen || !boardFrame) return;
 
-            var isMobile = window.innerWidth <= 640;
-
             function fitToViewport() {
                 var vw = window.innerWidth;
                 var vh = window.innerHeight;
-                isMobile = vw <= 640;
 
-                if (isMobile) {
-                    // Full-screen mobile: scale board-frame to fill screen width
-                    var frameScale = vw / 1024;
-                    // Check height too — don't let board overflow vertically
-                    var frameH = 1536 * frameScale;
-                    if (frameH > vh) frameScale = vh / 1536;
+                // Scale board-frame to fit viewport, capped at 900px rendered height
+                var maxRenderedH = Math.min(vh, 900);
+                var frameScale = maxRenderedH / 1536;
+                // Also check width
+                var maxRenderedW = Math.min(vw, 1024 * frameScale * (1024/1024));
+                if (1024 * frameScale > vw) frameScale = vw / 1024;
 
-                    boardFrame.style.transform = 'scale(' + frameScale + ')';
-                    boardFrame.style.transformOrigin = 'top left';
-                    // Center the scaled board in the viewport
-                    var renderedW = 1024 * frameScale;
-                    boardFrame.style.marginLeft = ((vw - renderedW) / 2) + 'px';
-                    // Also hide setup screen elements when game is active
-                    gameScreen.style.transform = 'none';
-                    gameScreen.style.marginBottom = '0';
-                } else {
-                    // Desktop: scale game-screen to fit with margin
-                    boardFrame.style.transform = 'scale(0.5859375)';
-                    boardFrame.style.transformOrigin = 'top left';
-                    boardFrame.style.marginLeft = '';
+                boardFrame.style.transform = 'scale(' + frameScale + ')';
+                boardFrame.style.transformOrigin = 'top left';
+                // Center horizontally
+                var renderedW = 1024 * frameScale;
+                boardFrame.style.marginLeft = ((vw - renderedW) / 2) + 'px';
 
-                    var baseW = 600, baseH = 900;
-                    var maxW = Math.min(vw - 16, 600);
-                    var screenScale = maxW / baseW;
-                    var maxH = vh - 40;
-                    var hScale = maxH / baseH;
-                    screenScale = Math.min(screenScale, hScale, 1);
-
-                    gameScreen.style.width  = baseW + 'px';
-                    gameScreen.style.height = baseH + 'px';
-                    gameScreen.style.transform = 'scale(' + screenScale + ')';
-                    gameScreen.style.transformOrigin = 'top center';
-                    gameScreen.style.marginBottom = (-(baseH - baseH * screenScale)) + 'px';
-                }
+                // Size game-screen to match rendered board
+                var renderedH = 1536 * frameScale;
+                gameScreen.style.width  = renderedW + 'px';
+                gameScreen.style.height = renderedH + 'px';
+                gameScreen.style.margin = '0 auto';
+                gameScreen.style.overflow = 'hidden';
             }
 
             window.addEventListener('resize', fitToViewport);
