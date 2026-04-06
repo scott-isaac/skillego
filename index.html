@@ -46,19 +46,16 @@
                 </div>
                 <button id="resign-button" style="display:none">Resign</button>
                 <button id="help-button" style="display:none">?</button>
-            </div>
-        </div>
 
-        <!-- ── Rules overlay (shown by ? button during game) ── -->
-        <div id="rules-overlay" style="display:none">
-            <h2 id="rules-overlay-title">How to Play</h2>
-            <div id="rules-overlay-content"></div>
-            <button id="close-rules-btn">Close</button>
-        </div>
+                <!-- ── Rules overlay (shown by ? button during game) ── -->
+                <div id="rules-overlay" class="board-overlay" style="display:none">
+                    <h2 id="rules-overlay-title">How to Play</h2>
+                    <div id="rules-overlay-content"></div>
+                    <button id="close-rules-btn">Close</button>
+                </div>
 
-        <!-- ── Setup overlay (floats on top of board art, like winner-message) ── -->
-        <div id="setup-screen">
-            <p class="tagline">Hidden-information strategy · Capture all enemy pieces to win</p>
+                <!-- ── Setup overlay ── -->
+        <div id="setup-screen" class="board-overlay">
 
             <details class="rules-toggle">
                 <summary>How to Play</summary>
@@ -216,7 +213,7 @@
         </details>
 
         <!-- ── Winner overlay ── -->
-        <div id="winner-message" style="display:none">
+        <div id="winner-message" class="board-overlay" style="display:none">
             <div id="winner-text"></div>
             <div id="winner-score"></div>
             <button id="restart-btn">Play Again</button>
@@ -243,7 +240,7 @@
 
     <!-- ── Shared rules content (stamped into setup + overlay via JS) ── -->
     <template id="rules-template">
-        <p>Each player has 18 pieces that are randomly mixed and placed <strong>face-down</strong> on a 6×6 board. On your turn, either <strong>flip a covered piece</strong> to reveal it, or <strong>move an uncovered piece</strong> one step (orthogonal).</p>
+        <p>Each player has 18 pieces that are randomly mixed and placed <strong>face-down</strong> on a 6×6 board. On your turn, either <strong>flip a covered piece</strong> to reveal it, or <strong>move an uncovered piece</strong> one step (orthogonal). Capture all enemy pieces to win.</p>
         <p><strong>Piece hierarchy</strong> (higher captures lower):</p>
         <table class="piece-table">
             <tr><td><img class="piece-icon" src="assets/piece_dragon.png" alt="Dragon"></td><td>Dragon</td><td>×1</td></tr>
@@ -253,7 +250,7 @@
             <tr><td><img class="piece-icon" src="assets/piece_cat.png" alt="Cat"></td><td>Cat</td><td>×4</td></tr>
             <tr><td><img class="piece-icon" src="assets/piece_mouse.png" alt="Mouse"></td><td>Mouse</td><td>×6</td></tr>
         </table>
-        <p><strong>Exception:</strong> <img class="piece-icon" src="assets/piece_mouse.png" alt="Mouse"> Mouse captures <img class="piece-icon" src="assets/piece_dragon.png" alt="Dragon"> Dragon — but Dragon beats everything else.</p>
+        <p><strong>Exception:</strong> <img class="piece-icon" src="assets/piece_mouse.png" alt="Mouse"> Mouse captures <img class="piece-icon" src="assets/piece_dragon.png" alt="Dragon"> Dragon — but Dragon beats everything else.</p>        
         <p><strong>Special Abilities</strong> (can be toggled on/off in setup):</p>
         <table class="piece-table">
             <tr><td><img class="piece-icon" src="assets/piece_dragon.png" alt="Dragon"></td><td><strong>Dragon — Push:</strong> Push an adjacent enemy one square away (space behind must be clear).</td></tr>
