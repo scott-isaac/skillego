@@ -512,10 +512,10 @@ const GameReplay = (function () {
 
         document.getElementById('setup-screen').style.display        = 'none';
         document.getElementById('winner-message').style.display       = 'none';
-        document.getElementById('game-screen').style.display          = 'block';
         document.getElementById('skill-tray').style.display           = 'none';
         document.getElementById('replay-controls').style.display      = 'flex';
         document.getElementById('resign-button').style.display        = 'none';
+        document.getElementById('help-button').style.display          = 'none';
         document.getElementById('exit-replay-btn').style.display      = 'block';
         document.getElementById('game-speed-row').style.display       = 'none';
 
@@ -533,11 +533,11 @@ const GameReplay = (function () {
         _stepIdx = 0;
         document.removeEventListener('keydown', onKey);
 
-        document.getElementById('game-screen').style.display          = 'none';
         document.getElementById('setup-screen').style.display         = '';
         document.getElementById('skill-tray').style.display           = '';
         document.getElementById('replay-controls').style.display      = 'none';
-        document.getElementById('resign-button').style.display        = '';
+        document.getElementById('resign-button').style.display        = 'none';
+        document.getElementById('turn-indicator').style.display       = 'none';
         document.getElementById('exit-replay-btn').style.display      = 'none';
 
         const ind = document.getElementById('turn-indicator');
