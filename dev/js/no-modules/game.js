@@ -640,6 +640,8 @@ function showSetupScreen() {
     document.getElementById('resign-button').style.display = 'none';
     document.getElementById('help-button').style.display = 'none';
     document.getElementById('turn-indicator').style.display = 'none';
+    // Collapse How to Play and Abilities if they were left open
+    document.querySelectorAll('#setup-screen details[open]').forEach(function(d) { d.removeAttribute('open'); });
     syncSetupUI();
 }
 
