@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Skillego</title>
     <meta name="description" content="Skillego — a hidden-information strategy board game with AI opponents ranging from Easy to Expert (minimax with alpha-beta pruning).">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -287,6 +287,45 @@
             document.getElementById('replay-next')   .addEventListener('click', function() { GameReplay.goForward(); });
             document.getElementById('replay-end')    .addEventListener('click', function() { GameReplay.goToEnd(); });
             document.getElementById('replay-analyze').addEventListener('click', function() { GameReplay.analyze(); });
+        })();
+    </script>
+    <script>
+        /* ── Mobile viewport scaling ── */
+        (function() {
+            var gameScreen = document.getElementById('game-screen');
+            var boardFrame = document.getElementById('board-frame');
+            if (!gameScreen || !boardFrame) return;
+
+            function fitToViewport() {
+                var vw = window.innerWidth;
+                var vh = window.innerHeight;
+                // Base size: board-frame is 1024×1536, game-screen clips it
+                var baseW = 600; // default game-screen width
+                var baseH = 900; // default game-screen height
+                // Scale to fit viewport width with small margin
+                var maxW = Math.min(vw - 16, 600); // 8px margin each side, cap at 600
+                var screenScale = maxW / baseW;
+                // Also check height so we don't overflow vertically
+                var maxH = vh - 40; // some breathing room
+                var hScale = maxH / baseH;
+                screenScale = Math.min(screenScale, hScale, 1); // never upscale past 1
+
+                gameScreen.style.width  = baseW + 'px';
+                gameScreen.style.height = baseH + 'px';
+                gameScreen.style.transform = 'scale(' + screenScale + ')';
+                gameScreen.style.transformOrigin = 'top center';
+                // Reserve actual space in the layout
+                gameScreen.style.marginBottom = (-(baseH - baseH * screenScale)) + 'px';
+            }
+
+            window.addEventListener('resize', fitToViewport);
+            window.addEventListener('orientationchange', fitToViewport);
+            // Run on game start — observe when game-screen becomes visible
+            var obs = new MutationObserver(function() {
+                if (gameScreen.style.display !== 'none') fitToViewport();
+            });
+            obs.observe(gameScreen, { attributes: true, attributeFilter: ['style'] });
+            fitToViewport();
         })();
     </script>
 </body>
