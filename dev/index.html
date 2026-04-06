@@ -299,25 +299,32 @@
             function fitToViewport() {
                 var vw = window.innerWidth;
                 var vh = window.innerHeight;
+                var isMobile = vw <= 640;
 
-                // Scale board-frame to fit viewport, capped at 900px rendered height
-                var maxRenderedH = Math.min(vh, 900);
+                // Scale board-frame to fit viewport, capped at 900px rendered height on desktop
+                var maxRenderedH = isMobile ? vh : Math.min(vh, 900);
                 var frameScale = maxRenderedH / 1536;
-                // Also check width
-                var maxRenderedW = Math.min(vw, 1024 * frameScale * (1024/1024));
                 if (1024 * frameScale > vw) frameScale = vw / 1024;
+
+                var renderedW = 1024 * frameScale;
+                var renderedH = 1536 * frameScale;
 
                 boardFrame.style.transform = 'scale(' + frameScale + ')';
                 boardFrame.style.transformOrigin = 'top left';
-                // Center horizontally
-                var renderedW = 1024 * frameScale;
-                boardFrame.style.marginLeft = ((vw - renderedW) / 2) + 'px';
 
-                // Size game-screen to match rendered board
-                var renderedH = 1536 * frameScale;
-                gameScreen.style.width  = renderedW + 'px';
-                gameScreen.style.height = renderedH + 'px';
-                gameScreen.style.margin = '0 auto';
+                if (isMobile) {
+                    // On mobile, game-screen is 100vw via CSS; center board inside it
+                    boardFrame.style.marginLeft = ((vw - renderedW) / 2) + 'px';
+                    gameScreen.style.width = '';
+                    gameScreen.style.height = '';
+                    gameScreen.style.margin = '';
+                } else {
+                    // On desktop, size game-screen to rendered board and center via margin auto
+                    boardFrame.style.marginLeft = '0';
+                    gameScreen.style.width  = renderedW + 'px';
+                    gameScreen.style.height = renderedH + 'px';
+                    gameScreen.style.margin = '0 auto';
+                }
                 gameScreen.style.overflow = 'hidden';
             }
 
