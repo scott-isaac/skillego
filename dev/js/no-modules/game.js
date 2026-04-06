@@ -418,17 +418,16 @@ function executePush(dragonRow, dragonCol, enemyRow, enemyCol, destRow, destCol)
 function flyRobot(fromEl, toEl, piece, onComplete) {
     if (!fromEl || !toEl) { onComplete(); return; }
 
-    const rRect = fromEl.getBoundingClientRect();
-    const tRect = toEl.getBoundingClientRect();
+    const board = document.getElementById('board');
     const color = PLAYER_ART[piece.player];
 
     const flyer = document.createElement('div');
     Object.assign(flyer.style, {
-        position:           'fixed',
-        left:               rRect.left + 'px',
-        top:                rRect.top  + 'px',
-        width:              rRect.width  + 'px',
-        height:             rRect.height + 'px',
+        position:           'absolute',
+        left:               fromEl.offsetLeft + 'px',
+        top:                fromEl.offsetTop  + 'px',
+        width:              fromEl.offsetWidth  + 'px',
+        height:             fromEl.offsetHeight + 'px',
         backgroundImage:    `url('assets/piece_${piece.type}.png'), url('assets/player_${color}.png')`,
         backgroundSize:     '65% 65%, 85% 85%',
         backgroundRepeat:   'no-repeat',
@@ -437,13 +436,13 @@ function flyRobot(fromEl, toEl, piece, onComplete) {
         pointerEvents:      'none',
         willChange:         'transform',
     });
-    document.body.appendChild(flyer);
+    board.appendChild(flyer);
 
     // Immediately clear the source cell
     renderCell(fromEl, null, false);
 
-    const dx = tRect.left - rRect.left;
-    const dy = tRect.top  - rRect.top;
+    const dx = toEl.offsetLeft - fromEl.offsetLeft;
+    const dy = toEl.offsetTop  - fromEl.offsetTop;
 
     // Fly: squish narrow at mid-flight, return to normal on landing
     const anim = flyer.animate([
