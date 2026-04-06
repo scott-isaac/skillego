@@ -130,7 +130,7 @@
                 </div>
             </div>
             <details class="abilities-toggle">
-                <summary>Special Abilities <span id="abilities-count" style="font-weight:normal;color:#888;font-size:12px"></span></summary>
+                <summary>Special Abilities <span id="abilities-count" style="font-weight:normal;color:#888"></span></summary>
                 <div class="abilities-body">
                     <p class="abilities-hint">Choose which special abilities are available in this game.</p>
                     <div class="ability-row">
@@ -341,8 +341,8 @@
                 var vh = window.innerHeight;
                 var isMobile = vw <= 640;
 
-                // Scale board-frame to fit viewport, capped at 900px rendered height on desktop
-                var maxRenderedH = isMobile ? vh : Math.min(vh, 900);
+                // Scale board-frame to fill viewport height
+                var maxRenderedH = vh;
                 var frameScale = maxRenderedH / 1536;
                 if (1024 * frameScale > vw) frameScale = vw / 1024;
 
