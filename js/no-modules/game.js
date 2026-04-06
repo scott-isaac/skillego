@@ -635,8 +635,11 @@ function initGame() {
 
 function showSetupScreen() {
     document.getElementById('setup-screen').style.display = '';
-    document.getElementById('game-screen').style.display = 'none';
     document.getElementById('winner-message').style.display = 'none';
+    document.getElementById('rules-overlay').style.display = 'none';
+    document.getElementById('resign-button').style.display = 'none';
+    document.getElementById('help-button').style.display = 'none';
+    document.getElementById('turn-indicator').style.display = 'none';
     syncSetupUI();
 }
 
@@ -761,7 +764,9 @@ function startGame() {
     if (resignBtn) resignBtn.textContent = allCpu ? 'Stop' : 'Resign';
 
     document.getElementById('setup-screen').style.display = 'none';
-    document.getElementById('game-screen').style.display  = '';
+    document.getElementById('resign-button').style.display = '';
+    document.getElementById('help-button').style.display = '';
+    document.getElementById('turn-indicator').style.display = '';
 
     // Show in-game speed control whenever >1 CPU is playing
     const activeCpuCount = [gameState.player1, gameState.player2, gameState.player3, gameState.player4]
@@ -924,7 +929,7 @@ function setupEventListeners() {
         const total   = document.querySelectorAll('.ability-toggle').length;
         const checked = document.querySelectorAll('.ability-toggle:checked').length;
         const el = document.getElementById('abilities-count');
-        if (el) el.textContent = `(${checked} / ${total})`;
+        if (el) el.textContent = `(${checked} / ${total} selected)`;
     }
     document.querySelectorAll('.ability-toggle').forEach(cb => {
         cb.addEventListener('change', updateAbilitiesCount);

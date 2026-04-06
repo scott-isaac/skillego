@@ -16,6 +16,7 @@ body {
     background: none;
     padding: 0;
     width: 100%;
+    position: relative;
 }
 
 #game-container > h1 {
@@ -160,13 +161,26 @@ button, .cell, input[type="range"] {
     margin: 0;
 }
 
-/* ── Setup screen ── */
+/* ── Setup overlay (positioned like winner-message, on top of board art) ── */
 #setup-screen {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    max-width: 420px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 20px;
-    padding: 30px 20px;
+    gap: 18px;
+    padding: 28px 36px;
+    background-color: rgba(26, 18, 6, 0.96);
+    border: 2px solid #c8a96e;
+    border-radius: 10px;
+    box-shadow: 0 0 40px rgba(0,0,0,0.6), inset 0 0 30px rgba(200, 169, 110, 0.08);
+    z-index: 100;
 }
 
 .player-config {
@@ -296,8 +310,42 @@ button, .cell, input[type="range"] {
 }
 
 .ability-emoji {
-    font-size: 18px;
-    line-height: 1;
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+}
+
+/* Inline piece icon for rules tables and text */
+.piece-icon {
+    width: 22px;
+    height: 22px;
+    vertical-align: middle;
+    display: inline-block;
+}
+
+/* Dragon + fire combo icon (matches in-game: fire 107%×72%, piece 63%) */
+.piece-icon-fire {
+    position: relative;
+    display: inline-block;
+    width: 22px;
+    height: 22px;
+    vertical-align: middle;
+}
+.piece-icon-fire .fire-bg {
+    position: absolute;
+    width: 140%;
+    height: 100%;
+    top: 0;
+    left: -20%;
+    z-index: 0;
+}
+.piece-icon-fire .piece-fg {
+    position: absolute;
+    width: 80%;
+    height: 80%;
+    top: 10%;
+    left: 10%;
+    z-index: 1;
 }
 
 .ability-name {
@@ -388,6 +436,88 @@ button, .cell, input[type="range"] {
 
 @media (hover: hover) {
     #resign-button:hover { opacity: 0.82; }
+}
+
+/* ── Help button (? icon next to resign) ── */
+#help-button {
+    position: absolute;
+    left: 660px;
+    top: 1185px;
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
+    background: rgba(26, 18, 6, 0.85);
+    border: 2px solid #c8a96e;
+    color: #FFD700;
+    font-family: 'Cinzel', 'Palatino Linotype', Georgia, serif;
+    font-size: 34px;
+    font-weight: 700;
+    cursor: pointer;
+    text-shadow: 0 0 8px rgba(255, 200, 60, 0.5);
+    transition: opacity 0.2s;
+    padding: 0;
+    line-height: 68px;
+    text-align: center;
+}
+@media (hover: hover) {
+    #help-button:hover { opacity: 0.8; }
+}
+
+/* ── Rules overlay ── */
+#rules-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    max-width: 420px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    padding: 24px 32px;
+    background-color: rgba(26, 18, 6, 0.96);
+    border: 2px solid #c8a96e;
+    border-radius: 10px;
+    box-shadow: 0 0 40px rgba(0,0,0,0.6), inset 0 0 30px rgba(200, 169, 110, 0.08);
+    z-index: 100;
+    font-size: 13px;
+    color: #a09070;
+    line-height: 1.6;
+}
+
+#rules-overlay-title {
+    font-family: 'Cinzel', 'Palatino Linotype', Georgia, serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: #FFD700;
+    text-shadow: 0 0 12px rgba(255, 200, 60, 0.4);
+    text-align: center;
+    margin: 0 0 12px;
+}
+
+#rules-overlay-content {
+    text-align: left;
+}
+
+#rules-overlay-content p {
+    margin: 6px 0;
+}
+
+#close-rules-btn {
+    display: block;
+    margin: 18px auto 0;
+    background-color: #8a6c3a;
+    border: 1px solid #c8a96e;
+    color: white;
+    padding: 8px 28px;
+    font-family: 'Cinzel', 'Palatino Linotype', Georgia, serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: opacity 0.2s;
+}
+@media (hover: hover) {
+    #close-rules-btn:hover { opacity: 0.8; }
 }
 
 /* ── Winner overlay ── */
