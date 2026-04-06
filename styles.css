@@ -305,14 +305,14 @@ body {
 /* 5 slots × 88px + 4 gaps × 10px = 480px wide; centered on board center (x=503): left = 503-240 = 263 */
 #skill-tray {
     position: absolute;
-    left: 263px;
-    top: 1035px;
-    width: 480px;
-    height: 110px;
+    left: 255px;
+    top: 1045px;
+    width: 503px;
+    height: 85px;
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 10px;
+    gap: 22px;
     background: none;
     border: none;
     border-radius: 0;
@@ -321,8 +321,8 @@ body {
 }
 
 .skill-slot {
-    width: 88px;
-    height: 88px;
+    width: 82px;
+    height: 82px;
     background: url('assets/button.png') no-repeat center / 100% 100%;
     border: none;
     color: #FFD700;
@@ -334,6 +334,7 @@ body {
     align-items: center;
     justify-content: center;
     position: relative;
+    padding-bottom: 8px;
     opacity: 0.18;
     transition: opacity 0.15s;
 }
