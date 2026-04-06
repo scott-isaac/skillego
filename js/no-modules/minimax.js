@@ -227,6 +227,27 @@ const SkillMinimax = (function () {
             }
         }
 
+        // Piece safety: penalize pieces that are adjacent to enemies that can capture them
+        for (let r = 0; r < BOARD_ROWS; r++) {
+            for (let c = 0; c < BOARD_COLS; c++) {
+                const p = state.board[r][c];
+                if (!p || p.player === 0 || state.covered[r][c]) continue;
+                for (const [dr, dc] of DIRS) {
+                    const nr = r + dr, nc = c + dc;
+                    if (!inBounds(nr, nc)) continue;
+                    const t = state.board[nr][nc];
+                    if (!t || t.player === 0 || state.covered[nr][nc] || t.player === p.player) continue;
+                    if (canCapture(t, p)) {
+                        // p is in danger from t — penalize by p's value
+                        const penalty = p.power * 8;
+                        if (p.player === cpuPlayer) score -= penalty;
+                        else score += penalty;
+                        break; // one threat is enough to flag this piece
+                    }
+                }
+            }
+        }
+
         // Robot threat dynamics
         // Locate both robots (only uncovered ones are known)
         let cpuRobotPos = null, opRobotPos = null;
