@@ -290,32 +290,53 @@
         })();
     </script>
     <script>
-        /* ── Mobile viewport scaling ── */
+        /* ── Viewport scaling ── */
         (function() {
             var gameScreen = document.getElementById('game-screen');
             var boardFrame = document.getElementById('board-frame');
             if (!gameScreen || !boardFrame) return;
 
+            var isMobile = window.innerWidth <= 640;
+
             function fitToViewport() {
                 var vw = window.innerWidth;
                 var vh = window.innerHeight;
-                // Base size: board-frame is 1024×1536, game-screen clips it
-                var baseW = 600; // default game-screen width
-                var baseH = 900; // default game-screen height
-                // Scale to fit viewport width with small margin
-                var maxW = Math.min(vw - 16, 600); // 8px margin each side, cap at 600
-                var screenScale = maxW / baseW;
-                // Also check height so we don't overflow vertically
-                var maxH = vh - 40; // some breathing room
-                var hScale = maxH / baseH;
-                screenScale = Math.min(screenScale, hScale, 1); // never upscale past 1
+                isMobile = vw <= 640;
 
-                gameScreen.style.width  = baseW + 'px';
-                gameScreen.style.height = baseH + 'px';
-                gameScreen.style.transform = 'scale(' + screenScale + ')';
-                gameScreen.style.transformOrigin = 'top center';
-                // Reserve actual space in the layout
-                gameScreen.style.marginBottom = (-(baseH - baseH * screenScale)) + 'px';
+                if (isMobile) {
+                    // Full-screen mobile: scale board-frame to fill screen width
+                    var frameScale = vw / 1024;
+                    // Check height too — don't let board overflow vertically
+                    var frameH = 1536 * frameScale;
+                    if (frameH > vh) frameScale = vh / 1536;
+
+                    boardFrame.style.transform = 'scale(' + frameScale + ')';
+                    boardFrame.style.transformOrigin = 'top center';
+                    // Center the board-frame horizontally in the viewport
+                    var renderedW = 1024 * frameScale;
+                    boardFrame.style.marginLeft = ((vw - renderedW) / 2) + 'px';
+                    // Also hide setup screen elements when game is active
+                    gameScreen.style.transform = 'none';
+                    gameScreen.style.marginBottom = '0';
+                } else {
+                    // Desktop: scale game-screen to fit with margin
+                    boardFrame.style.transform = 'scale(0.5859375)';
+                    boardFrame.style.transformOrigin = 'top left';
+                    boardFrame.style.marginLeft = '';
+
+                    var baseW = 600, baseH = 900;
+                    var maxW = Math.min(vw - 16, 600);
+                    var screenScale = maxW / baseW;
+                    var maxH = vh - 40;
+                    var hScale = maxH / baseH;
+                    screenScale = Math.min(screenScale, hScale, 1);
+
+                    gameScreen.style.width  = baseW + 'px';
+                    gameScreen.style.height = baseH + 'px';
+                    gameScreen.style.transform = 'scale(' + screenScale + ')';
+                    gameScreen.style.transformOrigin = 'top center';
+                    gameScreen.style.marginBottom = (-(baseH - baseH * screenScale)) + 'px';
+                }
             }
 
             window.addEventListener('resize', fitToViewport);

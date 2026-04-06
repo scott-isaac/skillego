@@ -634,3 +634,34 @@ button, .cell, input[type="range"] {
     pointer-events: none;
     z-index: 20;
 }
+
+/* ── Mobile fullscreen layout ── */
+@media (max-width: 640px) {
+    body {
+        padding: 0;
+        background-color: #1a1206;
+        align-items: flex-start;
+        overflow: hidden;
+    }
+    #game-container {
+        background: none;
+        border-radius: 0;
+        box-shadow: none;
+        padding: 0;
+        width: 100%;
+    }
+    #game-container > h1 {
+        display: none;
+    }
+    #game-screen {
+        width: 100vw !important;
+        height: 100vh !important;
+        overflow: hidden;
+        margin: 0;
+        transform: none !important;
+        margin-bottom: 0 !important;
+    }
+    #board-frame {
+        transform-origin: top center;
+    }
+}
