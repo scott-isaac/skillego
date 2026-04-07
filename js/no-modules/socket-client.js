@@ -17,8 +17,10 @@ const _TYPE_EMOJI = {
 };
 
 // ─── Connection ───────────────────────────────────────────────────────────────
+// Socket.io connects but server mode stays inactive until a multiplayer game
+// is explicitly created/joined. Solo Human vs CPU runs standalone so the
+// local game engine handles everything (game log recording, learning, etc.).
 if (typeof io !== 'undefined') {
-    serverMode.active = true;
     serverMode.socket = io();
 
     serverMode.socket.on('connect', () => {
@@ -33,6 +35,7 @@ if (typeof io !== 'undefined') {
 
     // ── Game lifecycle ────────────────────────────────────────────────────────
     serverMode.socket.on('game-created', ({ gameId, playerNumber, token }) => {
+        serverMode.active       = true;
         serverMode.gameId       = gameId;
         serverMode.playerNumber = playerNumber;
         serverMode.token        = token;
@@ -44,6 +47,7 @@ if (typeof io !== 'undefined') {
     });
 
     serverMode.socket.on('game-joined', ({ gameId, playerNumber, token }) => {
+        serverMode.active       = true;
         serverMode.gameId       = gameId;
         serverMode.playerNumber = playerNumber;
         serverMode.token        = token;
@@ -136,24 +140,8 @@ function renderBoardFromState() {
             if (!el) continue;
             const p       = gameState.board[r][c];
             const covered = gameState.covered[r][c];
-
             el.classList.remove('valid-move', 'valid-capture', 'selected', 'push-destination-preview');
-
-            if (!p) {
-                el.textContent = '';
-                el.style.backgroundColor = '#e0c9a6';
-                el.classList.remove('covered', 'burning');
-            } else if (covered) {
-                el.textContent = '';
-                el.style.backgroundColor = '#b8a080';
-                el.classList.add('covered');
-                el.classList.remove('burning');
-            } else {
-                el.textContent = p.emoji || _TYPE_EMOJI[p.type] || '';
-                el.style.backgroundColor = PLAYER_COLORS[p.player] || '#e0c9a6';
-                el.classList.remove('covered');
-                p.burning ? el.classList.add('burning') : el.classList.remove('burning');
-            }
+            renderCell(el, p, covered);
         }
     }
 }
@@ -194,6 +182,8 @@ function _handleServerGameOver(winner) {
         scoreText  = 'Score: 0';
     }
 
+    // Auto-save game log to server for learning
+    if (typeof gameLog !== 'undefined') gameLog.saveToServer();
     showResult(resultText, scoreText);
 }
 
