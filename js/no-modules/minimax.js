@@ -150,35 +150,44 @@ const SkillMinimax = (function () {
             if (opPieces  === 0) return  1000;
         }
 
-        // Mobility
+        // Positional evaluation: mobility restriction + safe movement analysis.
+        // A piece with few safe moves is effectively trapped — heavily penalize that.
+        // "Safe move" = a square where no adjacent enemy can capture you.
         let cpuMobility = 0, opMobility = 0;
+        let cpuTrapped = 0, opTrapped = 0;
         for (let r = 0; r < BOARD_ROWS; r++) {
             for (let c = 0; c < BOARD_COLS; c++) {
                 const p = state.board[r][c];
                 if (!p || p.player === 0 || state.covered[r][c]) continue;
-                const cnt = getValidMoves(state, r, c).length;
-                if (p.player === cpuPlayer) cpuMobility += cnt;
-                else opMobility += cnt;
-            }
-        }
-        // Mobility — stronger weight in late game when piece manoeuvring matters more
-        const mobilityWeight = hasCovered ? 0.5 : 2.0;
-        score += (cpuMobility - opMobility) * mobilityWeight;
-
-        // Centralization + advancement: pieces near the center and in enemy territory
-        // are more threatening. Center of 6×6 board is (2.5, 2.5).
-        if (!hasCovered) {
-            for (let r = 0; r < BOARD_ROWS; r++) {
-                for (let c = 0; c < BOARD_COLS; c++) {
-                    const p = state.board[r][c];
-                    if (!p || p.player === 0 || state.covered[r][c]) continue;
-                    const distFromCenter = Math.abs(r - 2.5) + Math.abs(c - 2.5);
-                    const centralBonus = Math.max(0, 4 - distFromCenter) * 2;
-                    if (p.player === cpuPlayer) score += centralBonus;
-                    else score -= centralBonus;
+                const moves = getValidMoves(state, r, c);
+                let safeMoves = 0;
+                for (const { row: mr, col: mc } of moves) {
+                    // A move is "safe" if no adjacent enemy at the destination can capture this piece
+                    let safe = true;
+                    for (const [dr, dc] of DIRS) {
+                        const nr = mr + dr, nc = mc + dc;
+                        if (!inBounds(nr, nc)) continue;
+                        const adj = state.board[nr][nc];
+                        if (adj && adj.player !== p.player && adj.player !== 0 && !state.covered[nr][nc]) {
+                            if (canCapture(adj, p)) { safe = false; break; }
+                        }
+                    }
+                    if (safe) safeMoves++;
+                }
+                if (p.player === cpuPlayer) {
+                    cpuMobility += safeMoves;
+                    if (safeMoves === 0) cpuTrapped++;
+                } else {
+                    opMobility += safeMoves;
+                    if (safeMoves === 0) opTrapped++;
                 }
             }
         }
+        // Mobility difference: weight increases in late game
+        const mobilityWeight = hasCovered ? 1.0 : 3.0;
+        score += (cpuMobility - opMobility) * mobilityWeight;
+        // Trapped pieces are severely penalized — they're effectively dead
+        score += (opTrapped - cpuTrapped) * 15;
 
         // Dragon-mouse proximity threat (suppressed when dragon is burning — immune to mice)
         if (cpuDragon && !cpuDragon.burning) {
@@ -289,57 +298,48 @@ const SkillMinimax = (function () {
             }
         }
 
-        // Late-game aggression — when most pieces are uncovered, reward closing
-        // distance on capturable opponents to prevent endless shuffling.
-        if (coveredCount <= 3) {
-            const aggressionScale = coveredCount === 0 ? 1.0 : 0.5;
-            for (let r = 0; r < BOARD_ROWS; r++) {
-                for (let c = 0; c < BOARD_COLS; c++) {
-                    const p = state.board[r][c];
-                    if (!p || p.player !== cpuPlayer || state.covered[r][c]) continue;
-                    // Find closest enemy this piece can capture
-                    let bestDist = 99;
-                    for (let er = 0; er < BOARD_ROWS; er++) {
-                        for (let ec = 0; ec < BOARD_COLS; ec++) {
-                            const t = state.board[er][ec];
-                            if (!t || t.player === cpuPlayer || t.player === 0 || state.covered[er][ec]) continue;
+        // Endgame pursuit — when few pieces remain and board is mostly uncovered,
+        // reward positions that RESTRICT opponent movement rather than just chasing.
+        // The goal is to corner opponents so their only moves are into our capture range.
+        if (coveredCount <= 3 && opPieces <= 5) {
+            // For each opponent piece, reward CPU pieces that can reach it
+            // AND penalize opponent's total safe mobility (already in score above)
+            for (let er = 0; er < BOARD_ROWS; er++) {
+                for (let ec = 0; ec < BOARD_COLS; ec++) {
+                    const t = state.board[er][ec];
+                    if (!t || t.player === cpuPlayer || t.player === 0 || state.covered[er][ec]) continue;
+                    // How many safe moves does this specific opponent piece have?
+                    const eMoves = getValidMoves(state, er, ec);
+                    let eSafeMoves = 0;
+                    for (const { row: mr, col: mc } of eMoves) {
+                        let safe = true;
+                        for (const [dr, dc] of DIRS) {
+                            const nr = mr + dr, nc = mc + dc;
+                            if (!inBounds(nr, nc)) continue;
+                            const adj = state.board[nr][nc];
+                            if (adj && adj.player === cpuPlayer && !state.covered[nr][nc] && canCapture(adj, t)) {
+                                safe = false; break;
+                            }
+                        }
+                        if (safe) eSafeMoves++;
+                    }
+                    // Reward restricting this piece — fewer safe moves = better
+                    const restrictionBonus = Math.max(0, 4 - eSafeMoves) * t.power * 3;
+                    score += restrictionBonus;
+
+                    // Also reward having a capturer nearby (but don't over-weight pure chasing)
+                    for (let r = 0; r < BOARD_ROWS; r++) {
+                        for (let c = 0; c < BOARD_COLS; c++) {
+                            const p = state.board[r][c];
+                            if (!p || p.player !== cpuPlayer || state.covered[r][c]) continue;
                             if (canCapture(p, t)) {
-                                const d = Math.abs(r - er) + Math.abs(c - ec);
-                                if (d < bestDist) bestDist = d;
+                                const dist = Math.abs(r - er) + Math.abs(c - ec);
+                                score += Math.max(0, 8 - dist) * 2;
                             }
                         }
                     }
-                    if (bestDist < 99) {
-                        score += Math.max(0, 10 - bestDist) * 5 * aggressionScale;
-                    }
                 }
             }
-        }
-
-        // Endgame hunt — few opponent pieces left, no/few covered pieces
-        if (opPieces <= 2 && coveredCount <= 1) {
-            // Collect opponent piece positions
-            const opPositions = [];
-            for (let r = 0; r < BOARD_ROWS; r++)
-                for (let c = 0; c < BOARD_COLS; c++) {
-                    const p = state.board[r][c];
-                    if (p && p.player !== cpuPlayer && p.player !== 0 && !state.covered[r][c])
-                        opPositions.push({ r, c, piece: p });
-                }
-            for (const { r: tR, c: tC, piece: target } of opPositions) {
-                for (let r = 0; r < BOARD_ROWS; r++)
-                    for (let c = 0; c < BOARD_COLS; c++) {
-                        const p = state.board[r][c];
-                        if (!p || p.player !== cpuPlayer || state.covered[r][c]) continue;
-                        const dist = Math.abs(r - tR) + Math.abs(c - tC);
-                        if (canCapture(p, target)) {
-                            score += Math.max(0, 12 - dist) * 16;
-                        } else {
-                            score += Math.max(0, 8 - dist) * 4;
-                        }
-                    }
-            }
-            score -= opMobility * 15;
         }
 
         return score;
