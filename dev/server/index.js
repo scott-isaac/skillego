@@ -6,6 +6,7 @@ const express  = require('express');
 const http     = require('http');
 const { Server } = require('socket.io');
 const path     = require('path');
+const fs       = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const GameRoom = require('./GameRoom');
 
@@ -18,6 +19,123 @@ const PORT = process.env.PORT || 3000;
 // ─── Static files ─────────────────────────────────────────────────────────────
 // Serve the client from the repo root so localhost:PORT loads the game directly.
 app.use(express.static(path.join(__dirname, '..')));
+app.use(express.json({ limit: '1mb' }));
+
+// ─── Game log auto-save + learning ────────────────────────────────────────────
+const GAMELOGS_DIR = path.join(__dirname, '..', 'gamelogs');
+const LEARNED_FILE = path.join(GAMELOGS_DIR, 'learned.json');
+
+function ensureGamelogsDir() {
+    if (!fs.existsSync(GAMELOGS_DIR)) fs.mkdirSync(GAMELOGS_DIR, { recursive: true });
+}
+
+function nextGameNumber() {
+    ensureGamelogsDir();
+    const files = fs.readdirSync(GAMELOGS_DIR).filter(f => /^\d+\.txt$/.test(f));
+    const nums = files.map(f => parseInt(f));
+    return nums.length ? Math.max(...nums) + 1 : 1;
+}
+
+function loadLearned() {
+    try {
+        if (fs.existsSync(LEARNED_FILE)) return JSON.parse(fs.readFileSync(LEARNED_FILE, 'utf8'));
+    } catch (e) { console.error('Failed to load learned.json:', e.message); }
+    return { blunders: [], weights: {}, gamesAnalyzed: 0 };
+}
+
+function saveLearned(data) {
+    ensureGamelogsDir();
+    fs.writeFileSync(LEARNED_FILE, JSON.stringify(data, null, 2));
+}
+
+// Analyze a game for true blunders — CPU moves that were punished AND:
+//   1. The CPU had other moves (not forced)
+//   2. The human's capture was NOT immediately recaptured (not a trade)
+// An uncover that reveals a piece next to an enemy that captures it is always a blunder.
+function analyzeBlunders(gameData) {
+    const { moves, cpuPlayer } = gameData;
+    const humanPlayer = cpuPlayer === 1 ? 2 : 1;
+    const blunders = [];
+
+    for (let i = 0; i < moves.length - 1; i++) {
+        const cpuMove = moves[i];
+        const humanReply = moves[i + 1];
+        if (cpuMove.player !== cpuPlayer) continue;
+        if (!humanReply || humanReply.player === cpuPlayer) continue;
+
+        // Did the human capture a CPU piece on the next move?
+        if (!humanReply.captured || humanReply.captured.player !== cpuPlayer) continue;
+
+        // Check if this was a forced move (only 1 non-uncover CPU move in this turn).
+        // Count how many CPU moves happened at the same turn number.
+        const sameTurnCpuMoves = moves.filter(m =>
+            m.turn === cpuMove.turn && m.player === cpuPlayer && m.type !== 'uncover'
+        );
+        // If the CPU's only option was this one move, it's not a blunder (forced).
+        // But uncovers next to enemies are always blunders — the CPU chose WHERE to uncover.
+        const wasForced = cpuMove.type !== 'uncover' && sameTurnCpuMoves.length <= 1
+            && moves.filter(m => m.turn === cpuMove.turn && m.player === cpuPlayer).length <= 1;
+
+        // Check if the human's capturing piece was recaptured on the very next CPU move.
+        // If so, it's a trade, not a blunder.
+        const nextCpuMove = moves[i + 2];
+        const wasRecaptured = nextCpuMove
+            && nextCpuMove.player === cpuPlayer
+            && nextCpuMove.captured
+            && nextCpuMove.captured.player === humanPlayer;
+
+        if (wasForced || wasRecaptured) continue;
+
+        blunders.push({
+            turn: cpuMove.turn,
+            cpuMoveType: cpuMove.type,
+            cpuPiece: cpuMove.piece,
+            cpuFrom: cpuMove.from,
+            cpuTo: cpuMove.to,
+            capturedBy: humanReply.piece,
+            capturedPiece: humanReply.captured,
+            lostPower: humanReply.captured.power,
+        });
+    }
+    return blunders;
+}
+
+// POST /api/save-game — save game log text + structured move data
+app.post('/api/save-game', (req, res) => {
+    try {
+        const { logText, moveData } = req.body;
+        if (!logText) return res.status(400).json({ error: 'No log text' });
+
+        ensureGamelogsDir();
+        const num = nextGameNumber();
+        const filename = `${num}.txt`;
+        fs.writeFileSync(path.join(GAMELOGS_DIR, filename), logText);
+        console.log(`Game ${num} saved to gamelogs/${filename}`);
+
+        // Analyze blunders if structured move data is provided
+        let blunders = [];
+        if (moveData && moveData.moves) {
+            blunders = analyzeBlunders(moveData);
+            const learned = loadLearned();
+            learned.blunders.push(...blunders);
+            learned.gamesAnalyzed++;
+            // Keep last 200 blunders
+            if (learned.blunders.length > 200) learned.blunders = learned.blunders.slice(-200);
+            saveLearned(learned);
+            console.log(`  → ${blunders.length} blunders detected, ${learned.blunders.length} total patterns`);
+        }
+
+        res.json({ saved: filename, blunders: blunders.length });
+    } catch (e) {
+        console.error('Failed to save game:', e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// GET /api/learned — retrieve learned weight adjustments for the AI
+app.get('/api/learned', (req, res) => {
+    res.json(loadLearned());
+});
 
 // ─── Room store ───────────────────────────────────────────────────────────────
 // gameId → GameRoom. In-memory only; restarts clear all games.

@@ -80,6 +80,7 @@ function makeCpuMove() {
             noise:            params.noise,
         });
     } catch (e) {
+        console.error('CPU error:', e);
         debugLog('CPU error: ' + e.message);
         return;
     }
@@ -87,23 +88,33 @@ function makeCpuMove() {
     if (!move) { debugLog('CPU: no move available'); return; }
     debugLog(`CPU P${cpuPlayer} (${difficulty}): ${move.type}`);
 
-    if (move.type === 'uncover') {
-        const el    = document.querySelector(`.cell[data-row="${move.r}"][data-col="${move.c}"]`);
-        const piece = gameState.board[move.r][move.c];
-        if (el && piece) {
-            // Suppress CSS transition during reveal — same fix as human uncover in game.js.
-            el.style.transition = 'none';
-            gameState.covered[move.r][move.c] = false;
-            renderCell(el, piece, false);
-            requestAnimationFrame(() => requestAnimationFrame(() => {
-                el.style.transition = '';
-            }));
-            if (typeof gameLog !== 'undefined') gameLog.recordUncover(piece.player, move.r, move.c, piece);
-            checkGameOver();
-            endTurn();
+    // Track oscillation history for non-uncover moves
+    if (move.type !== 'uncover') {
+        const fromR = move.fromR ?? move.drR ?? move.robotR;
+        const fromC = move.fromC ?? move.drC ?? move.robotC;
+        const toR   = move.toR ?? move.destR ?? move.targetR;
+        const toC   = move.toC ?? move.destC ?? move.targetC;
+        if (fromR !== undefined) {
+            gameState.cpuLastMoveFrom = { row: fromR, col: fromC };
+            gameState.cpuLastMoveTo   = { row: toR,   col: toC   };
+            const piece = gameState.board[fromR][fromC];
+            if (piece) {
+                if (!gameState.cpuRecentSquares) gameState.cpuRecentSquares = {};
+                const histKey = piece.type;
+                gameState.cpuRecentSquares[histKey] = [
+                    { row: toR, col: toC },
+                    ...(gameState.cpuRecentSquares[histKey] || [])
+                ].slice(0, 6);
+            }
         }
+    }
+
+    // Execute through the shared game engine functions
+    if (move.type === 'uncover') {
+        executeUncover(move.r, move.c);
     } else if (move.type === 'move' || move.type === 'capture') {
-        executeCpuMove(move.fromR, move.fromC, move.toR, move.toC);
+        movePiece(move.fromR, move.fromC, move.toR, move.toC);
+        endTurn();
     } else if (move.type === 'push') {
         executePush(move.drR, move.drC, move.enemyR, move.enemyC, move.destR, move.destC);
     } else if (move.type === 'hop') {
@@ -122,23 +133,3 @@ function makeCpuMove() {
     }
 }
 
-function executeCpuMove(fromRow, fromCol, toRow, toCol) {
-    const fromPiece = gameState.board[fromRow][fromCol];
-    if (!fromPiece) {
-        debugLog("Error: Failed to move piece - missing board data");
-        return;
-    }
-
-    // Track movement history for oscillation detection (read by minimax)
-    gameState.cpuLastMoveFrom = { row: fromRow, col: fromCol };
-    gameState.cpuLastMoveTo   = { row: toRow,   col: toCol   };
-    if (!gameState.cpuRecentSquares) gameState.cpuRecentSquares = {};
-    const histKey = fromPiece.type;
-    gameState.cpuRecentSquares[histKey] = [
-        { row: toRow, col: toCol },
-        ...( gameState.cpuRecentSquares[histKey] || [] )
-    ].slice(0, 6);
-
-    movePiece(fromRow, fromCol, toRow, toCol);
-    endTurn();
-}
