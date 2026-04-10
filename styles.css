@@ -84,17 +84,87 @@ button, .cell, input[type="range"] {
     box-shadow: none;
 }
 
+/* ── Selection glow — backlights the piece (behind icon, around player square) ── */
 .cell.selected {
-    outline: 3px solid yellow;
-    box-shadow: 0 0 15px rgba(255, 255, 0, 0.7);
+    outline: none;
+    z-index: 2;
+}
+.cell.selected::before {
+    content: '';
+    position: absolute;
+    /* Match the player color square size (85% of cell) */
+    width: 85%;
+    height: 85%;
+    border-radius: 6px;
+    box-shadow:
+        0 0 6px 3px rgba(255, 220, 100, 0.9),
+        0 0 16px 6px rgba(255, 180, 40, 0.5),
+        0 0 30px 12px rgba(200, 140, 20, 0.2);
+    border: 2px solid rgba(255, 220, 100, 0.8);
+    pointer-events: none;
+    animation: select-pulse 1.4s ease-in-out infinite alternate;
+}
+@keyframes select-pulse {
+    from { box-shadow: 0 0 6px 3px rgba(255,220,100,0.9), 0 0 16px 6px rgba(255,180,40,0.5), 0 0 30px 12px rgba(200,140,20,0.2); }
+    to   { box-shadow: 0 0 8px 4px rgba(255,220,100,1.0), 0 0 20px 8px rgba(255,180,40,0.6), 0 0 35px 16px rgba(200,140,20,0.25); }
 }
 
+/* ── Valid move — filled circle ── */
 .cell.valid-move {
-    outline: 3px dashed green;
+    outline: none;
+}
+.cell.valid-move::after {
+    content: '';
+    position: absolute;
+    width: 32%;
+    height: 32%;
+    border-radius: 50%;
+    background: rgba(130, 200, 110, 0.55);
+    box-shadow: 0 0 6px rgba(120, 200, 100, 0.4);
+    pointer-events: none;
 }
 
+/* ── Valid capture — glowing corner brackets ── */
 .cell.valid-capture {
-    outline: 3px dashed red;
+    outline: none;
+}
+.cell.valid-capture::before,
+.cell.valid-capture::after {
+    content: '';
+    position: absolute;
+    pointer-events: none;
+}
+.cell.valid-capture::before {
+    inset: 4px;
+    border: 3px solid transparent;
+    border-image: none;
+    border-top: 3px solid rgba(255,90,60,0.8);
+    border-left: 3px solid rgba(255,90,60,0.8);
+    border-bottom: 3px solid transparent;
+    border-right: 3px solid transparent;
+    border-radius: 4px 0 0 0;
+    width: 28%;
+    height: 28%;
+    top: 4px;
+    left: 4px;
+    right: auto;
+    bottom: auto;
+}
+.cell.valid-capture::after {
+    width: 28%;
+    height: 28%;
+    bottom: 4px;
+    right: 4px;
+    top: auto;
+    left: auto;
+    border-top: 3px solid transparent;
+    border-left: 3px solid transparent;
+    border-bottom: 3px solid rgba(255,90,60,0.8);
+    border-right: 3px solid rgba(255,90,60,0.8);
+    border-radius: 0 0 4px 0;
+}
+.cell.valid-capture {
+    box-shadow: inset 0 0 12px rgba(255,60,30,0.2);
 }
 
 /* ── Burning piece ── */
