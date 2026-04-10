@@ -1,0 +1,13 @@
+services:
+  skillego:
+    build: .
+    container_name: skillego-server
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3001}:3000"
+    env_file:
+      - .env
+    volumes:
+      - ./gamelogs:/app/gamelogs
+    environment:
+      - NODE_ENV=production

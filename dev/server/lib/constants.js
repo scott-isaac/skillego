@@ -21,8 +21,8 @@ PIECES.forEach(p => { BURN_LEVEL[p.power] = { type: p.type }; });
 const CPU_DIFFICULTY_PARAMS = {
     easy:   { depth: 1, noise: 35 },
     medium: { depth: 2, noise: 15 },
-    hard:   { depth: 3, noise: 0  },
-    expert: { depth: null, noise: 0 },
+    hard:   { depth: null, noise: 0 },
+    expert: { depth: null, noise: 0 },  // server fallback; client Expert uses ClassicAI
 };
 
 const ALL_ABILITY_IDS = ['push', 'engulf', 'hop', 'transform', 'snipe', 'pyromania'];

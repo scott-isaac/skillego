@@ -41,11 +41,15 @@ function captureCurrentState() {
 // Minimax search parameters per difficulty.
 // depth=null lets minimax auto-scale depth by game phase (expert behaviour).
 // noise adds ±jitter to move scores so lower difficulties make human-like mistakes.
+// Minimax search parameters per difficulty.
+// Easy/Medium: minimax with noise for human-like mistakes.
+// Hard: minimax adaptive depth, no noise.
+// Expert: deep negamax with iterative deepening + full ability support.
 const CPU_DIFFICULTY_PARAMS = {
     easy:   { depth: 1, noise: 35 },
     medium: { depth: 2, noise: 15 },
-    hard:   { depth: 3, noise: 0  },
-    expert: { depth: null, noise: 0 },
+    hard:   { depth: null, noise: 0 },
+    expert: { engine: 'classic' },
 };
 
 function makeCpuMove() {
@@ -69,16 +73,24 @@ function makeCpuMove() {
 
     let move;
     try {
-        move = SkillMinimax.getBestMove({
-            state,
-            cpuPlayer,
-            cpuRecentSquares: gameState.cpuRecentSquares,
-            cpuLastMoveFrom:  gameState.cpuLastMoveFrom,
-            cpuLastMoveTo:    gameState.cpuLastMoveTo,
-            enabledAbilities: gameState.enabledAbilities,
-            depth:            params.depth,
-            noise:            params.noise,
-        });
+        if (params.engine === 'classic') {
+            move = ClassicAI.getBestMove({
+                state,
+                cpuPlayer,
+                enabledAbilities: gameState.enabledAbilities,
+            });
+        } else {
+            move = SkillMinimax.getBestMove({
+                state,
+                cpuPlayer,
+                cpuRecentSquares: gameState.cpuRecentSquares,
+                cpuLastMoveFrom:  gameState.cpuLastMoveFrom,
+                cpuLastMoveTo:    gameState.cpuLastMoveTo,
+                enabledAbilities: gameState.enabledAbilities,
+                depth:            params.depth,
+                noise:            params.noise,
+            });
+        }
     } catch (e) {
         console.error('CPU error:', e);
         debugLog('CPU error: ' + e.message);

@@ -49,6 +49,7 @@
 
                 <!-- ── Rules overlay (shown by ? button during game) ── -->
                 <div id="rules-overlay" class="board-overlay" style="display:none">
+                    <button id="close-rules-x" class="overlay-close-x">&times;</button>
                     <h2 id="rules-overlay-title">How to Play</h2>
                     <div id="rules-overlay-content"></div>
                     <button id="close-rules-btn">Close</button>
@@ -190,19 +191,15 @@
                 <input type="file" id="replay-file-input" accept=".txt" style="display:none">
             </div>
 
-            <!-- Shown only in server mode (socket.io available) -->
-            <div id="join-game-section" style="display:none">
-                <hr style="border:none;border-top:1px solid #4a3520;margin:14px 0">
-                <p style="text-align:center;margin:0 0 8px;font-size:14px;color:#c8a96e">
-                    Have a friend's game code?
-                </p>
-                <div style="display:flex;gap:8px;justify-content:center">
-                    <input id="join-code-input" type="text" placeholder="ABCD1234" maxlength="8"
-                           style="text-transform:uppercase;letter-spacing:3px;width:110px;
-                                  text-align:center;padding:6px;font-size:15px;
-                                  border:1px solid #4a3520;border-radius:4px;
-                                  background:#2a1e10;color:#c8b080">
-                    <button id="join-game-btn">Join</button>
+            <!-- Shown only when connected to a game server -->
+            <div id="join-game-section" class="network-section" style="display:none">
+                <div class="network-divider"></div>
+                <div class="network-label">Network Play</div>
+                <button id="host-game-btn" class="secondary-btn network-host-btn">Host Game</button>
+                <div class="network-join-row">
+                    <input id="join-code-input" class="network-code-input" type="text"
+                           placeholder="CODE" maxlength="8">
+                    <button id="join-game-btn" class="secondary-btn">Join</button>
                 </div>
             </div>
         </div>
@@ -216,6 +213,7 @@
         <div id="winner-message" class="board-overlay" style="display:none">
             <div id="winner-text"></div>
             <div id="winner-score"></div>
+            <div id="network-status" style="display:none"></div>
             <button id="restart-btn">Play Again</button>
             <button id="new-game-btn">New Game</button>
             <button id="copy-log-btn" class="dev-only" onclick="gameLog.copyToClipboard()">📋 Copy Game Log</button>
@@ -253,12 +251,12 @@
         <p><strong>Exception:</strong> <img class="piece-icon" src="assets/piece_mouse.png" alt="Mouse"> Mouse captures <img class="piece-icon" src="assets/piece_dragon.png" alt="Dragon"> Dragon — but Dragon beats everything else.</p>        
         <p><strong>Special Abilities</strong> (can be toggled on/off in setup):</p>
         <table class="piece-table">
-            <tr><td><img class="piece-icon" src="assets/piece_dragon.png" alt="Dragon"></td><td><strong>Dragon — Push:</strong> Push an adjacent enemy one square away (space behind must be clear).</td></tr>
-            <tr><td><span class="piece-icon-fire"><img class="fire-bg" src="assets/gifs/fire_red.gif" alt=""><img class="piece-fg" src="assets/piece_dragon.png" alt="Dragon"></span></td><td><strong>Dragon — Enflame:</strong> Go up in flames. Burning Dragon is immune to Mice and can kill them — but loses 1 power every time it moves, cycling down through the piece hierarchy until it burns out.</td></tr>
-            <tr><td><img class="piece-icon" src="assets/piece_mouse.png" alt="Mouse"></td><td><strong>Mouse — Hop:</strong> Jump over any adjacent piece to the empty square beyond it.</td></tr>
-            <tr><td><img class="piece-icon" src="assets/piece_wizard.png" alt="Wizard"></td><td><strong>Wizard — Transform:</strong> Permanently become 4 Mice — line (Wizard stays + 3 extend in a direction) or explosion (Wizard vanishes, 4 Mice surround it).</td></tr>
-            <tr><td><img class="piece-icon" src="assets/piece_robot.png" alt="Robot"></td><td><strong>Robot Wants Kitty:</strong> If a Robot sees a friendly Kitty in danger from another piece, it can race to help — capturing any enemy along a clear orthogonal line if a friendly (non-burning) Cat is adjacent to the target. The Robot moves to the target's square. A burning Robot cannot snipe.</td></tr>
-            <tr><td><img class="piece-icon" src="assets/gifs/fire_red.gif" alt="Fire"></td><td><strong>Pyromania:</strong> Any burning piece can spread fire to an adjacent uncovered enemy, setting it ablaze. Costs the spreader 1 power level — all the way to burnout.</td></tr>
+            <tr data-ability="push"><td><img class="piece-icon" src="assets/piece_dragon.png" alt="Dragon"></td><td><strong>Dragon — Push:</strong> Push an adjacent enemy one square away (space behind must be clear).</td></tr>
+            <tr data-ability="engulf"><td><span class="piece-icon-fire"><img class="fire-bg" src="assets/gifs/fire_red.gif" alt=""><img class="piece-fg" src="assets/piece_dragon.png" alt="Dragon"></span></td><td><strong>Dragon — Enflame:</strong> Go up in flames. Burning Dragon is immune to Mice and can kill them — but loses 1 power every time it moves, cycling down through the piece hierarchy until it burns out.</td></tr>
+            <tr data-ability="hop"><td><img class="piece-icon" src="assets/piece_mouse.png" alt="Mouse"></td><td><strong>Mouse — Hop:</strong> Jump over any adjacent piece to the empty square beyond it.</td></tr>
+            <tr data-ability="transform"><td><img class="piece-icon" src="assets/piece_wizard.png" alt="Wizard"></td><td><strong>Wizard — Transform:</strong> Permanently become 4 Mice — line (Wizard stays + 3 extend in a direction) or explosion (Wizard vanishes, 4 Mice surround it).</td></tr>
+            <tr data-ability="snipe"><td><img class="piece-icon" src="assets/piece_robot.png" alt="Robot"></td><td><strong>Robot Wants Kitty:</strong> If a Robot sees a friendly Kitty in danger from another piece, it can race to help — capturing any enemy along a clear orthogonal line if a friendly (non-burning) Cat is adjacent to the target. The Robot moves to the target's square. A burning Robot cannot snipe.</td></tr>
+            <tr data-ability="pyromania"><td><img class="piece-icon" src="assets/gifs/fire_red.gif" alt="Fire"></td><td><strong>Pyromania:</strong> Any burning piece can spread fire to an adjacent uncovered enemy, setting it ablaze. Costs the spreader 1 power level — all the way to burnout.</td></tr>
         </table>
         <p>When a piece with an ability is selected, action buttons appear in the skill tray below the board.</p>
         <p>Eliminate all opponent pieces to win.</p>
@@ -275,10 +273,26 @@
     <script src="js/no-modules/rules.js?v=3"></script>
     <script src="js/no-modules/ai-learning.js?v=3"></script>
     <script src="js/no-modules/board.js?v=4"></script>
-    <script src="js/no-modules/minimax.js?v=3"></script>
-    <script src="js/no-modules/cpu.js?v=6"></script>
+    <script src="js/no-modules/minimax.js?v=4"></script>
+    <script src="js/no-modules/mcts.js?v=1"></script>
+    <script src="js/no-modules/classic-ai.js?v=1"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+    <script src="js/no-modules/nn-mcts.js?v=1"></script>
+    <script src="js/no-modules/cpu.js?v=8"></script>
     <script src="js/no-modules/game.js?v=6"></script>
-    <script src="js/no-modules/socket-client.js?v=3"></script>
+    <!-- Multiplayer: Socket.io client (CDN fallback when not served by Node) -->
+    <script>
+        // Set the game server URL for cross-origin multiplayer.
+        // When served by the Node server (localhost:3000), this is ignored — io() auto-connects.
+        // When served from GitHub Pages, this tells the client where to find the game server.
+        // Multiplayer server URL — loaded from server-config.js (gitignored).
+        // For local dev, the Node server serves the client so io() auto-connects.
+        // For GitHub Pages deployment, create js/no-modules/server-config.js with:
+        //   var SKILLEGO_SERVER = "https://your-server-url.example.com";
+    </script>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
+    <script src="js/no-modules/server-config.js" onerror=""></script>
+    <script src="js/no-modules/socket-client.js?v=4"></script>
     <script src="js/no-modules/main.js?v=3"></script>
     <script src="js/no-modules/replay.js"></script>
     <script>
@@ -322,9 +336,19 @@
 
             // ? help button
             document.getElementById('help-button').addEventListener('click', function() {
-                document.getElementById('rules-overlay').style.display = '';
+                var overlay = document.getElementById('rules-overlay');
+                // Mark ability rows as enabled/disabled based on current game
+                overlay.querySelectorAll('tr[data-ability]').forEach(function(row) {
+                    var enabled = gameState.enabledAbilities && gameState.enabledAbilities.has(row.dataset.ability);
+                    row.classList.toggle('ability-disabled', !enabled);
+                    row.classList.toggle('ability-enabled', enabled);
+                });
+                overlay.style.display = '';
             });
             document.getElementById('close-rules-btn').addEventListener('click', function() {
+                document.getElementById('rules-overlay').style.display = 'none';
+            });
+            document.getElementById('close-rules-x').addEventListener('click', function() {
                 document.getElementById('rules-overlay').style.display = 'none';
             });
         })();
