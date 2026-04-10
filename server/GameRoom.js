@@ -132,6 +132,7 @@ class GameRoom {
             currentPlayer:     this.currentPlayer,
             numPlayers:        this.numPlayers,
             eliminatedPlayers: [...this.eliminatedPlayers],
+            enabledAbilities:  [...this.enabledAbilities],
             gameOver:          this.gameOver,
             winner:            this.winner,
         };

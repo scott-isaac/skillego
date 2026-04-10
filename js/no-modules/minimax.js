@@ -15,27 +15,38 @@ const SkillMinimax = (function () {
     }
 
     // ─── Move Generation ──────────────────────────────────────────────────────
-    // Returns true if transform move places a mouse adjacent to an enemy dragon,
-    // or if the enemy dragon is nearly the last piece and we have no mice.
+    // Returns true if transform is tactically useful:
+    // Transform is only worth it if the mice can realistically TRAP the
+    // enemy dragon — not just "somewhere near it." The whole point is to
+    // create a mouse kill squad, so the mice need to land in positions
+    // that restrict the dragon's movement.
     function transformIsWorthIt(state, move, player) {
         for (let r = 0; r < BOARD_ROWS; r++) {
             for (let c = 0; c < BOARD_COLS; c++) {
                 const p = state.board[r][c];
-                if (!p || p.player === player || p.player === 0 || p.type !== 'dragon' || state.covered[r][c]) continue;
-                // Does any mouse cell land adjacent to the dragon?
+                if (!p || p.player === player || p.player === 0 || p.type !== 'dragon' || state.covered[r][c] || p.burning) continue;
+                // Does any mouse cell land adjacent to the dragon? (immediate kill threat)
+                let adjacentCount = 0;
                 for (const { r: mr, c: mc } of move.cells) {
-                    if (Math.abs(mr - r) + Math.abs(mc - c) === 1) return true;
+                    if (Math.abs(mr - r) + Math.abs(mc - c) === 1) adjacentCount++;
                 }
-                // Fallback: dragon is one of very few remaining pieces and we have no mice
-                let opCount = 0, ownMice = 0;
+                if (adjacentCount >= 1) return true;
+                // Does transform create 2+ mice within distance 2 of the dragon?
+                // This is close enough to form a pincer next turn.
+                let closeCount = 0;
+                for (const { r: mr, c: mc } of move.cells) {
+                    if (Math.abs(mr - r) + Math.abs(mc - c) <= 2) closeCount++;
+                }
+                if (closeCount >= 2) return true;
+                // Desperate: no mice at all, wizard is very close to dragon
+                let ownMice = 0;
                 for (let pr = 0; pr < BOARD_ROWS; pr++)
                     for (let pc = 0; pc < BOARD_COLS; pc++) {
                         const pp = state.board[pr][pc];
-                        if (!pp || pp.player === 0) continue;
-                        if (pp.player !== player && pp.player !== 0) opCount++;
-                        if (pp.player === player && pp.type === 'mouse' && !state.covered[pr][pc]) ownMice++;
+                        if (pp && pp.player === player && pp.type === 'mouse' && !state.covered[pr][pc]) ownMice++;
                     }
-                if (opCount <= 3 && ownMice === 0) return true;
+                const wizDist = Math.abs(move.wizR - r) + Math.abs(move.wizC - c);
+                if (ownMice === 0 && wizDist <= 3) return true;
             }
         }
         return false;
@@ -68,38 +79,36 @@ const SkillMinimax = (function () {
                     for (const m of getPushMoves(state, r, c, enabledAbilities))    moves.push(m);
                     for (const m of getHopMoves(state, r, c, enabledAbilities))     moves.push(m);
                     for (const m of getEngulfMoves(state, r, c, enabledAbilities)) {
-                        // Engulf is a last resort: only when an enemy mouse is adjacent AND the
-                        // dragon has no safe escape square AND cannot push the mouse away.
-                        let adjacentMouseDir = null;
-                        for (const [dr, dc] of DIRS) {
-                            const t = state.board[r + dr]?.[c + dc];
-                            if (t && t.type === 'mouse' && t.player !== player && !state.covered[r + dr]?.[c + dc]) {
-                                adjacentMouseDir = [dr, dc]; break;
+                        // Engulf ONLY when truly forced: enemy mouse is directly
+                        // adjacent AND the dragon can't move away AND can't push
+                        // the mouse. Burning costs power every move and loses mouse
+                        // immunity — it's a last resort, not a tactical choice.
+                        let adjacentMouse = false;
+                        for (const [dr, dc] of [[0,1],[0,-1],[1,0],[-1,0]]) {
+                            const mr = r + dr, mc = c + dc;
+                            if (!inBounds(mr, mc)) continue;
+                            const t = state.board[mr][mc];
+                            if (t && t.type === 'mouse' && t.player !== player && !state.covered[mr][mc]) {
+                                adjacentMouse = true; break;
                             }
                         }
-                        if (!adjacentMouseDir) continue; // no adjacent threat — don't engulf
-
-                        // Can the dragon push the mouse away?
-                        const [adr, adc] = adjacentMouseDir;
-                        const pushDestR = r + 2 * adr, pushDestC = c + 2 * adc;
-                        const canPush = inBounds(pushDestR, pushDestC) &&
-                                        state.board[pushDestR]?.[pushDestC] === null &&
-                                        enabledAbilities.has('push');
-
-                        // Can the dragon move to a square not adjacent to any enemy mouse?
+                        if (!adjacentMouse) continue;  // no adjacent mouse = never engulf
+                        // Can the dragon move to a safe square?
+                        const dragonMoves = getValidMoves(state, r, c);
                         let canEscape = false;
-                        for (const { row: mr, col: mc } of getValidMoves(state, r, c)) {
-                            let threatened = false;
-                            for (const [dr2, dc2] of DIRS) {
-                                const t = state.board[mr + dr2]?.[mc + dc2];
-                                if (t && t.type === 'mouse' && t.player !== player && !state.covered[mr + dr2]?.[mc + dc2]) {
-                                    threatened = true; break;
-                                }
+                        for (const mv of dragonMoves) {
+                            const dest = state.board[mv.row][mv.col];
+                            if (!dest) { canEscape = true; break; }  // empty square = escape
+                            if (dest.player !== player && dest.player !== 0 && dest.type !== 'mouse') {
+                                canEscape = true; break;  // can capture non-mouse = escape
                             }
-                            if (!threatened) { canEscape = true; break; }
                         }
-
-                        if (!canEscape) moves.push(m);
+                        if (canEscape) continue;  // can flee = don't engulf
+                        // Can the dragon push the mouse away?
+                        const pushMoves = getPushMoves(state, r, c, enabledAbilities);
+                        if (pushMoves.length > 0) continue;  // can push = don't engulf
+                        // Truly trapped: adjacent mouse, can't move, can't push. Engulf.
+                        moves.push(m);
                     }
                     for (const m of getSnipeMoves(state, r, c, enabledAbilities))   captures.push(m);  // snipe removes a piece
                     for (const m of getPyroMoves(state, r, c, enabledAbilities))    moves.push(m);
@@ -167,7 +176,7 @@ const SkillMinimax = (function () {
             if (opPieces  === 0) return  1000;
         }
 
-        // Mobility
+        // Mobility — simple move count (fast, called millions of times)
         let cpuMobility = 0, opMobility = 0;
         for (let r = 0; r < BOARD_ROWS; r++) {
             for (let c = 0; c < BOARD_COLS; c++) {
@@ -180,35 +189,109 @@ const SkillMinimax = (function () {
         }
         score += (cpuMobility - opMobility) * 0.5;
 
-        // Dragon-mouse proximity threat (suppressed when dragon is burning — immune to mice)
+        // Dragon-mouse proximity — scaled by mouse count near the dragon.
+        // A lone mouse chasing a mobile dragon is futile; multiple mice
+        // converging is a real kill threat. Suppressed when dragon is burning.
         if (cpuDragon && !cpuDragon.burning) {
+            // Count enemy mice within striking range of CPU dragon
+            let nearMice = 0;
+            for (let r = 0; r < BOARD_ROWS; r++)
+                for (let c = 0; c < BOARD_COLS; c++) {
+                    const p = state.board[r][c];
+                    if (p && p.type === 'mouse' && p.player !== cpuPlayer && p.player !== 0 && !state.covered[r][c])
+                        if (Math.abs(r - cpuDragon.r) + Math.abs(c - cpuDragon.c) <= 5) nearMice++;
+                }
+            // Scale: 1 mouse=0.6x, 2=1.0x, 3+=1.4x
+            const threatScale = nearMice <= 1 ? 0.6 : nearMice === 2 ? 1.0 : 1.4;
             for (let r = 0; r < BOARD_ROWS; r++) {
                 for (let c = 0; c < BOARD_COLS; c++) {
                     const p = state.board[r][c];
                     if (p && p.type === 'mouse' && p.player !== cpuPlayer && p.player !== 0 && !state.covered[r][c]) {
                         const d = Math.abs(r - cpuDragon.r) + Math.abs(c - cpuDragon.c);
-                        if (d === 1) score -= 45;
-                        else if (d === 2) score -= 18;
-                        else if (d === 3) score -= 7;
+                        if (d === 1) score -= 45 * threatScale;
+                        else if (d === 2) score -= 18 * threatScale;
+                        else if (d === 3) score -= 7 * threatScale;
+                        else if (d === 4) score -= 4 * threatScale;
                     }
                 }
             }
+            // Defensive: reward CPU dragon for having MORE escape routes when mice are near
+            if (nearMice >= 2) {
+                let dragonMoves = 0;
+                for (const [dr, dc] of DIRS) {
+                    const nr = cpuDragon.r + dr, nc = cpuDragon.c + dc;
+                    if (inBounds(nr, nc) && !state.board[nr][nc]) dragonMoves++;
+                }
+                score += dragonMoves * 8 * Math.min(nearMice, 4);
+            }
         }
         if (opDragon && !opDragon.burning) {
+            // Count CPU mice within striking range of opponent dragon
+            let nearMice = 0;
+            for (let r = 0; r < BOARD_ROWS; r++)
+                for (let c = 0; c < BOARD_COLS; c++) {
+                    const p = state.board[r][c];
+                    if (p && p.type === 'mouse' && p.player === cpuPlayer && !state.covered[r][c])
+                        if (Math.abs(r - opDragon.r) + Math.abs(c - opDragon.c) <= 5) nearMice++;
+                }
+            // Scale: 1 mouse=0.4x (lone chase is almost useless), 2=1.0x, 3+=1.5x
+            const huntScale = nearMice <= 1 ? 0.4 : nearMice === 2 ? 1.0 : 1.5;
+            // Proximity bonus — extended range so mice converge from further out
             for (let r = 0; r < BOARD_ROWS; r++) {
                 for (let c = 0; c < BOARD_COLS; c++) {
                     const p = state.board[r][c];
                     if (p && p.type === 'mouse' && p.player === cpuPlayer && !state.covered[r][c]) {
                         const d = Math.abs(r - opDragon.r) + Math.abs(c - opDragon.c);
-                        if (d === 1) score += 45;
-                        else if (d === 2) score += 25;
-                        else if (d === 3) score += 10;
+                        if (d === 1) score += 45 * huntScale;
+                        else if (d === 2) score += 25 * huntScale;
+                        else if (d === 3) score += 12 * huntScale;
+                        else if (d === 4) score += 6 * huntScale;
+                        else if (d === 5) score += 3 * huntScale;
+                    }
+                }
+            }
+            // Dragon mobility restriction — reward positions where mice cut off
+            // the dragon's escape routes. This makes mice surround rather than
+            // single-file chase. Only meaningful with 2+ mice in the area.
+            if (nearMice >= 2) {
+                let dragonMoves = 0;
+                for (const [dr, dc] of DIRS) {
+                    const nr = opDragon.r + dr, nc = opDragon.c + dc;
+                    if (inBounds(nr, nc) && !state.board[nr][nc]) dragonMoves++;
+                }
+                // Fewer escape routes = bigger bonus. Max 4 moves on open board.
+                // Bonus per restricted square scales with mouse count.
+                score += (4 - dragonMoves) * 12 * Math.min(nearMice, 4);
+            }
+        }
+
+        // Fire awareness — light touch: avoid parking valuable pieces next to
+        // enemy burning pieces (don't get ignited), small opportunistic bonus
+        // when our burning piece is adjacent to a high-value enemy.
+        for (let r = 0; r < BOARD_ROWS; r++) {
+            for (let c = 0; c < BOARD_COLS; c++) {
+                const p = state.board[r][c];
+                if (!p || !p.burning || p.player === 0 || state.covered[r][c]) continue;
+                for (const [dr, dc] of DIRS) {
+                    const nr = r + dr, nc = c + dc;
+                    if (!inBounds(nr, nc)) continue;
+                    const t = state.board[nr][nc];
+                    if (!t || t.player === 0 || t.player === p.player || state.covered[nr][nc]) continue;
+                    // t is an enemy piece adjacent to a burning piece
+                    if (p.player === cpuPlayer) {
+                        // Our burning piece next to their valuable piece — small bonus
+                        score += t.power * 1.5;
+                    } else {
+                        // Their burning piece next to our valuable piece — penalty
+                        score -= t.power * 1.5;
                     }
                 }
             }
         }
 
-        // Attack pressure: adjacent capturable opponents
+        // Attack pressure: small bonus for being adjacent to capturable opponents.
+        // Must be much less than material value (power * 10) so the AI strongly
+        // prefers actually capturing over just being adjacent.
         for (let r = 0; r < BOARD_ROWS; r++) {
             for (let c = 0; c < BOARD_COLS; c++) {
                 const p = state.board[r][c];
@@ -219,13 +302,16 @@ const SkillMinimax = (function () {
                     const t = state.board[nr][nc];
                     if (!t || t.player === 0 || state.covered[nr][nc] || t.player === p.player) continue;
                     if (canCapture(p, t)) {
-                        const bonus = t.power * 10;
+                        const bonus = t.power * 3;
                         if (p.player === cpuPlayer) score += bonus;
                         else score -= bonus;
                     }
                 }
             }
         }
+
+        // (Safety is handled by the search tree — the deeper we search,
+        //  the better we see threats. Keep the eval fast and let depth do the work.)
 
         // Robot threat dynamics
         // Locate both robots (only uncovered ones are known)
@@ -267,32 +353,51 @@ const SkillMinimax = (function () {
             }
         }
 
-        // Endgame hunt — 1 opponent piece left, no covered pieces
-        if (opPieces === 1 && !hasCovered) {
-            let lastR = -1, lastC = -1, lastPiece = null;
-            outer: for (let r = 0; r < BOARD_ROWS; r++)
-                for (let c = 0; c < BOARD_COLS; c++) {
-                    const p = state.board[r][c];
-                    if (p && p.player !== cpuPlayer && p.player !== 0 && !state.covered[r][c]) {
-                        lastR = r; lastC = c; lastPiece = p; break outer;
+        // Late-game pursuit — when board is mostly open, reward closing distance
+        // on capturable opponents. Intensity scales with how few pieces remain.
+        if (!hasCovered) {
+            // Full endgame hunt: ≤3 opponent pieces — maximum aggression
+            // Mid-late pursuit: 4-6 opponent pieces — moderate close-distance bonus
+            const isFullHunt = opPieces <= 3;
+            const isMidLate  = opPieces <= 6;
+            if (isMidLate) {
+                const huntScale = isFullHunt ? 1.0 : 0.4;
+                for (let er = 0; er < BOARD_ROWS; er++) {
+                    for (let ec = 0; ec < BOARD_COLS; ec++) {
+                        const t = state.board[er][ec];
+                        if (!t || t.player === cpuPlayer || t.player === 0 || state.covered[er][ec]) continue;
+                        for (let r = 0; r < BOARD_ROWS; r++)
+                            for (let c = 0; c < BOARD_COLS; c++) {
+                                const p = state.board[r][c];
+                                if (!p || p.player !== cpuPlayer || state.covered[r][c]) continue;
+                                const dist = Math.abs(r - er) + Math.abs(c - ec);
+                                if (canCapture(p, t)) {
+                                    score += Math.max(0, 12 - dist) * 18 * huntScale;
+                                } else {
+                                    score += Math.max(0, 8 - dist) * 6 * huntScale;
+                                }
+                            }
                     }
                 }
-            if (lastR >= 0) {
-                for (let r = 0; r < BOARD_ROWS; r++)
-                    for (let c = 0; c < BOARD_COLS; c++) {
-                        const p = state.board[r][c];
-                        if (!p || p.player !== cpuPlayer || state.covered[r][c]) continue;
-                        const dist = Math.abs(r - lastR) + Math.abs(c - lastC);
-                        if (canCapture(p, lastPiece)) {
-                            // Primary hunter: strongly reward closing distance
-                            score += Math.max(0, 12 - dist) * 18;
-                        } else {
-                            // Supporting piece: reward cornering — reduce opponent escape routes
-                            score += Math.max(0, 8 - dist) * 6;
+                if (isFullHunt) score -= opMobility * 20;
+                else score -= opMobility * 8;
+            }
+        } else if (coveredCount <= 6) {
+            // Board is mostly open but a few covered cells remain —
+            // light pursuit bonus so pieces don't idle while waiting to uncover.
+            for (let er = 0; er < BOARD_ROWS; er++) {
+                for (let ec = 0; ec < BOARD_COLS; ec++) {
+                    const t = state.board[er][ec];
+                    if (!t || t.player === cpuPlayer || t.player === 0 || state.covered[er][ec]) continue;
+                    for (let r = 0; r < BOARD_ROWS; r++)
+                        for (let c = 0; c < BOARD_COLS; c++) {
+                            const p = state.board[r][c];
+                            if (!p || p.player !== cpuPlayer || state.covered[r][c]) continue;
+                            if (!canCapture(p, t)) continue;
+                            const dist = Math.abs(r - er) + Math.abs(c - ec);
+                            score += Math.max(0, 10 - dist) * 3;
                         }
-                    }
-                // Heavily penalise opponent mobility — the goal is to leave them no moves
-                score -= opMobility * 20;
+                }
             }
         }
 
@@ -362,9 +467,13 @@ const SkillMinimax = (function () {
                 if (p && p.player !== cpuPlayer && !state.covered[r][c]) opUncoveredCount++;
             }
 
-        const isEndgameHunt = coveredCount === 0 && opUncoveredCount === 1;
+        const isEndgameHunt = coveredCount === 0 && opUncoveredCount <= 5;
         if (depth == null) {
-            depth = coveredCount > 16 ? 3 : coveredCount > 6 ? 4 : isEndgameHunt ? 7 : 5;
+            depth = coveredCount > 16 ? 3
+                  : coveredCount > 6  ? 4
+                  : opUncoveredCount <= 1 ? 7       // single piece left — deep hunt
+                  : isEndgameHunt     ? 6           // few pieces, open board — deeper search
+                  : 5;
         }
         debugLog(`Minimax: depth=${depth}, covered=${coveredCount}, opUncovered=${opUncoveredCount}`);
 
@@ -385,23 +494,80 @@ const SkillMinimax = (function () {
 
             if (noise) score += (Math.random() - 0.5) * 2 * noise;
 
-            // Oscillation penalty — suppressed during endgame hunt so the AI can freely
-            // manoeuvre for zugzwang without being blocked by its own visit history.
-            if (move.type !== 'uncover' && !isEndgameHunt) {
-                if (lastFrom && lastTo &&
-                    move.fromR === lastTo.row   && move.fromC === lastTo.col &&
-                    move.toR   === lastFrom.row  && move.toC  === lastFrom.col) {
-                    score -= 15;
+            // Uncover safety: penalize uncovering cells adjacent to own
+            // dragon/robot. With 6 enemy mice in the pool, uncovering next
+            // to your dragon is ~20% to instantly lose it. The minimax search
+            // can't see this risk because covered cells are unknown.
+            if (move.type === 'uncover' && coveredCount > 0) {
+                for (const [dr, dc] of [[0,1],[0,-1],[1,0],[-1,0]]) {
+                    const nr = move.r + dr, nc = move.c + dc;
+                    if (!inBounds(nr, nc)) continue;
+                    const adj = state.board[nr][nc];
+                    if (!adj || adj.player !== cpuPlayer || state.covered[nr][nc]) continue;
+                    // Uncovering next to own dragon: risk of enemy mouse
+                    if (adj.type === 'dragon' && !adj.burning) {
+                        // Estimate: ~6 enemy mice unaccounted / coveredCount
+                        // Expected loss ≈ probability × dragon value (60)
+                        const mouseRisk = Math.min(6, coveredCount) / coveredCount;
+                        score -= mouseRisk * 60;
+                    }
+                    // Uncovering next to own robot: risk of equal/higher power
+                    if (adj.type === 'robot') {
+                        const threatRisk = Math.min(2, coveredCount) / coveredCount;
+                        score -= threatRisk * 30;
+                    }
                 }
+            }
+
+            // Oscillation penalty — suppressed for captures, endgame hunt,
+            // and high-value pieces (dragon/robot should retreat freely
+            // rather than suicide to avoid revisiting a square).
+            const isCapture = move.type === 'capture' || move.type === 'snipe';
+            if (move.type !== 'uncover' && !isCapture && !isEndgameHunt) {
                 const fromR = move.fromR ?? move.drR ?? move.robotR;
                 const fromC = move.fromC ?? move.drC ?? move.robotC;
                 const piece = fromR !== undefined ? state.board[fromR][fromC] : null;
-                if (piece) {
-                    const history = recentSquares[piece.type] || [];
-                    const toR = move.toR ?? move.destR ?? move.targetR;
-                    const toC = move.toC ?? move.destC ?? move.targetC;
-                    const visits = history.filter(s => s.row === toR && s.col === toC).length;
-                    if (visits > 0) score -= visits * 8;
+                // High-value pieces (power >= 5) get no oscillation penalty.
+                // It's better to retreat a dragon/robot to a visited square
+                // than to walk it into death to avoid "looking repetitive."
+                const isHighValue = piece && piece.power >= 5;
+                if (!isHighValue) {
+                    if (lastFrom && lastTo &&
+                        move.fromR === lastTo.row   && move.fromC === lastTo.col &&
+                        move.toR   === lastFrom.row  && move.toC  === lastFrom.col) {
+                        score -= 8;
+                    }
+                    if (piece) {
+                        const history = recentSquares[piece.type] || [];
+                        const toR = move.toR ?? move.destR ?? move.targetR;
+                        const toC = move.toC ?? move.destC ?? move.targetC;
+                        const visits = history.filter(s => s.row === toR && s.col === toC).length;
+                        if (visits > 0) score -= visits * 4;
+                    }
+                }
+            }
+
+            // Capture preference: with finite pieces every free capture matters.
+            // Strongly prefer higher-value captures so the AI doesn't pass up
+            // a wizard to capture a dog.
+            if (isCapture) {
+                const capVal = move.capPower || 3;
+                // Quadratic scaling with minimum floor of 20.
+                // mouse=20, cat=20, dog=20, wizard=20, robot=25, dragon=36
+                // Any free capture must beat any positional move. Period.
+                score += Math.max(20, capVal * capVal);
+
+                // Mouse capturing unburning dragon — the single highest-value
+                // play in the game. Mice lose most of their value once the
+                // dragon is gone. Always take this, even if recaptured.
+                if (move.type === 'capture' && capVal === 6) {
+                    const attacker = state.board[move.fromR][move.fromC];
+                    if (attacker && attacker.type === 'mouse') {
+                        const target = state.board[move.toR][move.toC];
+                        if (target && target.type === 'dragon' && !target.burning) {
+                            score += 50;
+                        }
+                    }
                 }
             }
 
@@ -431,8 +597,12 @@ const SkillMinimax = (function () {
                     const p = state.board[r][c];
                     if (p && p.player !== cpuPlayer && !state.covered[r][c]) opUncovered++;
                 }
-            const hunt = coveredCount === 0 && opUncovered === 1;
-            depth = coveredCount > 16 ? 3 : coveredCount > 6 ? 4 : hunt ? 7 : 5;
+            const hunt = coveredCount === 0 && opUncovered <= 5;
+            depth = coveredCount > 16 ? 3
+                  : coveredCount > 6  ? 4
+                  : opUncovered <= 1  ? 7
+                  : hunt              ? 6
+                  : 5;
         }
 
         const moves = getAllMoves(state, cpuPlayer, enabledAbilities);

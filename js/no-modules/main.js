@@ -15,7 +15,15 @@ document.addEventListener('DOMContentLoaded', () => {
         // Initialize the game
         console.log('Starting game initialization...');
         initGame();
-        
+
+        // Try to load NN model for Genius difficulty (async, non-blocking)
+        if (typeof SkillNNMCTS !== 'undefined') {
+            SkillNNMCTS.loadModel('js/no-modules/model/model.json').then(ok => {
+                if (ok) debugLog('SkillZero neural network loaded — Genius mode upgraded');
+                else debugLog('No NN model found — Genius mode using vanilla MCTS');
+            });
+        }
+
         console.log('Game initialized successfully');
         debugLog("Game initialized. Ready to play!");
     } catch (error) {

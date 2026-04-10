@@ -1,0 +1,488 @@
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1775774408.190303   64360 port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1775774411.260871   64360 port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+============================================================
+SkillZero Training
+  Iterations: 12
+  Self-play games/iter: 25
+  Warmup games: 500
+  Output: C:\EpicSource\web\skillego\training\models
+============================================================
+Resuming from models/warmup_champion.keras
+C:\EpicSource\web\skillego\training\.venv\Lib\site-packages\keras\src\layers\layer.py:427: UserWarning: `build()` was called on layer 'res_0', however the layer does not have a `build()` method implemented and it looks like it has unbuilt state. This will cause the layer to be marked as built, despite not being actually built, which may cause failures down the line. Make sure to implement a proper `build()` method.
+  warnings.warn(
+C:\EpicSource\web\skillego\training\.venv\Lib\site-packages\keras\src\layers\layer.py:427: UserWarning: `build()` was called on layer 'res_1', however the layer does not have a `build()` method implemented and it looks like it has unbuilt state. This will cause the layer to be marked as built, despite not being actually built, which may cause failures down the line. Make sure to implement a proper `build()` method.
+  warnings.warn(
+C:\EpicSource\web\skillego\training\.venv\Lib\site-packages\keras\src\layers\layer.py:427: UserWarning: `build()` was called on layer 'res_2', however the layer does not have a `build()` method implemented and it looks like it has unbuilt state. This will cause the layer to be marked as built, despite not being actually built, which may cause failures down the line. Make sure to implement a proper `build()` method.
+  warnings.warn(
+C:\EpicSource\web\skillego\training\.venv\Lib\site-packages\keras\src\layers\layer.py:427: UserWarning: `build()` was called on layer 'res_3', however the layer does not have a `build()` method implemented and it looks like it has unbuilt state. This will cause the layer to be marked as built, despite not being actually built, which may cause failures down the line. Make sure to implement a proper `build()` method.
+  warnings.warn(
+WARNING:tensorflow:From C:\EpicSource\web\skillego\training\.venv\Lib\site-packages\keras\src\backend\tensorflow\core.py:232: The name tf.placeholder is deprecated. Please use tf.compat.v1.placeholder instead.
+
+WARNING:tensorflow:TensorFlow GPU support is not available on native Windows for TensorFlow >= 2.11. Even if CUDA/cuDNN are installed, GPU will not be used. Please use WSL2 or the TensorFlow-DirectML plugin.
+
+============================================================
+Phase 1: AlphaZero Self-Play Training
+============================================================
+
+------------------------------------------------------------
+Iteration 1/12
+------------------------------------------------------------
+
+[Self-play] Generating 25 games...
+  Game 1/25: P1 wins, 77 moves, 31.3s
+  Game 2/25: P1 wins, 147 moves, 52.8s
+  Game 3/25: P1 wins, 99 moves, 39.2s
+  Game 4/25: P2 wins, 98 moves, 38.2s
+  Game 5/25: P2 wins, 144 moves, 45.0s
+  Game 6/25: P2 wins, 100 moves, 38.4s
+  Game 7/25: P2 wins, 124 moves, 46.7s
+  Game 8/25: P2 wins, 104 moves, 38.1s
+  Game 9/25: P1 wins, 85 moves, 33.4s
+  Game 10/25: P2 wins, 84 moves, 33.0s
+  Game 11/25: draw, 300 moves, 124.1s
+  Game 12/25: P1 wins, 209 moves, 74.1s
+  Game 13/25: P1 wins, 93 moves, 36.7s
+  Game 14/25: P2 wins, 106 moves, 41.2s
+  Game 15/25: P2 wins, 100 moves, 38.9s
+  Game 16/25: P2 wins, 86 moves, 34.1s
+  Game 17/25: draw, 300 moves, 96.4s
+  Game 18/25: P2 wins, 122 moves, 47.1s
+  Game 19/25: P2 wins, 144 moves, 57.0s
+  Game 20/25: P1 wins, 93 moves, 37.0s
+  Game 21/25: P2 wins, 110 moves, 45.1s
+  Game 22/25: draw, 300 moves, 152.4s
+  Game 23/25: P2 wins, 141 moves, 54.9s
+  Game 24/25: P2 wins, 110 moves, 44.3s
+  Game 25/25: P2 wins, 114 moves, 50.3s
+  Results: P1=7W P2=15W D=3 | avg 136 moves | 3390 samples | 1329.5s
+  Replay buffer: 3390 samples
+
+[Training] 10 epochs, batch_size=128, lr=0.002
+  Loss: 0.9544 (policy=0.4870, value=0.0789) | 81.8s
+
+  Iteration 1 completed in 1411.3s
+
+------------------------------------------------------------
+Iteration 2/12
+------------------------------------------------------------
+
+[Self-play] Generating 25 games...
+  Game 1/25: P1 wins, 97 moves, 37.8s
+  Game 2/25: P2 wins, 192 moves, 58.0s
+  Game 3/25: P1 wins, 113 moves, 44.2s
+  Game 4/25: P2 wins, 84 moves, 33.3s
+  Game 5/25: draw, 300 moves, 127.9s
+  Game 6/25: P2 wins, 142 moves, 46.7s
+  Game 7/25: P2 wins, 110 moves, 40.6s
+  Game 8/25: P2 wins, 106 moves, 41.4s
+  Game 9/25: P2 wins, 106 moves, 40.9s
+  Game 10/25: P2 wins, 80 moves, 33.7s
+  Game 11/25: P1 wins, 93 moves, 36.4s
+  Game 12/25: P1 wins, 135 moves, 52.2s
+  Game 13/25: P1 wins, 93 moves, 34.7s
+  Game 14/25: P2 wins, 76 moves, 30.2s
+  Game 15/25: P2 wins, 122 moves, 50.4s
+  Game 16/25: P2 wins, 96 moves, 36.7s
+  Game 17/25: P2 wins, 114 moves, 41.8s
+  Game 18/25: draw, 300 moves, 137.2s
+  Game 19/25: P1 wins, 137 moves, 51.0s
+  Game 20/25: P1 wins, 103 moves, 37.5s
+  Game 21/25: P1 wins, 97 moves, 37.1s
+  Game 22/25: P2 wins, 100 moves, 38.7s
+  Game 23/25: P1 wins, 91 moves, 36.0s
+  Game 24/25: P1 wins, 123 moves, 43.6s
+  Game 25/25: P1 wins, 75 moves, 31.7s
+  Results: P1=11W P2=12W D=2 | avg 123 moves | 3085 samples | 1199.7s
+  Replay buffer: 6475 samples
+
+[Training] 10 epochs, batch_size=128, lr=0.002
+  Loss: 0.8005 (policy=0.4214, value=0.0624) | 149.5s
+
+  Iteration 2 completed in 1349.3s
+
+------------------------------------------------------------
+Iteration 3/12
+------------------------------------------------------------
+
+[Self-play] Generating 25 games...
+  Game 1/25: P1 wins, 195 moves, 60.0s
+  Game 2/25: P1 wins, 163 moves, 55.9s
+  Game 3/25: P1 wins, 135 moves, 47.3s
+  Game 4/25: P2 wins, 88 moves, 34.4s
+  Game 5/25: P1 wins, 121 moves, 49.6s
+  Game 6/25: draw, 300 moves, 101.8s
+  Game 7/25: P2 wins, 68 moves, 27.5s
+  Game 8/25: P1 wins, 111 moves, 42.7s
+  Game 9/25: P1 wins, 121 moves, 44.7s
+  Game 10/25: draw, 300 moves, 71.0s
+  Game 11/25: P2 wins, 102 moves, 37.7s
+  Game 12/25: P2 wins, 90 moves, 32.7s
+  Game 13/25: P2 wins, 94 moves, 37.0s
+  Game 14/25: P1 wins, 139 moves, 49.3s
+  Game 15/25: P2 wins, 108 moves, 38.4s
+  Game 16/25: P1 wins, 101 moves, 39.4s
+  Game 17/25: draw, 300 moves, 125.8s
+  Game 18/25: P2 wins, 80 moves, 32.2s
+  Game 19/25: P2 wins, 100 moves, 39.2s
+  Game 20/25: P1 wins, 89 moves, 36.4s
+  Game 21/25: P2 wins, 92 moves, 34.8s
+  Game 22/25: P1 wins, 81 moves, 32.3s
+  Game 23/25: P2 wins, 120 moves, 46.7s
+  Game 24/25: P2 wins, 126 moves, 45.0s
+  Game 25/25: P1 wins, 87 moves, 33.4s
+  Results: P1=11W P2=11W D=3 | avg 132 moves | 3311 samples | 1195.2s
+  Replay buffer: 9786 samples
+
+[Training] 10 epochs, batch_size=128, lr=0.002
+  Loss: 0.7219 (policy=0.4086, value=0.0460) | 225.9s
+
+  Iteration 3 completed in 1421.1s
+
+------------------------------------------------------------
+Iteration 4/12
+------------------------------------------------------------
+
+[Self-play] Generating 25 games...
+  Game 1/25: P1 wins, 131 moves, 49.7s
+  Game 2/25: P1 wins, 105 moves, 40.7s
+  Game 3/25: P2 wins, 104 moves, 40.7s
+  Game 4/25: P2 wins, 96 moves, 36.5s
+  Game 5/25: P1 wins, 107 moves, 39.9s
+  Game 6/25: P1 wins, 99 moves, 38.4s
+  Game 7/25: P1 wins, 97 moves, 39.4s
+  Game 8/25: P1 wins, 103 moves, 40.6s
+  Game 9/25: P2 wins, 86 moves, 36.2s
+  Game 10/25: P1 wins, 73 moves, 28.9s
+  Game 11/25: draw, 300 moves, 70.9s
+  Game 12/25: P1 wins, 183 moves, 55.5s
+  Game 13/25: P1 wins, 83 moves, 33.5s
+  Game 14/25: draw, 300 moves, 128.8s
+  Game 15/25: draw, 300 moves, 103.0s
+  Game 16/25: P2 wins, 106 moves, 39.0s
+  Game 17/25: P2 wins, 94 moves, 34.8s
+  Game 18/25: P1 wins, 113 moves, 43.5s
+  Game 19/25: P1 wins, 79 moves, 31.1s
+  Game 20/25: P2 wins, 98 moves, 37.5s
+  Game 21/25: P2 wins, 132 moves, 45.3s
+  Game 22/25: P1 wins, 103 moves, 37.3s
+  Game 23/25: P1 wins, 91 moves, 36.1s
+  Game 24/25: P1 wins, 115 moves, 41.3s
+  Game 25/25: draw, 300 moves, 71.6s
+  Results: P1=14W P2=7W D=4 | avg 136 moves | 3398 samples | 1200.3s
+  Replay buffer: 13184 samples
+
+[Training] 10 epochs, batch_size=128, lr=0.002
+  Loss: 0.6606 (policy=0.4083, value=0.0206) | 304.9s
+
+  Iteration 4 completed in 1505.2s
+
+------------------------------------------------------------
+Iteration 5/12
+------------------------------------------------------------
+
+[Self-play] Generating 25 games...
+  Game 1/25: P2 wins, 134 moves, 43.2s
+  Game 2/25: P2 wins, 90 moves, 36.0s
+  Game 3/25: P2 wins, 146 moves, 46.6s
+  Game 4/25: P1 wins, 99 moves, 37.5s
+  Game 5/25: P2 wins, 88 moves, 34.9s
+  Game 6/25: P1 wins, 89 moves, 35.2s
+  Game 7/25: P2 wins, 68 moves, 26.3s
+  Game 8/25: P2 wins, 120 moves, 41.8s
+  Game 9/25: P1 wins, 93 moves, 34.0s
+  Game 10/25: P1 wins, 83 moves, 32.1s
+  Game 11/25: P1 wins, 111 moves, 42.0s
+  Game 12/25: P2 wins, 92 moves, 36.8s
+  Game 13/25: P1 wins, 137 moves, 45.1s
+  Game 14/25: P2 wins, 131 moves, 44.2s
+  Game 15/25: P1 wins, 83 moves, 30.8s
+  Game 16/25: P1 wins, 85 moves, 31.3s
+  Game 17/25: P2 wins, 88 moves, 34.5s
+  Game 18/25: P2 wins, 106 moves, 38.9s
+  Game 19/25: P2 wins, 94 moves, 37.1s
+  Game 20/25: draw, 300 moves, 71.9s
+  Game 21/25: P2 wins, 112 moves, 42.4s
+  Game 22/25: draw, 300 moves, 108.6s
+  Game 23/25: P1 wins, 109 moves, 39.7s
+  Game 24/25: P1 wins, 107 moves, 40.9s
+  Game 25/25: P1 wins, 135 moves, 50.5s
+  Results: P1=11W P2=12W D=2 | avg 120 moves | 3000 samples | 1062.4s
+  Replay buffer: 16184 samples
+
+[Training] 10 epochs, batch_size=128, lr=0.002
+  Loss: 0.6623 (policy=0.4312, value=0.0162) | 374.8s
+  Saved checkpoint: C:\EpicSource\web\skillego\training\models\checkpoint_iter5.keras
+
+  Iteration 5 completed in 1437.3s
+
+------------------------------------------------------------
+Iteration 6/12
+------------------------------------------------------------
+
+[Self-play] Generating 25 games...
+  Game 1/25: P1 wins, 135 moves, 46.7s
+  Game 2/25: P1 wins, 85 moves, 34.6s
+  Game 3/25: draw, 300 moves, 123.5s
+  Game 4/25: P1 wins, 179 moves, 63.3s
+  Game 5/25: P2 wins, 90 moves, 36.1s
+  Game 6/25: P1 wins, 85 moves, 33.2s
+  Game 7/25: P2 wins, 108 moves, 35.0s
+  Game 8/25: P1 wins, 73 moves, 29.1s
+  Game 9/25: P1 wins, 79 moves, 32.0s
+  Game 10/25: P2 wins, 98 moves, 40.5s
+  Game 11/25: P2 wins, 110 moves, 43.2s
+  Game 12/25: P2 wins, 106 moves, 40.0s
+  Game 13/25: P2 wins, 98 moves, 38.6s
+  Game 14/25: draw, 300 moves, 75.8s
+  Game 15/25: P2 wins, 128 moves, 49.0s
+  Game 16/25: draw, 300 moves, 107.7s
+  Game 17/25: P1 wins, 91 moves, 34.3s
+  Game 18/25: P2 wins, 106 moves, 38.1s
+  Game 19/25: P1 wins, 113 moves, 43.7s
+  Game 20/25: P2 wins, 84 moves, 33.1s
+  Game 21/25: P2 wins, 80 moves, 33.2s
+  Game 22/25: P1 wins, 75 moves, 28.3s
+  Game 23/25: P1 wins, 77 moves, 32.0s
+  Game 24/25: P2 wins, 74 moves, 28.6s
+  Game 25/25: P2 wins, 86 moves, 35.0s
+  Results: P1=10W P2=12W D=3 | avg 122 moves | 3060 samples | 1134.7s
+  Replay buffer: 19244 samples
+
+[Training] 10 epochs, batch_size=128, lr=0.002
+  Loss: 0.6596 (policy=0.4401, value=0.0148) | 447.1s
+
+  Iteration 6 completed in 1581.8s
+
+------------------------------------------------------------
+Iteration 7/12
+------------------------------------------------------------
+
+[Self-play] Generating 25 games...
+  Game 1/25: P2 wins, 184 moves, 65.6s
+  Game 2/25: P2 wins, 84 moves, 34.3s
+  Game 3/25: P1 wins, 107 moves, 41.8s
+  Game 4/25: draw, 300 moves, 69.5s
+  Game 5/25: P2 wins, 118 moves, 45.1s
+  Game 6/25: P2 wins, 112 moves, 54.1s
+  Game 7/25: P1 wins, 111 moves, 43.1s
+  Game 8/25: P1 wins, 123 moves, 48.0s
+  Game 9/25: P1 wins, 153 moves, 56.5s
+  Game 10/25: P2 wins, 108 moves, 40.2s
+  Game 11/25: P2 wins, 114 moves, 37.6s
+  Game 12/25: P2 wins, 116 moves, 39.7s
+  Game 13/25: P2 wins, 114 moves, 41.6s
+  Game 14/25: P1 wins, 93 moves, 34.6s
+  Game 15/25: P1 wins, 101 moves, 37.4s
+  Game 16/25: P2 wins, 114 moves, 43.7s
+  Game 17/25: P1 wins, 291 moves, 111.4s
+  Game 18/25: P1 wins, 101 moves, 40.7s
+  Game 19/25: P1 wins, 105 moves, 41.8s
+  Game 20/25: P2 wins, 78 moves, 29.7s
+  Game 21/25: draw, 300 moves, 126.8s
+  Game 22/25: P2 wins, 102 moves, 39.7s
+  Game 23/25: P2 wins, 140 moves, 51.0s
+  Game 24/25: P2 wins, 84 moves, 32.1s
+  Game 25/25: P2 wins, 110 moves, 39.2s
+  Results: P1=9W P2=14W D=2 | avg 135 moves | 3363 samples | 1245.1s
+  Replay buffer: 22607 samples
+
+[Training] 10 epochs, batch_size=128, lr=0.002
+  Loss: 0.6732 (policy=0.4537, value=0.0151) | 526.6s
+
+  Iteration 7 completed in 1771.7s
+
+------------------------------------------------------------
+Iteration 8/12
+------------------------------------------------------------
+
+[Self-play] Generating 25 games...
+  Game 1/25: P2 wins, 90 moves, 35.0s
+  Game 2/25: P1 wins, 117 moves, 39.4s
+  Game 3/25: P2 wins, 92 moves, 35.3s
+  Game 4/25: P2 wins, 96 moves, 38.2s
+  Game 5/25: draw, 300 moves, 121.2s
+  Game 6/25: P2 wins, 120 moves, 44.7s
+  Game 7/25: draw, 300 moves, 74.6s
+  Game 8/25: P2 wins, 126 moves, 51.8s
+  Game 9/25: P1 wins, 107 moves, 41.6s
+  Game 10/25: P1 wins, 89 moves, 34.7s
+  Game 11/25: P2 wins, 68 moves, 27.6s
+  Game 12/25: P1 wins, 93 moves, 36.7s
+  Game 13/25: P2 wins, 86 moves, 33.8s
+  Game 14/25: P2 wins, 98 moves, 38.2s
+  Game 15/25: P2 wins, 90 moves, 33.8s
+  Game 16/25: P2 wins, 92 moves, 35.9s
+  Game 17/25: P2 wins, 96 moves, 37.0s
+  Game 18/25: P2 wins, 100 moves, 36.1s
+  Game 19/25: P1 wins, 97 moves, 37.9s
+  Game 20/25: P1 wins, 121 moves, 46.2s
+  Game 21/25: P1 wins, 109 moves, 42.0s
+  Game 22/25: P1 wins, 131 moves, 47.7s
+  Game 23/25: P2 wins, 80 moves, 32.2s
+  Game 24/25: P1 wins, 95 moves, 37.0s
+  Game 25/25: draw, 300 moves, 90.5s
+  Results: P1=9W P2=13W D=3 | avg 124 moves | 3093 samples | 1129.1s
+  Replay buffer: 25700 samples
+
+[Training] 10 epochs, batch_size=128, lr=0.002
+  Loss: 0.6782 (policy=0.4571, value=0.0167) | 596.4s
+
+  Iteration 8 completed in 1725.6s
+
+------------------------------------------------------------
+Iteration 9/12
+------------------------------------------------------------
+
+[Self-play] Generating 25 games...
+  Game 1/25: P2 wins, 100 moves, 38.6s
+  Game 2/25: P2 wins, 84 moves, 32.3s
+  Game 3/25: P1 wins, 115 moves, 39.8s
+  Game 4/25: draw, 300 moves, 72.1s
+  Game 5/25: P2 wins, 106 moves, 42.1s
+  Game 6/25: P2 wins, 92 moves, 35.0s
+  Game 7/25: P2 wins, 82 moves, 34.0s
+  Game 8/25: P1 wins, 87 moves, 31.7s
+  Game 9/25: draw, 300 moves, 122.4s
+  Game 10/25: P2 wins, 98 moves, 41.1s
+  Game 11/25: P1 wins, 109 moves, 39.9s
+  Game 12/25: P2 wins, 92 moves, 36.1s
+  Game 13/25: P2 wins, 140 moves, 50.1s
+  Game 14/25: P1 wins, 225 moves, 57.8s
+  Game 15/25: P1 wins, 155 moves, 52.2s
+  Game 16/25: draw, 300 moves, 71.5s
+  Game 17/25: P1 wins, 155 moves, 52.2s
+  Game 18/25: P1 wins, 99 moves, 36.1s
+  Game 19/25: P2 wins, 106 moves, 41.2s
+  Game 20/25: P2 wins, 78 moves, 31.1s
+  Game 21/25: P2 wins, 108 moves, 40.7s
+  Game 22/25: P2 wins, 130 moves, 50.6s
+  Game 23/25: P1 wins, 113 moves, 43.3s
+  Game 24/25: draw, 300 moves, 71.9s
+  Game 25/25: P1 wins, 127 moves, 42.3s
+  Results: P1=9W P2=12W D=4 | avg 144 moves | 3601 samples | 1206.3s
+  Replay buffer: 29301 samples
+
+[Training] 10 epochs, batch_size=128, lr=0.002
+  Loss: 0.7015 (policy=0.4698, value=0.0235) | 674.2s
+
+  Iteration 9 completed in 1880.4s
+
+------------------------------------------------------------
+Iteration 10/12
+------------------------------------------------------------
+
+[Self-play] Generating 25 games...
+  Game 1/25: P2 wins, 108 moves, 39.5s
+  Game 2/25: P2 wins, 88 moves, 35.4s
+  Game 3/25: P1 wins, 113 moves, 40.9s
+  Game 4/25: P1 wins, 91 moves, 35.8s
+  Game 5/25: P1 wins, 87 moves, 33.4s
+  Game 6/25: P2 wins, 92 moves, 36.0s
+  Game 7/25: P1 wins, 89 moves, 35.5s
+  Game 8/25: P2 wins, 116 moves, 45.4s
+  Game 9/25: P2 wins, 80 moves, 32.3s
+  Game 10/25: P2 wins, 198 moves, 58.5s
+  Game 11/25: P2 wins, 84 moves, 34.6s
+  Game 12/25: P1 wins, 113 moves, 41.3s
+  Game 13/25: P2 wins, 106 moves, 40.9s
+  Game 14/25: P1 wins, 79 moves, 31.3s
+  Game 15/25: P1 wins, 91 moves, 40.6s
+  Game 16/25: P2 wins, 114 moves, 41.6s
+  Game 17/25: P2 wins, 92 moves, 35.0s
+  Game 18/25: P2 wins, 100 moves, 39.5s
+  Game 19/25: P2 wins, 96 moves, 38.3s
+  Game 20/25: P1 wins, 177 moves, 45.2s
+  Game 21/25: P2 wins, 104 moves, 39.7s
+  Game 22/25: P1 wins, 109 moves, 39.2s
+  Game 23/25: P2 wins, 108 moves, 39.9s
+  Game 24/25: P2 wins, 90 moves, 35.8s
+  Game 25/25: P2 wins, 188 moves, 66.5s
+  Results: P1=9W P2=16W D=0 | avg 109 moves | 2713 samples | 1002.2s
+  Replay buffer: 32014 samples
+
+[Training] 10 epochs, batch_size=128, lr=0.002
+  Loss: 0.7150 (policy=0.4795, value=0.0181) | 742.3s
+  Saved checkpoint: C:\EpicSource\web\skillego\training\models\checkpoint_iter10.keras
+
+  Iteration 10 completed in 1744.5s
+
+------------------------------------------------------------
+Iteration 11/12
+------------------------------------------------------------
+
+[Self-play] Generating 25 games...
+  Game 1/25: P2 wins, 126 moves, 38.6s
+  Game 2/25: P1 wins, 155 moves, 46.5s
+  Game 3/25: P2 wins, 122 moves, 43.1s
+  Game 4/25: P2 wins, 90 moves, 36.3s
+  Game 5/25: P1 wins, 99 moves, 37.5s
+  Game 6/25: P1 wins, 93 moves, 36.5s
+  Game 7/25: P1 wins, 71 moves, 27.0s
+  Game 8/25: P2 wins, 112 moves, 42.2s
+  Game 9/25: P2 wins, 102 moves, 38.1s
+  Game 10/25: P1 wins, 91 moves, 35.5s
+  Game 11/25: P2 wins, 84 moves, 32.9s
+  Game 12/25: P1 wins, 97 moves, 36.9s
+  Game 13/25: P2 wins, 74 moves, 30.6s
+  Game 14/25: draw, 300 moves, 93.6s
+  Game 15/25: P1 wins, 113 moves, 41.1s
+  Game 16/25: P1 wins, 111 moves, 38.4s
+  Game 17/25: P2 wins, 106 moves, 40.2s
+  Game 18/25: P2 wins, 88 moves, 33.5s
+  Game 19/25: P1 wins, 85 moves, 33.5s
+  Game 20/25: P1 wins, 87 moves, 32.9s
+  Game 21/25: P1 wins, 109 moves, 41.6s
+  Game 22/25: P2 wins, 72 moves, 27.4s
+  Game 23/25: draw, 300 moves, 77.5s
+  Game 24/25: P2 wins, 112 moves, 42.7s
+  Game 25/25: P1 wins, 95 moves, 38.7s
+  Results: P1=12W P2=11W D=2 | avg 116 moves | 2894 samples | 1022.8s
+  Replay buffer: 34908 samples
+
+[Training] 10 epochs, batch_size=128, lr=0.002
+  Loss: 0.7331 (policy=0.4905, value=0.0170) | 819.9s
+
+  Iteration 11 completed in 1842.8s
+
+------------------------------------------------------------
+Iteration 12/12
+------------------------------------------------------------
+
+[Self-play] Generating 25 games...
+  Game 1/25: P1 wins, 95 moves, 35.6s
+  Game 2/25: P1 wins, 75 moves, 29.6s
+  Game 3/25: P2 wins, 112 moves, 42.7s
+  Game 4/25: P1 wins, 97 moves, 35.4s
+  Game 5/25: P1 wins, 103 moves, 37.9s
+  Game 6/25: P1 wins, 89 moves, 33.6s
+  Game 7/25: P2 wins, 100 moves, 37.7s
+  Game 8/25: P1 wins, 101 moves, 40.6s
+  Game 9/25: P2 wins, 124 moves, 45.1s
+  Game 10/25: P2 wins, 124 moves, 46.1s
+  Game 11/25: P2 wins, 124 moves, 48.7s
+  Game 12/25: P1 wins, 77 moves, 30.6s
+  Game 13/25: draw, 300 moves, 71.4s
+  Game 14/25: P2 wins, 86 moves, 32.6s
+  Game 15/25: P1 wins, 97 moves, 37.7s
+  Game 16/25: draw, 300 moves, 71.9s
+  Game 17/25: P1 wins, 89 moves, 34.0s
+  Game 18/25: P1 wins, 83 moves, 31.9s
+  Game 19/25: draw, 300 moves, 62.0s
+  Game 20/25: P2 wins, 104 moves, 38.8s
+  Game 21/25: P1 wins, 129 moves, 41.5s
+  Game 22/25: P2 wins, 112 moves, 39.5s
+  Game 23/25: P1 wins, 81 moves, 31.3s
+  Game 24/25: P1 wins, 89 moves, 33.2s
+  Game 25/25: P2 wins, 100 moves, 40.5s
+  Results: P1=13W P2=9W D=3 | avg 124 moves | 3091 samples | 1030.1s
+  Replay buffer: 37999 samples
+
+[Training] 10 epochs, batch_size=128, lr=0.002
+  Loss: 0.7498 (policy=0.4949, value=0.0215) | 888.7s
+
+  Iteration 12 completed in 1918.7s
+
+Training complete. Final model saved to C:\EpicSource\web\skillego\training\models\final.keras
+Champion model at C:\EpicSource\web\skillego\training\models\champion.keras

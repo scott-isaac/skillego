@@ -91,6 +91,14 @@ function assignPieces() {
 function updateTurnIndicator() {
     const turnIndicator = document.getElementById('turn-indicator');
     if (!turnIndicator) return;
+
+    // Network play: "Your Turn" / "Opponent's Turn"
+    if (typeof serverMode !== 'undefined' && serverMode.active && serverMode.playerNumber) {
+        turnIndicator.textContent = gameState.currentPlayer === serverMode.playerNumber
+            ? "Your Turn" : "Opponent's Turn";
+        return;
+    }
+
     const playerKey = `player${gameState.currentPlayer}`;
     const config = gameState[playerKey];
     const isCpu  = config && config.type === 'cpu';

@@ -77,21 +77,7 @@ function handleCellClick(row, col, cellElement) {
     }
     // If no cell is selected and clicked on a covered piece
     else if (cell && gameState.covered[row][col]) {
-        if (typeof serverMode !== 'undefined' && serverMode.active) {
-            serverMode.sendMove({ type: 'uncover', r: row, c: col });
-        } else {
-            // Uncover the piece. Suppress the CSS transition during the reveal so iOS
-            // doesn't take a GPU compositor snapshot before the image is composited.
-            cellElement.style.transition = 'none';
-            gameState.covered[row][col] = false;
-            renderCell(cellElement, cell, false);
-            requestAnimationFrame(() => requestAnimationFrame(() => {
-                cellElement.style.transition = '';
-            }));
-            if (typeof gameLog !== 'undefined') gameLog.recordUncover(gameState.currentPlayer, row, col, cell);
-            checkGameOver();
-            endTurn();
-        }
+        executeUncover(row, col);
     }
 }
 
@@ -320,6 +306,25 @@ function endTurn() {
     gameState.currentPlayer = next;
     updateTurnIndicator();
     scheduleNextCpuMoveIfNeeded();
+}
+
+function executeUncover(row, col) {
+    if (typeof serverMode !== 'undefined' && serverMode.active) {
+        serverMode.sendMove({ type: 'uncover', r: row, c: col });
+        return;
+    }
+    const el = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
+    const piece = gameState.board[row][col];
+    if (!el || !piece) return;
+    el.style.transition = 'none';
+    gameState.covered[row][col] = false;
+    renderCell(el, piece, false);
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+        el.style.transition = '';
+    }));
+    if (typeof gameLog !== 'undefined') gameLog.recordUncover(gameState.currentPlayer, row, col, piece);
+    checkGameOver();
+    endTurn();
 }
 
 function executeHop(mouseRow, mouseCol, destRow, destCol) {
@@ -622,6 +627,8 @@ function checkGameOver() {
     }
 
     debugLog(`Game over! Player ${winner} wins.`);
+    // Auto-save game log to server for learning
+    if (typeof gameLog !== 'undefined') gameLog.saveToServer();
     showResult(resultText, scoreText);
     return true;
 }
@@ -783,8 +790,18 @@ function startGame() {
 
 function resignGame() {
     if (gameState.gameOver) return;
-    gameState.gameOver = true;
 
+    // In server mode, tell the server — it will broadcast game-over to both players
+    if (typeof serverMode !== 'undefined' && serverMode.active) {
+        serverMode.socket.emit('resign', {
+            gameId: serverMode.gameId,
+            token:  serverMode.token,
+        });
+        return;
+    }
+
+    // Local mode
+    gameState.gameOver = true;
     const p1cpu = gameState.player1.type === 'cpu';
     const p2cpu = gameState.player2.type === 'cpu';
     let resultText, scoreText;
