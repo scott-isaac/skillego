@@ -81,6 +81,7 @@
                         <option value="medium">Medium</option>
                         <option value="hard" selected>Hard</option>
                         <option value="expert">Expert</option>
+                        <option value="genius">Genius</option>
                     </select>
                 </div>
                 <div class="player-row">
@@ -94,6 +95,7 @@
                         <option value="medium">Medium</option>
                         <option value="hard">Hard</option>
                         <option value="expert" selected>Expert</option>
+                        <option value="genius">Genius</option>
                     </select>
                 </div>
                 <div class="player-row" id="player3-row" style="display:none">
@@ -107,6 +109,7 @@
                         <option value="medium">Medium</option>
                         <option value="hard">Hard</option>
                         <option value="expert" selected>Expert</option>
+                        <option value="genius">Genius</option>
                     </select>
                 </div>
                 <div class="player-row" id="player4-row" style="display:none">
@@ -120,6 +123,7 @@
                         <option value="medium">Medium</option>
                         <option value="hard">Hard</option>
                         <option value="expert" selected>Expert</option>
+                        <option value="genius">Genius</option>
                     </select>
                 </div>
                 <div class="speed-row" id="speed-row" style="display:none">
@@ -275,8 +279,11 @@
     <script src="js/no-modules/rules.js?v=3"></script>
     <script src="js/no-modules/ai-learning.js?v=3"></script>
     <script src="js/no-modules/board.js?v=4"></script>
-    <script src="js/no-modules/minimax.js?v=3"></script>
-    <script src="js/no-modules/cpu.js?v=6"></script>
+    <script src="js/no-modules/minimax.js?v=4"></script>
+    <script src="js/no-modules/mcts.js?v=1"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+    <script src="js/no-modules/nn-mcts.js?v=1"></script>
+    <script src="js/no-modules/cpu.js?v=8"></script>
     <script src="js/no-modules/game.js?v=6"></script>
     <script src="js/no-modules/socket-client.js?v=3"></script>
     <script src="js/no-modules/main.js?v=3"></script>
