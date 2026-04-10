@@ -790,8 +790,18 @@ function startGame() {
 
 function resignGame() {
     if (gameState.gameOver) return;
-    gameState.gameOver = true;
 
+    // In server mode, tell the server — it will broadcast game-over to both players
+    if (typeof serverMode !== 'undefined' && serverMode.active) {
+        serverMode.socket.emit('resign', {
+            gameId: serverMode.gameId,
+            token:  serverMode.token,
+        });
+        return;
+    }
+
+    // Local mode
+    gameState.gameOver = true;
     const p1cpu = gameState.player1.type === 'cpu';
     const p2cpu = gameState.player2.type === 'cpu';
     let resultText, scoreText;

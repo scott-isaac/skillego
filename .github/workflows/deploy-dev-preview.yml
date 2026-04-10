@@ -12,6 +12,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Inject multiplayer server config
+        if: ${{ vars.SKILLEGO_SERVER != '' }}
+        run: |
+          echo "var SKILLEGO_SERVER = \"${{ vars.SKILLEGO_SERVER }}\";" \
+            > js/no-modules/server-config.js
+
       - name: Deploy dev to /dev subfolder on gh-pages
         uses: peaceiris/actions-gh-pages@v4
         with:
@@ -19,5 +25,5 @@ jobs:
           publish_dir: .
           publish_branch: gh-pages
           destination_dir: dev
-          exclude_assets: '.github,node_modules,gamelogs'
+          exclude_assets: '.github,node_modules,gamelogs,training'
           keep_files: true

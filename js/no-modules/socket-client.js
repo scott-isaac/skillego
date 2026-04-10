@@ -21,7 +21,12 @@ const _TYPE_EMOJI = {
 // is explicitly created/joined. Solo Human vs CPU runs standalone so the
 // local game engine handles everything (game log recording, learning, etc.).
 if (typeof io !== 'undefined') {
-    serverMode.socket = io();
+    // Connect to the game server. When served locally (localhost:3000),
+    // io() auto-connects to the same origin. For GitHub Pages or other
+    // static hosts, set SKILLEGO_SERVER in a script tag before this file
+    // to point to the remote server (e.g. "https://crisiscontrol.app").
+    const serverUrl = (typeof SKILLEGO_SERVER !== 'undefined') ? SKILLEGO_SERVER : undefined;
+    serverMode.socket = io(serverUrl);
 
     serverMode.socket.on('connect', () => {
         console.log('Connected to Skillego server');
@@ -33,13 +38,40 @@ if (typeof io !== 'undefined') {
         console.warn('Disconnected from server — will attempt to rejoin if game is active');
     });
 
+    // ── Session persistence (survive page refresh) ─────────────────────────
+    function _saveSession() {
+        sessionStorage.setItem('skillego_session', JSON.stringify({
+            gameId: serverMode.gameId,
+            playerNumber: serverMode.playerNumber,
+            token: serverMode.token,
+        }));
+    }
+    function _clearSession() {
+        sessionStorage.removeItem('skillego_session');
+    }
+
+    // On connect, try to rejoin a saved session (page was refreshed)
+    const saved = sessionStorage.getItem('skillego_session');
+    if (saved) {
+        try {
+            const s = JSON.parse(saved);
+            if (s.gameId && s.token) {
+                serverMode.gameId       = s.gameId;
+                serverMode.playerNumber = s.playerNumber;
+                serverMode.token        = s.token;
+                serverMode.active       = true;
+                serverMode.socket.emit('rejoin-game', { gameId: s.gameId, token: s.token });
+            }
+        } catch (e) { _clearSession(); }
+    }
+
     // ── Game lifecycle ────────────────────────────────────────────────────────
     serverMode.socket.on('game-created', ({ gameId, playerNumber, token }) => {
         serverMode.active       = true;
         serverMode.gameId       = gameId;
         serverMode.playerNumber = playerNumber;
         serverMode.token        = token;
-        // game-started (or waiting-for-players) follows immediately from server
+        _saveSession();
     });
 
     serverMode.socket.on('waiting-for-players', ({ gameId }) => {
@@ -51,7 +83,7 @@ if (typeof io !== 'undefined') {
         serverMode.gameId       = gameId;
         serverMode.playerNumber = playerNumber;
         serverMode.token        = token;
-        // game-started follows immediately
+        _saveSession();
     });
 
     serverMode.socket.on('game-started', ({ state }) => {
@@ -61,12 +93,17 @@ if (typeof io !== 'undefined') {
 
     serverMode.socket.on('game-rejoined', ({ state }) => {
         _hideWaitOverlay();
+        _hideDisconnectOverlay();
         _showGameScreen(state);
     });
 
     // ── In-game updates ───────────────────────────────────────────────────────
-    serverMode.socket.on('state-update', ({ state }) => {
-        applyServerState(state);
+    serverMode.socket.on('state-update', ({ state, lastMove }) => {
+        if (lastMove) {
+            _animateAndApply(state, lastMove);
+        } else {
+            applyServerState(state);
+        }
         if (state.gameOver) _handleServerGameOver(state.winner);
     });
 
@@ -77,8 +114,44 @@ if (typeof io !== 'undefined') {
 
     serverMode.socket.on('move-rejected', ({ reason }) => {
         console.warn('Move rejected:', reason);
-        // Re-sync from server in case local state drifted
         serverMode.socket.emit('rejoin-game', { gameId: serverMode.gameId, token: serverMode.token });
+    });
+
+    // ── Resign / Leave / Rematch ─────────────────────────────────────────────
+    serverMode.socket.on('game-over', ({ state, winner, reason }) => {
+        applyServerState(state);
+        _handleServerGameOver(winner, reason);
+    });
+
+    serverMode.socket.on('opponent-left', ({ player }) => {
+        // Host: disable Play Again
+        const restartBtn = document.getElementById('restart-btn');
+        if (restartBtn && serverMode.playerNumber === 1) {
+            restartBtn.textContent = 'Opponent left';
+            restartBtn.disabled = true;
+            restartBtn.style.opacity = '0.5';
+        }
+        // Joiner: update status text
+        const statusEl = document.getElementById('network-status');
+        if (statusEl && serverMode.playerNumber !== 1) {
+            statusEl.textContent = 'Host left';
+        }
+    });
+
+    serverMode.socket.on('opponent-disconnected', ({ player }) => {
+        if (gameState.gameOver) return;
+        _showDisconnectOverlay(player);
+    });
+
+    // When opponent reconnects, server re-sends state via rejoin flow.
+    // Listen for state-update while overlay is showing to dismiss it.
+    serverMode.socket.on('opponent-reconnected', ({ player }) => {
+        _hideDisconnectOverlay();
+    });
+
+    serverMode.socket.on('rematch-started', ({ gameId, state }) => {
+        serverMode.gameId = gameId;
+        _showGameScreen(state);
     });
 
     serverMode.socket.on('error', ({ message }) => {
@@ -128,6 +201,9 @@ function applyServerState(state) {
     gameState.numPlayers        = state.numPlayers;
     gameState.eliminatedPlayers = new Set(state.eliminatedPlayers || []);
     gameState.gameOver          = state.gameOver || false;
+    if (state.enabledAbilities) {
+        gameState.enabledAbilities = new Set(state.enabledAbilities);
+    }
 
     renderBoardFromState();
     updateTurnIndicator();
@@ -146,8 +222,98 @@ function renderBoardFromState() {
     }
 }
 
+// ─── Move Animation ──────────────────────────────────────────────────────────
+// Execute the opponent's move using the SAME board functions as local play
+// (movePiece, hopPiece, etc.) so animations are identical.
+// Then reconcile with the authoritative server state.
+function _animateAndApply(newState, move) {
+    const RECONCILE_MS = 300;  // sync with server state after animation settles
+
+    try {
+        switch (move.type) {
+            case 'move':
+            case 'capture':
+                movePiece(move.fromR, move.fromC, move.toR, move.toC);
+                break;
+            case 'uncover': {
+                // Apply server state for uncover — it reveals the piece identity
+                const piece = newState.board[move.r][move.c];
+                if (piece) {
+                    gameState.board[move.r][move.c] = { ...piece, emoji: _TYPE_EMOJI[piece.type] || '?' };
+                    gameState.covered[move.r][move.c] = false;
+                }
+                const el = document.querySelector(`.cell[data-row="${move.r}"][data-col="${move.c}"]`);
+                if (el) renderCell(el, gameState.board[move.r][move.c], false);
+                break;
+            }
+            case 'hop':
+                // Use the board-level hop animation directly
+                if (typeof executeHop === 'function') {
+                    // executeHop checks serverMode and sends to server — bypass that
+                    const fromEl = document.querySelector(`.cell[data-row="${move.fromR}"][data-col="${move.fromC}"]`);
+                    const toEl   = document.querySelector(`.cell[data-row="${move.toR}"][data-col="${move.toC}"]`);
+                    const piece  = gameState.board[move.fromR]?.[move.fromC];
+                    if (piece && fromEl && toEl) {
+                        gameState.board[move.toR][move.toC] = piece;
+                        gameState.board[move.fromR][move.fromC] = null;
+                        gameState.covered[move.toR][move.toC] = false;
+                        hopPiece(fromEl, toEl, piece, () => renderCell(toEl, piece, false));
+                        renderCell(fromEl, null, false);
+                    }
+                }
+                break;
+            case 'push': {
+                const fromEl = document.querySelector(`.cell[data-row="${move.enemyR}"][data-col="${move.enemyC}"]`);
+                const toEl   = document.querySelector(`.cell[data-row="${move.destR}"][data-col="${move.destC}"]`);
+                const piece  = gameState.board[move.enemyR]?.[move.enemyC];
+                if (piece && fromEl && toEl) {
+                    gameState.board[move.destR][move.destC] = piece;
+                    gameState.board[move.enemyR][move.enemyC] = null;
+                    gameState.covered[move.destR][move.destC] = false;
+                    slidePiece(fromEl, toEl, piece, () => renderCell(toEl, piece, false));
+                    renderCell(fromEl, null, false);
+                }
+                break;
+            }
+            case 'snipe': {
+                const fromEl = document.querySelector(`.cell[data-row="${move.robotR}"][data-col="${move.robotC}"]`);
+                const toEl   = document.querySelector(`.cell[data-row="${move.targetR}"][data-col="${move.targetC}"]`);
+                const piece  = gameState.board[move.robotR]?.[move.robotC];
+                if (piece && fromEl && toEl) {
+                    gameState.board[move.targetR][move.targetC] = piece;
+                    gameState.board[move.robotR][move.robotC] = null;
+                    gameState.covered[move.targetR][move.targetC] = false;
+                    slidePiece(fromEl, toEl, piece, () => renderCell(toEl, piece, false));
+                    renderCell(fromEl, null, false);
+                }
+                break;
+            }
+            default:
+                // engulf, transform, pyro — just apply state directly
+                applyServerState(newState);
+                return;
+        }
+    } catch (e) {
+        console.warn('Animation failed, applying state directly:', e);
+        applyServerState(newState);
+        return;
+    }
+
+    // Reconcile with authoritative server state after animation finishes.
+    // This corrects any drift (e.g., burning power changes, eliminated players).
+    setTimeout(() => {
+        applyServerState(newState);
+    }, RECONCILE_MS);
+}
+
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 function _showGameScreen(state) {
+    // Ensure the board DOM exists before rendering server state
+    const boardCfg = BOARD_CONFIG[state.numPlayers] || BOARD_CONFIG[2];
+    BOARD_ROWS = boardCfg.rows;
+    BOARD_COLS = boardCfg.cols;
+    initializeBoard();
+
     applyServerState(state);
 
     document.getElementById('setup-screen').style.display   = 'none';
@@ -163,28 +329,79 @@ function _showGameScreen(state) {
     }
 }
 
-function _handleServerGameOver(winner) {
+function _handleServerGameOver(winner, reason) {
     gameState.gameOver = true;
     const isOurWin = winner === serverMode.playerNumber;
     let resultText, scoreText;
 
     if (!winner) {
         resultText = 'Draw!';
-        scoreText  = 'Score: 0';
+        scoreText  = '';
     } else if (serverMode.playerNumber === null) {
         resultText = `Player ${winner} Wins!`;
-        scoreText  = `Score: ${calcPowerScore(winner)}`;
+        scoreText  = reason || '';
     } else if (isOurWin) {
         resultText = 'You Win!';
-        scoreText  = `Score: ${calcPowerScore(winner)}`;
+        scoreText  = reason || '';
     } else {
-        resultText = `Player ${winner} Wins!`;
-        scoreText  = 'Score: 0';
+        resultText = 'You Lose!';
+        scoreText  = reason || '';
     }
 
-    // Auto-save game log to server for learning
     if (typeof gameLog !== 'undefined') gameLog.saveToServer();
     showResult(resultText, scoreText);
+
+    // Customize buttons for network play
+    const restartBtn = document.getElementById('restart-btn');
+    const newGameBtn = document.getElementById('new-game-btn');
+
+    if (restartBtn) {
+        if (serverMode.playerNumber === 1) {
+            // Host can request rematch
+            restartBtn.textContent = 'Play Again';
+            restartBtn.disabled = false;
+            restartBtn.style.opacity = '';
+            restartBtn.onclick = () => {
+                serverMode.socket.emit('rematch', {
+                    gameId: serverMode.gameId,
+                    token: serverMode.token,
+                });
+            };
+        } else {
+            restartBtn.style.display = 'none';
+        }
+
+        // Joiner sees status text above the buttons
+        const statusEl = document.getElementById('network-status');
+        if (statusEl && serverMode.playerNumber !== 1) {
+            statusEl.textContent = 'Waiting for host to restart...';
+            statusEl.style.display = '';
+        }
+    }
+
+    if (newGameBtn) {
+        newGameBtn.textContent = 'Leave';
+        newGameBtn.onclick = () => {
+            serverMode.socket.emit('leave-game', {
+                gameId: serverMode.gameId,
+                token: serverMode.token,
+            });
+            serverMode.active = false;
+            serverMode.gameId = null;
+            serverMode.token = null;
+            serverMode.playerNumber = null;
+            _clearSession();
+            const statusEl = document.getElementById('network-status');
+            if (statusEl) statusEl.style.display = 'none';
+            showSetupScreen();
+            // Reset buttons for next game
+            restartBtn.style.display = '';
+            restartBtn.disabled = false;
+            restartBtn.style.opacity = '';
+            restartBtn.onclick = null;
+            newGameBtn.onclick = null;
+        };
+    }
 }
 
 function _showWaitOverlay(gameId) {
@@ -201,20 +418,47 @@ function _showWaitOverlay(gameId) {
         });
         document.body.appendChild(overlay);
     }
+    const joinUrl = `${window.location.origin}${window.location.pathname}?join=${gameId}`;
     overlay.innerHTML = `
         <div style="background:#4a3728;padding:32px 40px;border-radius:12px;
-                    text-align:center;max-width:320px;font-family:inherit;color:#f5e6d0">
-            <h2 style="margin:0 0 10px">Waiting for players…</h2>
-            <p style="margin:0 0 18px;color:#d2c1a3;font-size:14px">
-                Share this game code with your friend:
+                    text-align:center;max-width:380px;font-family:inherit;color:#f5e6d0">
+            <h2 style="margin:0 0 14px">Waiting for opponent</h2>
+            <p style="margin:0 0 12px;color:#d2c1a3;font-size:14px">
+                Send this link to your friend:
             </p>
-            <div style="font-size:2.8em;font-weight:bold;letter-spacing:8px;
-                        color:#ffdd88;margin-bottom:18px">${gameId}</div>
+            <div id="join-link-box" style="background:#2a1e10;border:2px solid #6e583b;
+                        border-radius:6px;padding:10px 14px;margin-bottom:14px;
+                        cursor:pointer;word-break:break-all;
+                        font-size:14px;color:#ffdd88">${joinUrl}</div>
+            <button id="copy-link-btn" style="margin-bottom:8px">Copy Link</button>
             <p style="margin:0;font-size:12px;color:#9a8060">
-                They enter it on the setup screen and click Join
+                Or share the code: <strong style="letter-spacing:4px;color:#ffdd88">${gameId}</strong>
             </p>
         </div>`;
     overlay.style.display = 'flex';
+
+    document.getElementById('copy-link-btn').addEventListener('click', () => {
+        // navigator.clipboard requires HTTPS; use execCommand fallback for HTTP
+        let copied = false;
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(joinUrl).then(() => {}).catch(() => {});
+            copied = true;
+        }
+        if (!copied) {
+            const ta = document.createElement('textarea');
+            ta.value = joinUrl;
+            ta.style.cssText = 'position:fixed;left:-9999px';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            ta.remove();
+        }
+        document.getElementById('copy-link-btn').textContent = 'Copied!';
+        setTimeout(() => {
+            const btn = document.getElementById('copy-link-btn');
+            if (btn) btn.textContent = 'Copy Link';
+        }, 2000);
+    });
 }
 
 function _hideWaitOverlay() {
@@ -222,10 +466,83 @@ function _hideWaitOverlay() {
     if (overlay) overlay.style.display = 'none';
 }
 
-// ─── Join-game button wiring ──────────────────────────────────────────────────
+function _showDisconnectOverlay(player) {
+    let overlay = document.getElementById('disconnect-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'disconnect-overlay';
+        Object.assign(overlay.style, {
+            position: 'fixed', inset: '0',
+            background: 'rgba(0,0,0,0.65)',
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            zIndex: '999',
+        });
+        document.body.appendChild(overlay);
+    }
+    overlay.innerHTML = `
+        <div style="background:#4a3728;padding:32px 40px;border-radius:12px;
+                    text-align:center;max-width:320px;font-family:inherit;color:#f5e6d0">
+            <h2 style="margin:0 0 10px">Opponent disconnected</h2>
+            <p style="margin:0 0 18px;color:#d2c1a3;font-size:14px">
+                Waiting for them to reconnect...
+            </p>
+            <button id="disconnect-leave-btn">Leave Game</button>
+        </div>`;
+    overlay.style.display = 'flex';
+
+    document.getElementById('disconnect-leave-btn').addEventListener('click', () => {
+        _hideDisconnectOverlay();
+        serverMode.socket.emit('leave-game', {
+            gameId: serverMode.gameId,
+            token: serverMode.token,
+        });
+        serverMode.active = false;
+        serverMode.gameId = null;
+        serverMode.token = null;
+        serverMode.playerNumber = null;
+        _clearSession();
+        const statusEl = document.getElementById('network-status');
+        if (statusEl) statusEl.remove();
+        showSetupScreen();
+    });
+}
+
+function _hideDisconnectOverlay() {
+    const overlay = document.getElementById('disconnect-overlay');
+    if (overlay) overlay.style.display = 'none';
+}
+
+// ─── Host / Join button wiring ────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+    const hostBtn   = document.getElementById('host-game-btn');
     const joinBtn   = document.getElementById('join-game-btn');
     const joinInput = document.getElementById('join-code-input');
+
+    if (hostBtn) {
+        hostBtn.addEventListener('click', () => {
+            // Host a network game: P1 = local human, P2 = remote human.
+            gameState.player1 = { type: 'human' };
+            gameState.player2 = { type: 'human' };
+            gameState.numPlayers = 2;
+            gameState.cpuEnabled = false;
+
+            // Read abilities from the setup screen checkboxes (same as startGame)
+            gameState.enabledAbilities = new Set(
+                Array.from(document.querySelectorAll('.ability-toggle:checked')).map(cb => cb.value)
+            );
+
+            serverMode.createGame({
+                numPlayers: 2,
+                playerConfigs: {
+                    1: { type: 'human' },
+                    2: { type: 'human' },
+                },
+                enabledAbilities: [...gameState.enabledAbilities],
+            });
+        });
+    }
+
     if (joinBtn) {
         joinBtn.addEventListener('click', () => {
             const code = joinInput?.value?.trim();
@@ -239,5 +556,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (code) serverMode.joinGame(code);
             }
         });
+    }
+
+    // Auto-join if URL has ?join=XXXX
+    const urlParams = new URLSearchParams(window.location.search);
+    const joinCode = urlParams.get('join');
+    if (joinCode && serverMode.socket) {
+        // Wait for socket to connect, then join
+        const tryJoin = () => {
+            gameState.player1 = { type: 'human' };
+            gameState.player2 = { type: 'human' };
+            gameState.numPlayers = 2;
+            gameState.cpuEnabled = false;
+            serverMode.joinGame(joinCode.trim().toUpperCase());
+            // Clean the URL so refresh doesn't re-join
+            window.history.replaceState({}, '', window.location.pathname);
+        };
+        if (serverMode.socket.connected) {
+            tryJoin();
+        } else {
+            serverMode.socket.once('connect', tryJoin);
+        }
     }
 });

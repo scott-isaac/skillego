@@ -10,6 +10,103 @@ const SkillNNMCTS = (function () {
     let _model = null;        // TF.js LayersModel
     let _modelReady = false;
 
+    // ── Determinization (copied from mcts.js — it's inside that IIFE) ──────
+    function determinize(maskedState, cpuPlayer) {
+        const s = cloneState(maskedState);
+        const coveredCells = [];
+        const seenByPlayer = {};
+        for (let r = 0; r < BOARD_ROWS; r++) {
+            for (let c = 0; c < BOARD_COLS; c++) {
+                if (s.covered[r][c]) {
+                    coveredCells.push({ r, c });
+                } else {
+                    const p = s.board[r][c];
+                    if (p && p.player !== 0) {
+                        if (!seenByPlayer[p.player]) seenByPlayer[p.player] = [];
+                        seenByPlayer[p.player].push(p.type);
+                    }
+                }
+            }
+        }
+        if (coveredCells.length === 0) return s;
+        const numPlayers = (typeof gameState !== 'undefined' && gameState.numPlayers) || 2;
+        const pool = [];
+        for (let pl = 1; pl <= numPlayers; pl++) {
+            const seen = seenByPlayer[pl] || [];
+            const remaining = {};
+            for (const def of PIECES) remaining[def.type] = def.quantity;
+            for (const t of seen) remaining[t]--;
+            for (const def of PIECES)
+                for (let i = 0; i < Math.max(0, remaining[def.type]); i++)
+                    pool.push({ type: def.type, power: def.power, player: pl });
+        }
+        shuffle(pool);
+        for (let i = 0; i < coveredCells.length; i++) {
+            const { r, c } = coveredCells[i];
+            if (i < pool.length) {
+                s.board[r][c] = { ...pool[i], burning: false };
+            } else {
+                s.board[r][c] = null;
+                s.covered[r][c] = false;
+            }
+        }
+        return s;
+    }
+
+    function shuffle(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+    }
+
+    // ── Move Generation (same as mcts.js, uses global rules.js functions) ─
+    function getAllMoves(state, player, enabledAbilities) {
+        const captures = [];
+        const moves    = [];
+        const uncovers = [];
+        for (let r = 0; r < BOARD_ROWS; r++) {
+            for (let c = 0; c < BOARD_COLS; c++) {
+                const piece = state.board[r][c];
+                if (!piece) continue;
+                if (state.covered[r][c]) {
+                    uncovers.push({ type: 'uncover', r, c });
+                } else if (piece.player === player) {
+                    for (const { row, col } of getValidMoves(state, r, c)) {
+                        const target = state.board[row][col];
+                        if (target) {
+                            captures.push({ type: 'capture', fromR: r, fromC: c, toR: row, toC: col, capPower: target.power });
+                        } else {
+                            moves.push({ type: 'move', fromR: r, fromC: c, toR: row, toC: col });
+                        }
+                    }
+                    for (const m of getPushMoves(state, r, c, enabledAbilities))  moves.push(m);
+                    for (const m of getHopMoves(state, r, c, enabledAbilities))   moves.push(m);
+                    for (const m of getEngulfMoves(state, r, c, enabledAbilities)) {
+                        let nearbyMouse = false;
+                        for (let mr = 0; mr < BOARD_ROWS; mr++) {
+                            for (let mc = 0; mc < BOARD_COLS; mc++) {
+                                const t = state.board[mr][mc];
+                                if (t && t.type === 'mouse' && t.player !== player && !state.covered[mr][mc]) {
+                                    if (Math.abs(mr - r) + Math.abs(mc - c) <= 2) {
+                                        nearbyMouse = true; break;
+                                    }
+                                }
+                            }
+                            if (nearbyMouse) break;
+                        }
+                        if (nearbyMouse) moves.push(m);
+                    }
+                    for (const m of getSnipeMoves(state, r, c, enabledAbilities))     captures.push(m);
+                    for (const m of getPyroMoves(state, r, c, enabledAbilities))      moves.push(m);
+                    for (const m of getTransformMoves(state, r, c, enabledAbilities))  moves.push(m);
+                }
+            }
+        }
+        captures.sort((a, b) => (b.capPower || 0) - (a.capPower || 0));
+        return [...captures, ...moves, ...uncovers];
+    }
+
     // ── Action space constants (must match Python config.py exactly) ──────
     const NUM_CELLS = BOARD_ROWS * BOARD_COLS;  // 36
     const DIR_IDX = { '-1,0': 0, '0,1': 1, '1,0': 2, '0,-1': 3 }; // N,E,S,W
@@ -36,6 +133,49 @@ const SkillNNMCTS = (function () {
     const DEFAULT_SIMS = 200;
     const DEFAULT_DETS = 4;
 
+    // ── Model Architecture (must match Python network.py exactly) ───────
+    // Build the SkillZero ResNet in TF.js, then load trained weights.
+    const NUM_RES_BLOCKS = 4;
+    const NUM_FILTERS = 64;
+
+    function buildModel() {
+        const input = tf.input({shape: [BOARD_ROWS, BOARD_COLS, 24], name: 'board'});
+
+        // Initial conv
+        let x = tf.layers.conv2d({filters: NUM_FILTERS, kernelSize: 3, padding: 'same', useBias: false, name: 'conv_init'}).apply(input);
+        x = tf.layers.batchNormalization({name: 'bn_init'}).apply(x);
+        x = tf.layers.reLU({name: 'relu_init'}).apply(x);
+
+        // Residual tower
+        for (let i = 0; i < NUM_RES_BLOCKS; i++) {
+            const residual = x;
+            x = tf.layers.conv2d({filters: NUM_FILTERS, kernelSize: 3, padding: 'same', useBias: false, name: `res_${i}_conv1`}).apply(x);
+            x = tf.layers.batchNormalization({name: `res_${i}_bn1`}).apply(x);
+            x = tf.layers.reLU({name: `res_${i}_relu1`}).apply(x);
+            x = tf.layers.conv2d({filters: NUM_FILTERS, kernelSize: 3, padding: 'same', useBias: false, name: `res_${i}_conv2`}).apply(x);
+            x = tf.layers.batchNormalization({name: `res_${i}_bn2`}).apply(x);
+            x = tf.layers.add({name: `res_${i}_add`}).apply([x, residual]);
+            x = tf.layers.reLU({name: `res_${i}_relu2`}).apply(x);
+        }
+
+        // Policy head
+        let p = tf.layers.conv2d({filters: 32, kernelSize: 1, useBias: false, name: 'policy_conv'}).apply(x);
+        p = tf.layers.batchNormalization({name: 'policy_bn'}).apply(p);
+        p = tf.layers.reLU({name: 'policy_relu'}).apply(p);
+        p = tf.layers.flatten({name: 'policy_flat'}).apply(p);
+        p = tf.layers.dense({units: ACTION_SPACE_SIZE, name: 'policy_out'}).apply(p);
+
+        // Value head
+        let v = tf.layers.conv2d({filters: 1, kernelSize: 1, useBias: false, name: 'value_conv'}).apply(x);
+        v = tf.layers.batchNormalization({name: 'value_bn'}).apply(v);
+        v = tf.layers.reLU({name: 'value_relu'}).apply(v);
+        v = tf.layers.flatten({name: 'value_flat'}).apply(v);
+        v = tf.layers.dense({units: 128, activation: 'relu', name: 'value_fc'}).apply(v);
+        v = tf.layers.dense({units: 1, activation: 'tanh', name: 'value_out'}).apply(v);
+
+        return tf.model({inputs: input, outputs: [p, v]});
+    }
+
     // ── Model Loading ────────────────────────────────────────────────────
     async function loadModel(url) {
         if (typeof tf === 'undefined') {
@@ -43,31 +183,94 @@ const SkillNNMCTS = (function () {
             return false;
         }
         try {
-            // Check for trained-model marker (export.py writes this).
-            // Without it, the model is untrained and we should fall back to vanilla MCTS.
+            // Check for trained-model marker
             const markerUrl = url.replace('model.json', 'trained.json');
             const markerResp = await fetch(markerUrl);
             if (!markerResp.ok) {
-                console.log('NN-MCTS: No trained.json marker found — model not yet trained, skipping');
+                console.log('NN-MCTS: No trained.json marker — model not yet trained, skipping');
                 return false;
             }
             const marker = await markerResp.json();
             console.log(`NN-MCTS: Found trained model (iteration ${marker.iteration || '?'})`);
 
-            // Try loading as a graph model first (SavedModel export), then layers model
-            try {
-                _model = await tf.loadGraphModel(url);
-            } catch {
-                _model = await tf.loadLayersModel(url);
+            // Load the weight manifest + binary
+            const manifestResp = await fetch(url);
+            if (!manifestResp.ok) throw new Error('Failed to fetch model.json');
+            const manifest = await manifestResp.json();
+
+            const weightsUrl = url.replace('model.json', manifest.weightsManifest[0].paths[0]);
+            const weightsResp = await fetch(weightsUrl);
+            if (!weightsResp.ok) throw new Error('Failed to fetch weights');
+            const weightsBuf = await weightsResp.arrayBuffer();
+
+            // Build the architecture in JS (same structure as Python)
+            _model = buildModel();
+
+            // Build name-based lookup from exported weights.
+            // Python paths: "conv_init/kernel", "res_0/conv2d/kernel", etc.
+            const pyByName = {};
+            for (const spec of manifest.weightsManifest[0].weights) {
+                const arr = new Float32Array(weightsBuf, spec.byteOffset, spec.byteLength / 4);
+                pyByName[spec.name] = { data: arr, shape: spec.shape };
             }
-            // Warm up with dummy input
+
+            // Map JS layer names → Python weight paths.
+            // Python ResBlock nests: "res_0/conv2d/kernel", "res_0/batch_normalization/gamma"
+            // JS uses flat names: "res_0_conv1/kernel", "res_0_bn1/gamma"
+            function jsNameToPyName(jsName) {
+                // Direct matches: conv_init, bn_init, policy_*, value_*
+                if (pyByName[jsName]) return jsName;
+
+                // ResBlock mapping: res_N_conv1 → res_N/conv2d, res_N_conv2 → res_N/conv2d_1
+                // res_N_bn1 → res_N/batch_normalization, res_N_bn2 → res_N/batch_normalization_1
+                const m = jsName.match(/^res_(\d+)_(conv|bn)(\d)\/(.*)/);
+                if (m) {
+                    const blockIdx = parseInt(m[1]);
+                    const layerType = m[2]; // 'conv' or 'bn'
+                    const subIdx = parseInt(m[3]); // 1 or 2
+                    const param = m[4]; // 'kernel', 'gamma', etc.
+
+                    // Python uses global counters: conv2d, conv2d_1, conv2d_2...
+                    // block 0 conv1 = conv2d, conv2 = conv2d_1
+                    // block 1 conv1 = conv2d_2, conv2 = conv2d_3
+                    const globalIdx = blockIdx * 2 + (subIdx - 1);
+                    if (layerType === 'conv') {
+                        const suffix = globalIdx === 0 ? '' : `_${globalIdx}`;
+                        return `res_${blockIdx}/conv2d${suffix}/${param}`;
+                    } else {
+                        const suffix = globalIdx === 0 ? '' : `_${globalIdx}`;
+                        return `res_${blockIdx}/batch_normalization${suffix}/${param}`;
+                    }
+                }
+                return jsName; // fallback
+            }
+
+            // Assign weights by name mapping
+            const jsWeights = _model.weights;
+            const newWeights = [];
+            for (const jsW of jsWeights) {
+                const jsName = jsW.name.replace(':0', ''); // TF.js appends :0
+                const pyName = jsNameToPyName(jsName);
+                const pyW = pyByName[pyName];
+                if (!pyW) {
+                    throw new Error(`No exported weight for JS weight "${jsName}" (mapped to "${pyName}")`);
+                }
+                if (JSON.stringify(pyW.shape) !== JSON.stringify(Array.from(jsW.shape))) {
+                    throw new Error(`Shape mismatch for "${jsName}": export=${JSON.stringify(pyW.shape)} JS=${JSON.stringify(jsW.shape)}`);
+                }
+                newWeights.push(tf.tensor(pyW.data, pyW.shape));
+            }
+            _model.setWeights(newWeights);
+
+            // Warm up
             const dummy = tf.zeros([1, BOARD_ROWS, BOARD_COLS, 24]);
             const out = _model.predict(dummy);
             if (Array.isArray(out)) out.forEach(t => t.dispose());
             else out.dispose();
             dummy.dispose();
+
             _modelReady = true;
-            console.log('NN-MCTS: Model loaded and ready');
+            console.log(`NN-MCTS: Model loaded (${marker.iteration ? 'iter ' + marker.iteration : 'trained'})`);
             return true;
         } catch (e) {
             console.warn('NN-MCTS: Failed to load model:', e.message);

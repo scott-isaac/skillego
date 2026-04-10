@@ -12,13 +12,26 @@ const GameRoom = require('./GameRoom');
 
 const app    = express();
 const server = http.createServer(app);
-const io     = new Server(server);
+
+// Allow cross-origin connections from GitHub Pages (or any origin in dev).
+// In production, lock this down to your specific GitHub Pages URL.
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '*').split(',').map(s => s.trim());
+const io = new Server(server, {
+    cors: {
+        origin: ALLOWED_ORIGINS[0] === '*' ? '*' : ALLOWED_ORIGINS,
+        methods: ['GET', 'POST'],
+    },
+});
 
 const PORT = process.env.PORT || 3000;
 
 // ─── Static files ─────────────────────────────────────────────────────────────
-// Serve the client from the repo root so localhost:PORT loads the game directly.
-app.use(express.static(path.join(__dirname, '..')));
+// In local dev, serve client from repo root. In Docker (production), client
+// is on GitHub Pages — the container is a backend-only WebSocket server.
+const clientDir = path.join(__dirname, '..');
+if (fs.existsSync(path.join(clientDir, 'index.html'))) {
+    app.use(express.static(clientDir));
+}
 app.use(express.json({ limit: '1mb' }));
 
 // ─── Game log auto-save + learning ────────────────────────────────────────────
@@ -188,6 +201,7 @@ io.on('connection', (socket) => {
     //   playerConfigs: { 1: {type:'human'|'cpu', difficulty?:'easy'|..}, 2: ..., }
     //   enabledAbilities: string[]  e.g. ['push','hop','transform']
     socket.on('create-game', ({ numPlayers, playerConfigs, enabledAbilities }) => {
+        console.log(`[create-game] abilities: ${JSON.stringify(enabledAbilities)}`);
         const gameId = uuidv4().substring(0, 8).toUpperCase();
         const room   = new GameRoom(gameId, numPlayers, playerConfigs, enabledAbilities);
 
@@ -271,6 +285,9 @@ io.on('connection', (socket) => {
             state: room.getMaskedState(),
         });
 
+        // Notify the other player that this player is back
+        socket.to(gameId).emit('opponent-reconnected', { player: playerNumber });
+
         console.log(`[${gameId}] P${playerNumber} rejoined (${socket.id})`);
     });
 
@@ -298,11 +315,112 @@ io.on('connection', (socket) => {
         }
     });
 
+    // ── resign ───────────────────────────────────────────────────────────────
+    // payload: { gameId, token }
+    socket.on('resign', ({ gameId, token }) => {
+        const room = rooms.get(gameId);
+        if (!room) return;
+        const playerNumber = room.getPlayerByToken(token);
+        if (!playerNumber) return;
+
+        room.gameOver = true;
+        // The OTHER player wins
+        const winner = Array.from({ length: room.numPlayers }, (_, i) => i + 1)
+            .find(p => p !== playerNumber && !room.eliminatedPlayers.has(p)) || null;
+        room.winner = winner;
+
+        io.to(gameId).emit('game-over', {
+            state: room.getMaskedState(),
+            winner,
+            reason: `Player ${playerNumber} resigned`,
+        });
+        console.log(`[${gameId}] P${playerNumber} resigned → P${winner} wins`);
+        scheduleRoomCleanup(gameId);
+    });
+
+    // ── leave-game ───────────────────────────────────────────────────────────
+    // Player leaves the room (after game over, or abandoning)
+    // payload: { gameId, token }
+    socket.on('leave-game', ({ gameId, token }) => {
+        const room = rooms.get(gameId);
+        if (!room) return;
+        const playerNumber = room.getPlayerByToken(token);
+        if (!playerNumber) return;
+
+        room.players.delete(playerNumber);
+        socket.leave(gameId);
+
+        // Notify remaining players
+        io.to(gameId).emit('opponent-left', { player: playerNumber });
+        console.log(`[${gameId}] P${playerNumber} left`);
+
+        // If the game was still going, the leaving player forfeits
+        if (!room.gameOver) {
+            room.gameOver = true;
+            const winner = Array.from({ length: room.numPlayers }, (_, i) => i + 1)
+                .find(p => p !== playerNumber && !room.eliminatedPlayers.has(p)) || null;
+            room.winner = winner;
+            io.to(gameId).emit('game-over', {
+                state: room.getMaskedState(),
+                winner,
+                reason: `Player ${playerNumber} left`,
+            });
+            scheduleRoomCleanup(gameId);
+        }
+    });
+
+    // ── rematch ──────────────────────────────────────────────────────────────
+    // Host requests a new game with the same settings and players
+    // payload: { gameId, token }
+    socket.on('rematch', ({ gameId, token }) => {
+        const oldRoom = rooms.get(gameId);
+        if (!oldRoom) { socket.emit('error', { message: 'Game not found' }); return; }
+        const playerNumber = oldRoom.getPlayerByToken(token);
+        if (!playerNumber) { socket.emit('error', { message: 'Invalid token' }); return; }
+
+        // Create a new room with the same settings
+        const newGameId = uuidv4().substring(0, 8).toUpperCase();
+        const newRoom = new GameRoom(newGameId, oldRoom.numPlayers,
+            oldRoom.playerConfigs, [...oldRoom.enabledAbilities]);
+        rooms.set(newGameId, newRoom);
+
+        // Migrate all connected players from the old room to the new one
+        for (const [pNum, info] of oldRoom.players) {
+            newRoom.addPlayer(pNum, info.socketId, info.token);
+            const pSocket = io.sockets.sockets.get(info.socketId);
+            if (pSocket) {
+                pSocket.leave(gameId);
+                pSocket.join(newGameId);
+            }
+        }
+
+        // Notify all players
+        io.to(newGameId).emit('rematch-started', {
+            gameId: newGameId,
+            state: newRoom.getMaskedState(),
+        });
+
+        if (newRoom.readyToStart()) {
+            io.to(newGameId).emit('game-started', { state: newRoom.getMaskedState() });
+            scheduleCpuMove(newRoom);
+        }
+
+        rooms.delete(gameId);
+        console.log(`[${gameId}] Rematch → [${newGameId}]`);
+    });
+
     // ── disconnect ───────────────────────────────────────────────────────────
     socket.on('disconnect', () => {
         console.log(`[disconnect] ${socket.id}`);
-        // Players have 10 minutes to rejoin before the room is cleaned up.
-        // The game continues (CPU still moves, other players still play).
+        // Notify rooms this socket was in
+        for (const [gameId, room] of rooms) {
+            for (const [pNum, info] of room.players) {
+                if (info.socketId === socket.id) {
+                    io.to(gameId).emit('opponent-disconnected', { player: pNum });
+                    console.log(`[${gameId}] P${pNum} disconnected`);
+                }
+            }
+        }
     });
 });
 

@@ -14,3 +14,12 @@ node_modules/
 .DS_Store
 Thumbs.db
 .vscode/
+
+# Claude Code config (dev tool, not part of the project)
+.claude/
+
+# Art assets (local only, not part of the game)
+art/
+
+# Multiplayer server config (injected by GitHub Actions deploy, not in source)
+js/no-modules/server-config.js

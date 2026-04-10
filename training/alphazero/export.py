@@ -61,7 +61,6 @@ def export_to_tfjs(keras_path, output_dir):
                 print(f"SavedModel conversion also failed: {e2}")
                 print("Falling back to manual weight export...")
                 _try_direct_keras_export(model, output_dir)
-                return
 
     # Write trained-model marker (nn-mcts.js checks for this before loading)
     import json, datetime
@@ -105,7 +104,7 @@ def _try_direct_keras_export(model, output_dir):
     all_bytes = b''
 
     for i, (w, layer_w) in enumerate(zip(weights, model.weights)):
-        name = layer_w.name
+        name = layer_w.path  # full path like "conv_init/kernel"
         arr = w.astype(np.float32)
         weight_bytes = arr.tobytes()
         weight_specs.append({

@@ -641,6 +641,30 @@ button, .cell, input[type="range"] {
     color: #8a7a60;
 }
 
+/* ── Ability enabled/disabled in help overlay ── */
+tr.ability-disabled {
+    opacity: 0.3;
+}
+tr.ability-disabled td:last-child::after {
+    content: ' (disabled)';
+    font-style: italic;
+    color: #6e583b;
+}
+
+/* ── Overlay close X button ── */
+.overlay-close-x {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    background: none;
+    border: none;
+    color: #c8a96e;
+    font-size: 32px;
+    cursor: pointer;
+    padding: 4px 10px;
+    line-height: 1;
+}
+
 /* ── Debug log (dev tool, collapsed by default) ── */
 #debug-log {
     margin-top: 20px;
@@ -729,6 +753,52 @@ button, .cell, input[type="range"] {
 
 @media (hover: hover) {
     .secondary-btn:hover { background-color: rgba(110, 88, 59, 0.3); }
+}
+
+/* ── Network Play section on setup screen ── */
+.network-section {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+.network-divider {
+    width: 100%;
+    height: 1px;
+    background: #4a3520;
+    margin-top: 4px;
+}
+.network-label {
+    font-size: 24px;
+    color: #c8a96e;
+    font-weight: bold;
+}
+.network-host-btn {
+    width: 100%;
+    max-width: 280px;
+}
+.network-join-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+.network-code-input {
+    text-transform: uppercase;
+    letter-spacing: 4px;
+    width: 140px;
+    text-align: center;
+    padding: 10px 14px;
+    font-size: 24px;
+    font-family: 'Cinzel', 'Palatino Linotype', Georgia, serif;
+    border: 2px solid #4a3520;
+    border-radius: 6px;
+    background: #2a1e10;
+    color: #c8b080;
+}
+.network-code-input::placeholder {
+    color: #6e583b;
+    letter-spacing: 6px;
 }
 
 #exit-replay-btn {
