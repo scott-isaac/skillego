@@ -4,12 +4,14 @@ const gameLog = {
     entries: [],
     turnNumber: 0,
     totalMoves: 0,
+    structuredMoves: [],  // Machine-readable move history for learning
 
     reset() {
         this.entries = [];
         this.turnNumber = 0;
         this.totalMoves = 0;
         this.initialBoard = null;
+        this.structuredMoves = [];
         localStorage.removeItem('skillego_last_game_log');
     },
 
@@ -52,6 +54,11 @@ const gameLog = {
     recordUncover(player, row, col, piece) {
         this._advanceTurn();
         this.entries.push(`T${this.turnNumber} ${this._who(player)}: UNCOVER ${this._coord(row, col)} → P${piece.player} ${this._pieceLabel(piece)}`);
+        this.structuredMoves.push({
+            turn: this.turnNumber, player, type: 'uncover',
+            piece: { type: piece.type, power: piece.power, player: piece.player },
+            from: null, to: { r: row, c: col }, captured: null,
+        });
     },
 
     recordMove(player, fromRow, fromCol, toRow, toCol, piece, capturedPiece) {
@@ -65,6 +72,14 @@ const gameLog = {
                 `T${this.turnNumber} ${this._who(player)}: ${this._pieceLabel(piece)} ${this._coord(fromRow, fromCol)} → ${this._coord(toRow, toCol)}`
             );
         }
+        this.structuredMoves.push({
+            turn: this.turnNumber, player,
+            type: capturedPiece ? 'capture' : 'move',
+            piece: { type: piece.type, power: piece.power, player: piece.player },
+            from: { r: fromRow, c: fromCol },
+            to: { r: toRow, c: toCol },
+            captured: capturedPiece ? { type: capturedPiece.type, power: capturedPiece.power, player: capturedPiece.player } : null,
+        });
     },
 
     recordTransform(player, wizRow, wizCol, mouseCells) {
@@ -76,21 +91,38 @@ const gameLog = {
     recordHop(player, fromRow, fromCol, destRow, destCol) {
         this._advanceTurn();
         this.entries.push(`T${this.turnNumber} ${this._who(player)}: mouse[1] HOP ${this._coord(fromRow, fromCol)} → ${this._coord(destRow, destCol)}`);
+        this.structuredMoves.push({
+            turn: this.turnNumber, player, type: 'hop',
+            piece: { type: 'mouse', power: 1, player }, from: { r: fromRow, c: fromCol }, to: { r: destRow, c: destCol }, captured: null,
+        });
     },
 
     recordSnipe(player, robotRow, robotCol, targetRow, targetCol, captured) {
         this._advanceTurn();
         this.entries.push(`T${this.turnNumber} ${this._who(player)}: robot[5] ${this._coord(robotRow, robotCol)} SNIPES ${this._pieceLabel(captured)} ${this._coord(targetRow, targetCol)}`);
+        this.structuredMoves.push({
+            turn: this.turnNumber, player, type: 'snipe',
+            piece: { type: 'robot', power: 5, player }, from: { r: robotRow, c: robotCol }, to: { r: targetRow, c: targetCol },
+            captured: { type: captured.type, power: captured.power, player: captured.player },
+        });
     },
 
     recordPyromania(player, fromRow, fromCol, targetRow, targetCol, targetPiece) {
         this._advanceTurn();
         this.entries.push(`T${this.turnNumber} ${this._who(player)}: burning ${this._coord(fromRow, fromCol)} IGNITES ${this._pieceLabel(targetPiece)} ${this._coord(targetRow, targetCol)}`);
+        this.structuredMoves.push({
+            turn: this.turnNumber, player, type: 'pyro',
+            piece: { type: 'unknown', power: 0, player }, from: { r: fromRow, c: fromCol }, to: { r: targetRow, c: targetCol }, captured: null,
+        });
     },
 
     recordEngulf(player, row, col) {
         this._advanceTurn();
         this.entries.push(`T${this.turnNumber} ${this._who(player)}: dragon[6] ENGULFS ${this._coord(row, col)} — on fire!`);
+        this.structuredMoves.push({
+            turn: this.turnNumber, player, type: 'engulf',
+            piece: { type: 'dragon', power: 6, player }, from: { r: row, c: col }, to: { r: row, c: col }, captured: null,
+        });
     },
 
     recordPush(player, dragonRow, dragonCol, enemyRow, enemyCol, destRow, destCol, pushedPiece) {
@@ -98,6 +130,10 @@ const gameLog = {
         this.entries.push(
             `T${this.turnNumber} ${this._who(player)}: dragon[6] PUSHES ${this._pieceLabel(pushedPiece)} ${this._coord(enemyRow, enemyCol)} → ${this._coord(destRow, destCol)}`
         );
+        this.structuredMoves.push({
+            turn: this.turnNumber, player, type: 'push',
+            piece: { type: 'dragon', power: 6, player }, from: { r: dragonRow, c: dragonCol }, to: { r: enemyRow, c: enemyCol }, captured: null,
+        });
     },
 
     boardSnapshot() {
@@ -200,6 +236,26 @@ const gameLog = {
 
     getText() {
         return this.saveToStorage();
+    },
+
+    // Auto-save game log to server (if running locally)
+    saveToServer() {
+        const logText = this.saveToStorage();
+        const cpuPlayer = (typeof gameState !== 'undefined' && gameState.cpuPlayer) || 2;
+        const moveData = {
+            moves: this.structuredMoves,
+            cpuPlayer,
+            winner: typeof gameState !== 'undefined' ? (gameState.eliminatedPlayers?.has(cpuPlayer) ? 'human' : 'cpu') : null,
+        };
+        fetch('/api/save-game', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ logText, moveData }),
+        }).then(r => r.json()).then(data => {
+            console.log(`Game auto-saved as ${data.saved} (${data.blunders} blunders detected)`);
+        }).catch(() => {
+            // Server not running (GitHub Pages, file://) — silently skip
+        });
     },
 
     copyToClipboard() {

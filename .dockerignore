@@ -1,0 +1,8 @@
+node_modules
+training/
+.venv
+.git
+gamelogs/
+*.keras
+*.bin
+__pycache__
