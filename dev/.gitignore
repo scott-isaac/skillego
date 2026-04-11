@@ -22,4 +22,3 @@ Thumbs.db
 art/
 
 # Multiplayer server config (injected by GitHub Actions deploy, not in source)
-js/no-modules/server-config.js
