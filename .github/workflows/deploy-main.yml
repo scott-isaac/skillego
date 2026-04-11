@@ -17,6 +17,7 @@ jobs:
         run: |
           echo "var SKILLEGO_SERVER = \"${{ vars.SKILLEGO_SERVER }}\";" \
             > js/no-modules/server-config.js
+          sed -i '/server-config\.js/d' .gitignore
 
       - name: Deploy main to gh-pages root
         uses: peaceiris/actions-gh-pages@v4
