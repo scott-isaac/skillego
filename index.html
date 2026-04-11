@@ -265,7 +265,13 @@
     <!-- Load scripts in the correct order (no modules) -->
     <!-- socket.io is auto-served by the Node server. On GitHub Pages it 404s
          silently and the game runs in standalone mode — no change needed. -->
-    <script src="/socket.io/socket.io.js"></script>
+    <!-- When served by Node, this loads socket.io from the server.
+         On GitHub Pages, the CDN version below handles it instead. -->
+    <script>
+        if (window.location.port === '3000' || window.location.hostname === 'localhost') {
+            document.write('<scr'+'ipt src="/socket.io/socket.io.js"><\/scr'+'ipt>');
+        }
+    </script>
     <script src="js/no-modules/gamelog.js?v=3"></script>
     <script src="js/no-modules/utils.js?v=3"></script>
     <script src="js/no-modules/constants.js?v=3"></script>
