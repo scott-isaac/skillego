@@ -100,6 +100,16 @@ if (typeof io !== 'undefined') {
     serverMode.socket.on('game-rejoined', ({ state }) => {
         _hideWaitOverlay();
         _hideDisconnectOverlay();
+        if (state.gameOver) {
+            // Game already ended — don't rejoin, go to setup
+            serverMode.active = false;
+            serverMode.gameId = null;
+            serverMode.token = null;
+            serverMode.playerNumber = null;
+            _clearSession();
+            showSetupScreen();
+            return;
+        }
         _showGameScreen(state);
     });
 
@@ -125,11 +135,13 @@ if (typeof io !== 'undefined') {
 
     // ── Resign / Leave / Rematch ─────────────────────────────────────────────
     serverMode.socket.on('game-over', ({ state, winner, reason }) => {
+        _clearSession();
         applyServerState(state);
         _handleServerGameOver(winner, reason);
     });
 
     serverMode.socket.on('opponent-left', ({ player }) => {
+        _clearSession();
         // Host: disable Play Again
         const restartBtn = document.getElementById('restart-btn');
         if (restartBtn && serverMode.playerNumber === 1) {
