@@ -3,16 +3,16 @@
 ## Architecture
 
 ```
-GitHub Pages                     Cloudflare Tunnel              Home PC (WSL2)
+GitHub Pages                     Cloudflare Tunnel              Your PC (WSL2)
 (public client)                  (hidden proxy)                 (Docker)
 +-----------------------+  wss   +-------------------------+    +------------------+
-| yourusername.github.io| -----> | skillego.crisiscontrol  | -> | skillego-server  |
-| /skillego             |        | .app                    |    | container :3000  |
-| (HTML/JS/CSS)         |        | (not public-facing)     |    | (WebSocket only) |
+| yourusername.github.io| -----> | skillego.yourdomain.com | -> | skillego-server  |
+| /skillego             |        | (not public-facing)     |    | container :3000  |
+| (HTML/JS/CSS)         |        |                         |    | (WebSocket only) |
 +-----------------------+        +-------------------------+    +------------------+
 
 Players visit GitHub Pages. Multiplayer traffic routes silently
-through Cloudflare to the Docker container. Nobody sees crisiscontrol.app.
+through Cloudflare to the Docker container. Your domain stays hidden.
 ```
 
 ## Setup on Home PC (WSL2)
@@ -38,32 +38,31 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-The server runs on port 3001 (host) mapped to 3000 (container).
+The server runs on port 3000.
 It's WebSocket-only — no HTML served. Verify with:
 ```bash
-curl http://localhost:3001    # should get 404 or empty (no static files)
+curl http://localhost:3000/socket.io/?EIO=4&transport=polling
+# Should return a 200 with a JSON-ish body (socket.io handshake)
 ```
 
 ### 4. Expose via Cloudflare Tunnel
 
-Add Skillego to your existing `cloudflared` tunnel config
-(usually `~/.cloudflared/config.yml`):
+Add Skillego to your `cloudflared` tunnel config
+(check `~/.cloudflared/config.yml` or `/etc/cloudflared/config.yml`):
 
 ```yaml
 ingress:
-  # Existing crisiscontrol.app rules...
-  - hostname: crisiscontrol.app
-    service: http://localhost:XXXX
+  # Your existing rules...
 
   # Skillego multiplayer backend
-  - hostname: skillego.crisiscontrol.app
-    service: http://localhost:3001
+  - hostname: skillego.yourdomain.com
+    service: http://localhost:3000
 
   - service: http_status:404
 ```
 
 Then in the Cloudflare dashboard, add a CNAME DNS record:
-- Name: `skillego`
+- Name: `skillego` (or whatever subdomain you chose)
 - Target: `<your-tunnel-id>.cfargotunnel.com`
 - Proxy: enabled (orange cloud)
 
@@ -71,30 +70,31 @@ Then in the Cloudflare dashboard, add a CNAME DNS record:
 
 ```bash
 sudo systemctl restart cloudflared
-# or: cloudflared tunnel run <tunnel-name>
 ```
 
-### 6. Test
+**Note:** If cloudflared runs as a service, make sure the service config
+points to the right file (e.g. `/etc/cloudflared/config.yml`).
 
-Open your GitHub Pages URL, open dev console. Should see:
+### 6. Configure GitHub Actions
+
+In your repo on GitHub, go to **Settings > Secrets and variables > Actions > Variables**
+and add a repository variable:
+
+- Name: `SKILLEGO_SERVER`
+- Value: `https://skillego.yourdomain.com`
+
+The deploy workflows will inject this into a `server-config.js` file during build.
+The URL never appears in the source code.
+
+### 7. Test
+
+Push to main (or dev) to trigger a deploy, then open your GitHub Pages URL
+and check the browser console. Should see:
 ```
 Connected to Skillego server
 ```
 
-Create a multiplayer game, share the code. Done.
-
-## Client Configuration
-
-The server URL is set in `index.html`:
-
-```html
-<script>
-    var SKILLEGO_SERVER = "https://skillego.crisiscontrol.app";
-</script>
-```
-
-This line is already committed. To disable multiplayer (standalone CPU-only),
-comment it out.
+Create a multiplayer game, share the link. Done.
 
 ## Managing
 

@@ -279,6 +279,19 @@ io.on('connection', (socket) => {
         room.players.get(playerNumber).socketId = socket.id;
         socket.join(gameId);
 
+        // If game hasn't started yet (still waiting for opponent), show waiting screen
+        if (!room.readyToStart()) {
+            socket.emit('game-created', {
+                gameId,
+                playerNumber,
+                token,
+                state: room.getMaskedState(),
+            });
+            socket.emit('waiting-for-players', { gameId });
+            console.log(`[${gameId}] P${playerNumber} rejoined (still waiting for opponent)`);
+            return;
+        }
+
         socket.emit('game-rejoined', {
             gameId,
             playerNumber,
