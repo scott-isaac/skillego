@@ -50,19 +50,23 @@ if (typeof io !== 'undefined') {
         sessionStorage.removeItem('skillego_session');
     }
 
-    // On connect, try to rejoin a saved session (page was refreshed)
-    const saved = sessionStorage.getItem('skillego_session');
-    if (saved) {
-        try {
-            const s = JSON.parse(saved);
-            if (s.gameId && s.token) {
-                serverMode.gameId       = s.gameId;
-                serverMode.playerNumber = s.playerNumber;
-                serverMode.token        = s.token;
-                serverMode.active       = true;
-                serverMode.socket.emit('rejoin-game', { gameId: s.gameId, token: s.token });
-            }
-        } catch (e) { _clearSession(); }
+    // On connect, try to rejoin a saved session (page was refreshed).
+    // Skip if there's a ?join= param in the URL — that takes priority.
+    const hasJoinParam = new URLSearchParams(window.location.search).has('join');
+    if (!hasJoinParam) {
+        const saved = sessionStorage.getItem('skillego_session');
+        if (saved) {
+            try {
+                const s = JSON.parse(saved);
+                if (s.gameId && s.token) {
+                    serverMode.gameId       = s.gameId;
+                    serverMode.playerNumber = s.playerNumber;
+                    serverMode.token        = s.token;
+                    serverMode.active       = true;
+                    serverMode.socket.emit('rejoin-game', { gameId: s.gameId, token: s.token });
+                }
+            } catch (e) { _clearSession(); }
+        }
     }
 
     // ── Game lifecycle ────────────────────────────────────────────────────────
@@ -75,6 +79,8 @@ if (typeof io !== 'undefined') {
     });
 
     serverMode.socket.on('waiting-for-players', ({ gameId }) => {
+        // Make sure setup screen is hidden (in case of rejoin after refresh)
+        document.getElementById('setup-screen').style.display = 'none';
         _showWaitOverlay(gameId);
     });
 
@@ -156,6 +162,18 @@ if (typeof io !== 'undefined') {
 
     serverMode.socket.on('error', ({ message }) => {
         console.error('Server error:', message);
+        // If we were trying to rejoin or join a game that no longer exists,
+        // clean up and go back to setup screen.
+        if (message === 'Game not found' || message === 'Game not found or expired' || message === 'Invalid token') {
+            serverMode.active = false;
+            serverMode.gameId = null;
+            serverMode.token = null;
+            serverMode.playerNumber = null;
+            _clearSession();
+            _hideWaitOverlay();
+            _hideDisconnectOverlay();
+            showSetupScreen();
+        }
     });
 
     // ── Rejoin on reconnect if game is active ─────────────────────────────────
