@@ -77,15 +77,7 @@ function createRules({ rows, cols, burnLevel }) {
         if (!enabledAbilities.has('engulf')) return [];
         const piece = state.board[r][c];
         if (!piece || piece.burning || piece.type !== 'dragon') return [];
-        for (const [dr, dc] of DIRS) {
-            const nr = r + dr, nc = c + dc;
-            if (!inBounds(nr, nc)) continue;
-            const t = state.board[nr][nc];
-            if (t && t.type === 'mouse' && t.player !== piece.player && !state.covered[nr][nc]) {
-                return [{ type: 'engulf', r, c }];
-            }
-        }
-        return [];
+        return [{ type: 'engulf', r, c }];
     }
 
     function getTransformMoves(state, r, c, enabledAbilities) {
