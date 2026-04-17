@@ -173,7 +173,7 @@ const PLAYER_ART = ['', 'red', 'blue', 'yellow', 'green'];
 // Slide a ghost of the moving piece from source to destination.
 // onLand fires when the ghost arrives; ghost fades out and is removed shortly after.
 function slidePiece(fromEl, toEl, piece, onLand) {
-    if (!fromEl || !toEl) { if (onLand) onLand(); return; }
+    if (!fromEl || !toEl || !gameState.animationsEnabled) { if (onLand) onLand(); return; }
     const board = document.getElementById('board');
     const color = PLAYER_ART[piece.player];
 
@@ -210,7 +210,7 @@ function slidePiece(fromEl, toEl, piece, onLand) {
 
 // Flip the mouse ghost from source over the piece in the middle, landing at destination.
 function hopPiece(fromEl, toEl, piece, onLand) {
-    if (!fromEl || !toEl) { if (onLand) onLand(); return; }
+    if (!fromEl || !toEl || !gameState.animationsEnabled) { if (onLand) onLand(); return; }
     const board = document.getElementById('board');
     const color = PLAYER_ART[piece.player];
 

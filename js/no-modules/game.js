@@ -421,7 +421,7 @@ function executePush(dragonRow, dragonCol, enemyRow, enemyCol, destRow, destCol)
 }
 
 function flyRobot(fromEl, toEl, piece, onComplete) {
-    if (!fromEl || !toEl) { onComplete(); return; }
+    if (!fromEl || !toEl || !gameState.animationsEnabled) { onComplete(); return; }
 
     const board = document.getElementById('board');
     const color = PLAYER_ART[piece.player];
@@ -935,6 +935,7 @@ function setupEventListeners() {
     // Speed sliders — setup screen + in-game share the same cpuMoveDelay
     function applySpeed(val) {
         gameState.cpuMoveDelay = parseInt(val, 10);
+        gameState.animationsEnabled = gameState.cpuMoveDelay >= 200;
         const label = gameState.cpuMoveDelay === 0 ? '0ms' : `${(gameState.cpuMoveDelay / 1000).toFixed(1)}s`;
         document.querySelectorAll('.cpu-speed-label').forEach(el => el.textContent = label);
         document.querySelectorAll('.cpu-speed-slider').forEach(el => el.value = val);
