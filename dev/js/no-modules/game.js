@@ -780,7 +780,7 @@ function startGame() {
     // Show in-game speed control whenever >1 CPU is playing
     const activeCpuCount = [gameState.player1, gameState.player2, gameState.player3, gameState.player4]
         .filter((p, i) => i < gameState.numPlayers && p && p.type === 'cpu').length;
-    const gameSpeedRow = document.getElementById('game-speed-row');
+    const gameSpeedRow = document.getElementById('speed-overlay');
     if (gameSpeedRow) gameSpeedRow.style.display = activeCpuCount > 1 ? '' : 'none';
 
     debugLog(`Game started: ${gameState.numPlayers}P mode`);
@@ -878,7 +878,7 @@ function restartGame() {
     if (resignBtn) resignBtn.textContent = allCpu ? 'Stop' : 'Resign';
     const activeCpuCount2 = [gameState.player1, gameState.player2, gameState.player3, gameState.player4]
         .filter((p, i) => i < gameState.numPlayers && p && p.type === 'cpu').length;
-    const gameSpeedRow2 = document.getElementById('game-speed-row');
+    const gameSpeedRow2 = document.getElementById('speed-overlay');
     if (gameSpeedRow2) gameSpeedRow2.style.display = activeCpuCount2 > 1 ? '' : 'none';
     scheduleNextCpuMoveIfNeeded();
 }

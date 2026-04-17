@@ -437,6 +437,30 @@ button, .cell, input[type="range"] {
     line-height: 1.4;
 }
 
+/* ── CPU speed overlay (sits above skill tray during CPU vs CPU) ── */
+#speed-overlay {
+    position: absolute;
+    left: 249px;
+    top: 1041px;
+    width: 519px;
+    height: 90px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: rgba(42, 30, 16, 0.85);
+    border: 1px solid #6e583b;
+    border-radius: 8px;
+    color: #c8a96e;
+    font-size: 22px;
+    z-index: 10;
+}
+
+#speed-overlay input[type=range] {
+    width: 180px;
+    vertical-align: middle;
+}
+
 /* ── Skill tray ── */
 /* 5 slots × 88px + 4 gaps × 10px = 480px wide; centered on board center (x=503): left = 503-240 = 263 */
 #skill-tray {
