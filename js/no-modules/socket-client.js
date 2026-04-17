@@ -460,10 +460,11 @@ function _showWaitOverlay(gameId) {
                         border-radius:6px;padding:10px 14px;margin-bottom:14px;
                         cursor:pointer;word-break:break-all;
                         font-size:14px;color:#ffdd88">${joinUrl}</div>
-            <button id="copy-link-btn" style="margin-bottom:8px">Copy Link</button>
-            <p style="margin:0;font-size:12px;color:#9a8060">
+            <button id="copy-link-btn" class="btn-primary" style="margin-bottom:8px">Copy Link</button>
+            <p style="margin:0 0 16px;font-size:12px;color:#9a8060">
                 Or share the code: <strong style="letter-spacing:4px;color:#ffdd88">${gameId}</strong>
             </p>
+            <button id="cancel-host-btn" class="btn-secondary">Cancel</button>
         </div>`;
     overlay.style.display = 'flex';
 
@@ -488,6 +489,20 @@ function _showWaitOverlay(gameId) {
             const btn = document.getElementById('copy-link-btn');
             if (btn) btn.textContent = 'Copy Link';
         }, 2000);
+    });
+
+    document.getElementById('cancel-host-btn').addEventListener('click', () => {
+        serverMode.socket.emit('leave-game', {
+            gameId: serverMode.gameId,
+            token: serverMode.token,
+        });
+        serverMode.active = false;
+        serverMode.gameId = null;
+        serverMode.token = null;
+        serverMode.playerNumber = null;
+        _clearSession();
+        _hideWaitOverlay();
+        showSetupScreen();
     });
 }
 
