@@ -655,6 +655,33 @@ button, .cell, input[type="range"] {
     #watch-replay-btn:hover { background-color: rgba(110, 88, 59, 0.3); }
 }
 
+/* ── Wait-overlay buttons ── */
+#wait-overlay .btn-primary {
+    background-color: #8a6c3a;
+    border: 2px solid #c8a96e;
+    color: #fff;
+    padding: 8px 24px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background-color 0.2s;
+}
+#wait-overlay .btn-secondary {
+    background-color: transparent;
+    border: 2px solid #6e583b;
+    color: #c8a96e;
+    padding: 8px 24px;
+    font-size: 15px;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background-color 0.2s;
+}
+@media (hover: hover) {
+    #wait-overlay .btn-primary:hover { background-color: #a0803e; }
+    #wait-overlay .btn-secondary:hover { background-color: rgba(110, 88, 59, 0.3); }
+}
+
 /* ── Tagline ── */
 .tagline {
     color: #8a7a60;
