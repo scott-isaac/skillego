@@ -21,6 +21,11 @@
 
                 <!-- setup-screen is outside board-frame to avoid scaling -->
 
+                <div id="speed-overlay" style="display:none">
+                    CPU Speed:
+                    <input type="range" class="cpu-speed-slider" id="game-cpu-speed" min="0" max="3000" value="800" step="100">
+                    <span class="cpu-speed-label">0.8s</span>
+                </div>
                 <div id="skill-tray">
                     <button class="skill-slot" disabled></button>
                     <button class="skill-slot" disabled></button>
@@ -37,11 +42,6 @@
                     <button id="replay-analyze" class="replay-btn" title="Analyze this position" disabled>🔍</button>
                 </div>
                 <div id="controls">
-                    <div class="speed-row" id="game-speed-row" style="display:none">
-                        CPU Speed:
-                        <input type="range" class="cpu-speed-slider" id="game-cpu-speed" min="0" max="3000" value="800" step="100">
-                        <span class="cpu-speed-label">0.8s</span>
-                    </div>
                     <button id="exit-replay-btn" style="display:none">Exit Replay</button>
                 </div>
                 <button id="resign-button" style="display:none">Resign</button>

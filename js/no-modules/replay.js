@@ -517,7 +517,7 @@ const GameReplay = (function () {
         document.getElementById('resign-button').style.display        = 'none';
         document.getElementById('help-button').style.display          = 'none';
         document.getElementById('exit-replay-btn').style.display      = 'block';
-        document.getElementById('game-speed-row').style.display       = 'none';
+        document.getElementById('speed-overlay').style.display       = 'none';
 
         const ind = document.getElementById('turn-indicator');
         if (ind) ind.style.fontSize = '14px';
