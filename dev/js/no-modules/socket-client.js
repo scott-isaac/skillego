@@ -257,7 +257,7 @@ function renderBoardFromState() {
 // (movePiece, hopPiece, etc.) so animations are identical.
 // Then reconcile with the authoritative server state.
 function _animateAndApply(newState, move) {
-    const RECONCILE_MS = 300;  // sync with server state after animation settles
+    const RECONCILE_MS = gameState.animationsEnabled ? 300 : 0;
 
     try {
         switch (move.type) {
