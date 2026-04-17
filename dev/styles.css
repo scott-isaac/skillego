@@ -196,8 +196,20 @@ button, .cell, input[type="range"] {
     border-radius: 8px;
 }
 
+/* ── Skill destination preview (hover) — orange dot, slightly larger than valid-move ── */
 .cell.push-destination-preview {
-    outline: 2px dashed #e67e22;
+    outline: none;
+}
+.cell.push-destination-preview::before {
+    content: '';
+    position: absolute;
+    width: 38%;
+    height: 38%;
+    border-radius: 50%;
+    background: rgba(230, 150, 50, 0.6);
+    box-shadow: 0 0 8px rgba(230, 130, 30, 0.5);
+    pointer-events: none;
+    z-index: 5;
 }
 
 #turn-indicator {
