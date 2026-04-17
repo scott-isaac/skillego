@@ -256,8 +256,29 @@ function renderBoardFromState() {
 // Execute the opponent's move using the SAME board functions as local play
 // (movePiece, hopPiece, etc.) so animations are identical.
 // Then reconcile with the authoritative server state.
+function _lastMoveCells(move) {
+    switch (move.type) {
+        case 'move': case 'capture':
+            return [{ row: move.fromR, col: move.fromC }, { row: move.toR, col: move.toC }];
+        case 'uncover': case 'engulf':
+            return [{ row: move.r, col: move.c }];
+        case 'hop':
+            return [{ row: move.fromR, col: move.fromC }, { row: move.toR, col: move.toC }];
+        case 'push':
+            return [{ row: move.drR, col: move.drC }, { row: move.enemyR, col: move.enemyC }, { row: move.destR, col: move.destC }];
+        case 'snipe':
+            return [{ row: move.robotR, col: move.robotC }, { row: move.targetR, col: move.targetC }];
+        case 'pyro':
+            return [{ row: move.fromR, col: move.fromC }, { row: move.targetR, col: move.targetC }];
+        case 'transform':
+            return [{ row: move.wizR, col: move.wizC }, ...(move.cells || []).map(c => ({ row: c.r, col: c.c }))];
+        default: return [];
+    }
+}
+
 function _animateAndApply(newState, move) {
     const RECONCILE_MS = gameState.animationsEnabled ? 300 : 0;
+    showLastMove(_lastMoveCells(move));
 
     try {
         switch (move.type) {
