@@ -113,6 +113,32 @@ function highlightCell(row, col, className) {
     }
 }
 
+// Radial gold glow used as a background layer beneath pieces
+// Gold highlight behind pieces — mimics inset box-shadow but as a background layer
+const LAST_MOVE_GLOW = 'linear-gradient(rgba(200,169,110,0.5), rgba(200,169,110,0.5))';
+
+function showLastMove(cells) {
+    // Clear old highlights and re-render to remove glow layer
+    document.querySelectorAll('.last-move').forEach(el => {
+        el.classList.remove('last-move');
+        const r = +el.dataset.row, c = +el.dataset.col;
+        renderCell(el, gameState.board[r]?.[c], gameState.covered[r]?.[c]);
+    });
+    // Set class on new cells — the caller's renderCell will pick up the glow
+    for (const { row, col } of cells) {
+        const el = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
+        if (el) el.classList.add('last-move');
+    }
+}
+
+function clearLastMove() {
+    document.querySelectorAll('.last-move').forEach(el => {
+        el.classList.remove('last-move');
+        const r = +el.dataset.row, c = +el.dataset.col;
+        renderCell(el, gameState.board[r]?.[c], gameState.covered[r]?.[c]);
+    });
+}
+
 function clearValidMoves() {
     document.querySelectorAll('.valid-move, .valid-capture').forEach(cell => {
         cell.classList.remove('valid-move', 'valid-capture');
@@ -128,6 +154,8 @@ function movePiece(fromRow, fromCol, toRow, toCol) {
     gameState.board[toRow][toCol]     = fromPiece;
     gameState.board[fromRow][fromCol] = null;
     gameState.covered[toRow][toCol]   = false;
+
+    showLastMove([{ row: fromRow, col: fromCol }, { row: toRow, col: toCol }]);
 
     const fromCell = document.querySelector(`.cell[data-row="${fromRow}"][data-col="${fromCol}"]`);
     const toCell   = document.querySelector(`.cell[data-row="${toRow}"][data-col="${toCol}"]`);
@@ -173,7 +201,7 @@ const PLAYER_ART = ['', 'red', 'blue', 'yellow', 'green'];
 // Slide a ghost of the moving piece from source to destination.
 // onLand fires when the ghost arrives; ghost fades out and is removed shortly after.
 function slidePiece(fromEl, toEl, piece, onLand) {
-    if (!fromEl || !toEl) { if (onLand) onLand(); return; }
+    if (!fromEl || !toEl || !gameState.animationsEnabled) { if (onLand) onLand(); return; }
     const board = document.getElementById('board');
     const color = PLAYER_ART[piece.player];
 
@@ -210,7 +238,7 @@ function slidePiece(fromEl, toEl, piece, onLand) {
 
 // Flip the mouse ghost from source over the piece in the middle, landing at destination.
 function hopPiece(fromEl, toEl, piece, onLand) {
-    if (!fromEl || !toEl) { if (onLand) onLand(); return; }
+    if (!fromEl || !toEl || !gameState.animationsEnabled) { if (onLand) onLand(); return; }
     const board = document.getElementById('board');
     const color = PLAYER_ART[piece.player];
 
@@ -254,28 +282,35 @@ function hopPiece(fromEl, toEl, piece, onLand) {
 function renderCell(el, piece, covered) {
     el.textContent = '';
     const tile = `url('assets/tile_${el.dataset.tile || '1'}.png')`;
+    const glow = el.classList.contains('last-move') ? LAST_MOVE_GLOW : '';
     if (!piece) {
-        // Empty square — just the stone tile
-        el.style.backgroundImage = tile;
-        el.style.backgroundSize  = '100% 100%';
+        // Empty square — just the stone tile (+ highlight if last-move)
+        el.style.backgroundImage = glow ? `${glow}, ${tile}` : tile;
+        el.style.backgroundSize  = glow ? '100% 100%, 100% 100%' : '100% 100%';
         el.style.backgroundColor = '';
         el.classList.remove('covered', 'burning');
     } else if (covered) {
         // Covered piece — ? overlay on stone tile
-        el.style.backgroundImage = `url('assets/piece_uncovered.png'), ${tile}`;
-        el.style.backgroundSize  = '75% 75%, 100% 100%';
+        el.style.backgroundImage = glow
+            ? `url('assets/piece_uncovered.png'), ${glow}, ${tile}`
+            : `url('assets/piece_uncovered.png'), ${tile}`;
+        el.style.backgroundSize  = glow ? '75% 75%, 100% 100%, 100% 100%' : '75% 75%, 100% 100%';
         el.style.backgroundColor = '';
         el.classList.add('covered');
         el.classList.remove('burning');
     } else {
-        // Revealed: piece + [fire gif if burning] + player colour + stone tile
+        // Revealed: piece + [fire gif if burning] + player colour + highlight + stone tile
         const color = PLAYER_ART[piece.player];
         if (piece.burning) {
-            el.style.backgroundImage = `url('assets/piece_${piece.type}.png'), url('assets/gifs/fire_${color}.gif'), url('assets/player_${color}.png'), ${tile}`;
-            el.style.backgroundSize  = '63% 63%, 107% 72%, 85% 85%, 100% 100%';
+            el.style.backgroundImage = glow
+                ? `url('assets/piece_${piece.type}.png'), url('assets/gifs/fire_${color}.gif'), url('assets/player_${color}.png'), ${glow}, ${tile}`
+                : `url('assets/piece_${piece.type}.png'), url('assets/gifs/fire_${color}.gif'), url('assets/player_${color}.png'), ${tile}`;
+            el.style.backgroundSize  = glow ? '63% 63%, 107% 72%, 85% 85%, 100% 100%, 100% 100%' : '63% 63%, 107% 72%, 85% 85%, 100% 100%';
         } else {
-            el.style.backgroundImage = `url('assets/piece_${piece.type}.png'), url('assets/player_${color}.png'), ${tile}`;
-            el.style.backgroundSize  = '65% 65%, 85% 85%, 100% 100%';
+            el.style.backgroundImage = glow
+                ? `url('assets/piece_${piece.type}.png'), url('assets/player_${color}.png'), ${glow}, ${tile}`
+                : `url('assets/piece_${piece.type}.png'), url('assets/player_${color}.png'), ${tile}`;
+            el.style.backgroundSize  = glow ? '65% 65%, 85% 85%, 100% 100%, 100% 100%' : '65% 65%, 85% 85%, 100% 100%';
         }
         el.style.backgroundColor = '';
         el.classList.remove('covered');
