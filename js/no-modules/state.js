@@ -26,4 +26,5 @@ const gameState = {
     player3: { type: 'cpu', difficulty: 'expert' },
     player4: { type: 'cpu', difficulty: 'expert' },
     eliminatedPlayers: new Set(),
+    animationsEnabled: true,
 };

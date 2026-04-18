@@ -316,6 +316,7 @@ function executeUncover(row, col) {
     const el = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
     const piece = gameState.board[row][col];
     if (!el || !piece) return;
+    showLastMove([{ row, col }]);
     el.style.transition = 'none';
     gameState.covered[row][col] = false;
     renderCell(el, piece, false);
@@ -334,6 +335,7 @@ function executeHop(mouseRow, mouseCol, destRow, destCol) {
     }
     const mouse = gameState.board[mouseRow][mouseCol];
 
+    showLastMove([{ row: mouseRow, col: mouseCol }, { row: destRow, col: destCol }]);
     gameState.board[destRow][destCol] = mouse;
     gameState.board[mouseRow][mouseCol] = null;
     gameState.covered[destRow][destCol] = false;
@@ -362,6 +364,7 @@ function executeTransform(wizRow, wizCol, mouseCells, isExplosion = false) {
         return;
     }
     const player = gameState.board[wizRow][wizCol].player;
+    showLastMove([{ row: wizRow, col: wizCol }, ...mouseCells]);
     const newMouse = () => ({ type: 'mouse', power: 1, player, emoji: '🐭' });
 
     // Clear wizard cell
@@ -396,6 +399,7 @@ function executePush(dragonRow, dragonCol, enemyRow, enemyCol, destRow, destCol)
     }
     const enemy = gameState.board[enemyRow][enemyCol];
 
+    showLastMove([{ row: dragonRow, col: dragonCol }, { row: enemyRow, col: enemyCol }, { row: destRow, col: destCol }]);
     gameState.board[destRow][destCol] = enemy;
     gameState.board[enemyRow][enemyCol] = null;
     gameState.covered[destRow][destCol] = false;
@@ -421,7 +425,7 @@ function executePush(dragonRow, dragonCol, enemyRow, enemyCol, destRow, destCol)
 }
 
 function flyRobot(fromEl, toEl, piece, onComplete) {
-    if (!fromEl || !toEl) { onComplete(); return; }
+    if (!fromEl || !toEl || !gameState.animationsEnabled) { onComplete(); return; }
 
     const board = document.getElementById('board');
     const color = PLAYER_ART[piece.player];
@@ -469,6 +473,7 @@ function executeRobotKitty(robotRow, robotCol, targetRow, targetCol) {
     const robot    = gameState.board[robotRow][robotCol];
     const captured = gameState.board[targetRow][targetCol];
 
+    showLastMove([{ row: robotRow, col: robotCol }, { row: targetRow, col: targetCol }]);
     // Update board state immediately
     gameState.board[robotRow][robotCol]     = null;
     gameState.board[targetRow][targetCol]   = robot;
@@ -505,6 +510,7 @@ function executeEngulf(row, col) {
     const piece = gameState.board[row][col];
     piece.burning = true;
 
+    showLastMove([{ row, col }]);
     const el = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
     if (el) { el.classList.remove('selected'); renderCell(el, piece, false); }
 
@@ -526,6 +532,7 @@ function executePyromania(burnerRow, burnerCol, targetRow, targetCol) {
     const burner = gameState.board[burnerRow][burnerCol];
     const target = gameState.board[targetRow][targetCol];
 
+    showLastMove([{ row: burnerRow, col: burnerCol }, { row: targetRow, col: targetCol }]);
     // Set target on fire (must already be uncovered)
     target.burning = true;
     const targetEl = document.querySelector(`.cell[data-row="${targetRow}"][data-col="${targetCol}"]`);
@@ -780,7 +787,7 @@ function startGame() {
     // Show in-game speed control whenever >1 CPU is playing
     const activeCpuCount = [gameState.player1, gameState.player2, gameState.player3, gameState.player4]
         .filter((p, i) => i < gameState.numPlayers && p && p.type === 'cpu').length;
-    const gameSpeedRow = document.getElementById('game-speed-row');
+    const gameSpeedRow = document.getElementById('speed-overlay');
     if (gameSpeedRow) gameSpeedRow.style.display = activeCpuCount > 1 ? '' : 'none';
 
     debugLog(`Game started: ${gameState.numPlayers}P mode`);
@@ -878,7 +885,7 @@ function restartGame() {
     if (resignBtn) resignBtn.textContent = allCpu ? 'Stop' : 'Resign';
     const activeCpuCount2 = [gameState.player1, gameState.player2, gameState.player3, gameState.player4]
         .filter((p, i) => i < gameState.numPlayers && p && p.type === 'cpu').length;
-    const gameSpeedRow2 = document.getElementById('game-speed-row');
+    const gameSpeedRow2 = document.getElementById('speed-overlay');
     if (gameSpeedRow2) gameSpeedRow2.style.display = activeCpuCount2 > 1 ? '' : 'none';
     scheduleNextCpuMoveIfNeeded();
 }
@@ -935,6 +942,7 @@ function setupEventListeners() {
     // Speed sliders — setup screen + in-game share the same cpuMoveDelay
     function applySpeed(val) {
         gameState.cpuMoveDelay = parseInt(val, 10);
+        gameState.animationsEnabled = gameState.cpuMoveDelay >= 200;
         const label = gameState.cpuMoveDelay === 0 ? '0ms' : `${(gameState.cpuMoveDelay / 1000).toFixed(1)}s`;
         document.querySelectorAll('.cpu-speed-label').forEach(el => el.textContent = label);
         document.querySelectorAll('.cpu-speed-slider').forEach(el => el.value = val);
