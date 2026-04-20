@@ -693,6 +693,7 @@ function syncSetupUI() {
 }
 
 function startGame() {
+    _cpuMoveGen++;  // invalidate any in-flight worker results
     const p1Type = document.getElementById('p1-type').value;
     const p1Diff = document.getElementById('p1-difficulty').value;
     const p2Type = document.getElementById('p2-type').value;
