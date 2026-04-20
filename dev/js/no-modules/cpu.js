@@ -1,4 +1,28 @@
 // cpu.js - CPU scheduling and move execution
+// AI search runs in a Web Worker so the main thread stays free for animations.
+
+let _cpuWorker = null;
+let _cpuWorkerFailed = false;  // true if Worker couldn't load (e.g. file:// protocol)
+let _cpuMoveGen = 0;  // generation counter — incremented each game to discard stale results
+
+function _getCpuWorker() {
+    if (_cpuWorkerFailed) return null;
+    if (!_cpuWorker) {
+        try {
+            _cpuWorker = new Worker('js/no-modules/cpu-worker.js');
+            _cpuWorker.onerror = function () {
+                console.warn('CPU Worker failed to load — falling back to main thread');
+                _cpuWorkerFailed = true;
+                _cpuWorker = null;
+            };
+        } catch (e) {
+            console.warn('CPU Worker unavailable — falling back to main thread');
+            _cpuWorkerFailed = true;
+            return null;
+        }
+    }
+    return _cpuWorker;
+}
 
 // Schedule the next CPU move if the current player is a CPU.
 function scheduleNextCpuMoveIfNeeded() {
@@ -39,9 +63,6 @@ function captureCurrentState() {
 }
 
 // Minimax search parameters per difficulty.
-// depth=null lets minimax auto-scale depth by game phase (expert behaviour).
-// noise adds ±jitter to move scores so lower difficulties make human-like mistakes.
-// Minimax search parameters per difficulty.
 // Easy/Medium: minimax with noise for human-like mistakes.
 // Hard: minimax adaptive depth, no noise.
 // Expert: deep negamax with iterative deepening + full ability support.
@@ -70,36 +91,75 @@ function makeCpuMove() {
 
     const params = CPU_DIFFICULTY_PARAMS[difficulty] || CPU_DIFFICULTY_PARAMS.hard;
     const state  = captureCurrentState();
+    const enabledAbilities = [...gameState.enabledAbilities];
 
-    let move;
-    try {
-        if (params.engine === 'classic') {
-            move = ClassicAI.getBestMove({
-                state,
-                cpuPlayer,
-                enabledAbilities: gameState.enabledAbilities,
-            });
-        } else {
-            move = SkillMinimax.getBestMove({
-                state,
-                cpuPlayer,
-                cpuRecentSquares: gameState.cpuRecentSquares,
-                cpuLastMoveFrom:  gameState.cpuLastMoveFrom,
-                cpuLastMoveTo:    gameState.cpuLastMoveTo,
-                enabledAbilities: gameState.enabledAbilities,
-                depth:            params.depth,
-                noise:            params.noise,
-            });
+    const worker = _getCpuWorker();
+
+    if (!worker) {
+        // Fallback: run synchronously on main thread (file:// or Worker unsupported)
+        let move;
+        try {
+            if (params.engine === 'classic') {
+                move = ClassicAI.getBestMove({ state, cpuPlayer, enabledAbilities: gameState.enabledAbilities });
+            } else {
+                move = SkillMinimax.getBestMove({
+                    state, cpuPlayer, enabledAbilities: gameState.enabledAbilities,
+                    cpuRecentSquares: gameState.cpuRecentSquares,
+                    cpuLastMoveFrom:  gameState.cpuLastMoveFrom,
+                    cpuLastMoveTo:    gameState.cpuLastMoveTo,
+                    depth: params.depth, noise: params.noise,
+                });
+            }
+        } catch (e) {
+            console.error('CPU error:', e);
+            debugLog('CPU error: ' + e.message);
+            return;
         }
-    } catch (e) {
-        console.error('CPU error:', e);
-        debugLog('CPU error: ' + e.message);
+        if (!move) { debugLog('CPU: no move available'); return; }
+        debugLog(`CPU P${cpuPlayer} (${difficulty}): ${move.type}`);
+        _applyCpuMove(move, cpuPlayer);
         return;
     }
 
-    if (!move) { debugLog('CPU: no move available'); return; }
-    debugLog(`CPU P${cpuPlayer} (${difficulty}): ${move.type}`);
+    const gen = _cpuMoveGen;
 
+    // One-shot handler for this move's result
+    worker.onmessage = function (e) {
+        if (gen !== _cpuMoveGen) return;  // stale result from a previous game
+        if (e.data.error) {
+            console.error('CPU worker error:', e.data.error);
+            debugLog('CPU error: ' + e.data.error);
+            return;
+        }
+        const move = e.data.move;
+        if (!move) { debugLog('CPU: no move available'); return; }
+
+        // Guard against stale results after game ended
+        if (gameState.gameOver) return;
+
+        debugLog(`CPU P${cpuPlayer} (${difficulty}): ${move.type}`);
+        _applyCpuMove(move, cpuPlayer);
+    };
+
+    worker.postMessage({
+        engine: params.engine || 'minimax',
+        params: {
+            depth:            params.depth,
+            noise:            params.noise,
+            cpuRecentSquares: gameState.cpuRecentSquares,
+            cpuLastMoveFrom:  gameState.cpuLastMoveFrom,
+            cpuLastMoveTo:    gameState.cpuLastMoveTo,
+        },
+        state,
+        cpuPlayer,
+        enabledAbilities,
+        boardRows: BOARD_ROWS,
+        boardCols: BOARD_COLS,
+        numPlayers: gameState.numPlayers,
+    });
+}
+
+function _applyCpuMove(move, cpuPlayer) {
     // Track oscillation history for non-uncover moves
     if (move.type !== 'uncover') {
         const fromR = move.fromR ?? move.drR ?? move.robotR;
@@ -144,4 +204,3 @@ function makeCpuMove() {
         debugLog(`CPU: unknown move type '${move.type}'`);
     }
 }
-
