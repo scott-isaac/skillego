@@ -8,7 +8,28 @@ const serverMode = {
     gameId:       null,
     playerNumber: null, // null = spectator (CPU vs CPU); 1..N = human player
     token:        null,
+    capabilities: null, // Set of ability IDs — populated via handshake or legacy fallback
 };
+
+// Abilities that exist on every server released to date. A server that hasn't been
+// redeployed since a later feature was added won't emit a capabilities handshake,
+// so we fall back to this set and strip newer abilities (e.g. friendlyFire) from
+// outgoing network games.
+const LEGACY_SERVER_ABILITIES = ['push', 'engulf', 'hop', 'transform', 'snipe', 'pyromania'];
+
+// Filter an ability Set to only what the connected server will honor. Safe to
+// call before the handshake — returns the original set unchanged until we've
+// received capabilities or timed out into the legacy fallback.
+function stripUnsupportedAbilities(abilities) {
+    if (!serverMode.capabilities) return { filtered: new Set(abilities), stripped: [] };
+    const filtered = new Set();
+    const stripped = [];
+    for (const a of abilities) {
+        if (serverMode.capabilities.has(a)) filtered.add(a);
+        else stripped.push(a);
+    }
+    return { filtered, stripped };
+}
 
 // Emoji lookup for re-hydrating pieces from server state (server strips emoji field)
 const _TYPE_EMOJI = {
@@ -32,6 +53,21 @@ if (typeof io !== 'undefined') {
         console.log('Connected to Skillego server');
         const joinSection = document.getElementById('join-game-section');
         if (joinSection) joinSection.style.display = '';
+
+        // Wait briefly for the capability handshake. If an old server never sends
+        // one, assume the legacy ability set so we don't offer features it'll ignore.
+        serverMode.capabilities = null;
+        setTimeout(() => {
+            if (serverMode.capabilities === null) {
+                console.log('No server-capabilities handshake — falling back to legacy ability set');
+                serverMode.capabilities = new Set(LEGACY_SERVER_ABILITIES);
+            }
+        }, 500);
+    });
+
+    serverMode.socket.on('server-capabilities', ({ abilities }) => {
+        serverMode.capabilities = new Set(abilities);
+        console.log('Server capabilities:', [...serverMode.capabilities]);
     });
 
     serverMode.socket.on('disconnect', () => {
@@ -227,6 +263,7 @@ function applyServerState(state) {
         return { ...cell, emoji: _TYPE_EMOJI[cell.type] || '?' };
     }));
     gameState.covered           = state.covered.map(row => [...row]);
+    gameState.pushBlocked       = state.pushBlocked || [];
     gameState.currentPlayer     = state.currentPlayer;
     gameState.numPlayers        = state.numPlayers;
     gameState.eliminatedPlayers = new Set(state.eliminatedPlayers || []);
@@ -593,10 +630,16 @@ document.addEventListener('DOMContentLoaded', () => {
             gameState.numPlayers = 2;
             gameState.cpuEnabled = false;
 
-            // Read abilities from the setup screen checkboxes (same as startGame)
-            gameState.enabledAbilities = new Set(
+            // Read abilities from the setup screen checkboxes (same as startGame),
+            // then strip any the connected server doesn't advertise support for.
+            const requested = new Set(
                 Array.from(document.querySelectorAll('.ability-toggle:checked')).map(cb => cb.value)
             );
+            const { filtered, stripped } = stripUnsupportedAbilities(requested);
+            gameState.enabledAbilities = filtered;
+            if (stripped.length) {
+                alert(`Server doesn't support: ${stripped.join(', ')} — disabled for this game.`);
+            }
 
             serverMode.createGame({
                 numPlayers: 2,

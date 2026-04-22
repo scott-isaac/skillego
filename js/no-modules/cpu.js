@@ -59,7 +59,7 @@ function captureCurrentState() {
             }
         }
     }
-    return { board, covered };
+    return { board, covered, pushBlocked: gameState.pushBlocked ? [...gameState.pushBlocked] : [] };
 }
 
 // Minimax search parameters per difficulty.

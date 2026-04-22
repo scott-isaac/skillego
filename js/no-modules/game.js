@@ -297,6 +297,22 @@ function clearSkillTray() {
 // execute* functions handle mechanics then call endTurn(); no turn logic elsewhere.
 function endTurn() {
     if (gameState.gameOver) return;
+
+    // Expire old push-blocked squares, promote pending ones
+    const oldBlocked = gameState.pushBlocked || [];
+    gameState.pushBlocked = gameState._pendingPushBlock
+        ? [gameState._pendingPushBlock] : [];
+    gameState._pendingPushBlock = null;
+    // Re-render affected cells
+    for (const { row, col } of oldBlocked) {
+        const el = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
+        if (el) renderCell(el, gameState.board[row][col], gameState.covered[row][col]);
+    }
+    for (const { row, col } of gameState.pushBlocked) {
+        const el = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
+        if (el) renderCell(el, gameState.board[row][col], gameState.covered[row][col]);
+    }
+
     const n = gameState.numPlayers || 2;
     let next = (gameState.currentPlayer % n) + 1;
     let safety = 0;
@@ -408,6 +424,9 @@ function executePush(dragonRow, dragonCol, enemyRow, enemyCol, destRow, destCol)
     const toEl   = document.querySelector(`.cell[data-row="${destRow}"][data-col="${destCol}"]`);
     renderCell(fromEl, null, false);
     renderCell(toEl, enemy, false);
+
+    // Mark the enemy's old square as blocked for 1 turn
+    gameState._pendingPushBlock = { row: enemyRow, col: enemyCol };
 
     if (typeof gameLog !== 'undefined') {
         gameLog.recordPush(gameState.currentPlayer, dragonRow, dragonCol,
@@ -749,6 +768,8 @@ function startGame() {
     gameState.cpuLastMoveTo           = null;
     gameState.cpuRecentSquares        = {};
     gameState.eliminatedPlayers = new Set();
+    gameState.pushBlocked       = [];
+    gameState._pendingPushBlock = null;
     if (typeof gameLog !== 'undefined') gameLog.reset();
 
     const boardCfg = BOARD_CONFIG[gameState.numPlayers] || BOARD_CONFIG[2];
