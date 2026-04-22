@@ -118,10 +118,14 @@ function highlightCell(row, col, className) {
 const LAST_MOVE_GLOW = 'linear-gradient(rgba(200,169,110,0.5), rgba(200,169,110,0.5))';
 
 function showLastMove(cells) {
-    // Clear old highlights and re-render to remove glow layer
+    // Cells in the new list are about to be rendered by the caller (often via an
+    // animation callback). Skip them here so we don't paint a stale piece into a
+    // destination square before the slide starts.
+    const skip = new Set(cells.map(({ row, col }) => `${row},${col}`));
     document.querySelectorAll('.last-move').forEach(el => {
         el.classList.remove('last-move');
         const r = +el.dataset.row, c = +el.dataset.col;
+        if (skip.has(`${r},${c}`)) return;
         renderCell(el, gameState.board[r]?.[c], gameState.covered[r]?.[c]);
     });
     // Set class on new cells — the caller's renderCell will pick up the glow
@@ -283,10 +287,26 @@ function renderCell(el, piece, covered) {
     el.textContent = '';
     const tile = `url('assets/tile_${el.dataset.tile || '1'}.png')`;
     const glow = el.classList.contains('last-move') ? LAST_MOVE_GLOW : '';
+    const r = +el.dataset.row, c = +el.dataset.col;
+    const blocked = isPushBlocked(gameState, r, c);
     if (!piece) {
-        // Empty square — just the stone tile (+ highlight if last-move)
-        el.style.backgroundImage = glow ? `${glow}, ${tile}` : tile;
-        el.style.backgroundSize  = glow ? '100% 100%, 100% 100%' : '100% 100%';
+        // Empty square — stone tile + push-block gif if applicable + last-move glow
+        const pushGif = blocked ? "url('assets/gifs/dragon_push.gif')" : '';
+        if (pushGif && glow) {
+            el.style.backgroundImage = `${pushGif}, ${glow}, ${tile}`;
+            el.style.backgroundSize  = '80% 80%, 100% 100%, 100% 100%';
+        } else if (pushGif) {
+            el.style.backgroundImage = `${pushGif}, ${tile}`;
+            el.style.backgroundSize  = '80% 80%, 100% 100%';
+        } else if (glow) {
+            el.style.backgroundImage = `${glow}, ${tile}`;
+            el.style.backgroundSize  = '100% 100%, 100% 100%';
+        } else {
+            el.style.backgroundImage = tile;
+            el.style.backgroundSize  = '100% 100%';
+        }
+        el.style.backgroundRepeat   = 'no-repeat';
+        el.style.backgroundPosition = 'center';
         el.style.backgroundColor = '';
         el.classList.remove('covered', 'burning');
     } else if (covered) {

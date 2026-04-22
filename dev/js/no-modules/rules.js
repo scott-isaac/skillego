@@ -8,6 +8,15 @@ function inBounds(r, c) {
     return r >= 0 && r < BOARD_ROWS && c >= 0 && c < BOARD_COLS;
 }
 
+function isPushBlocked(state, r, c) {
+    const blocked = state.pushBlocked;
+    if (!blocked || !blocked.length) return false;
+    for (const b of blocked) {
+        if (b.row === r && b.col === c) return true;
+    }
+    return false;
+}
+
 // ─── Capture Rules ────────────────────────────────────────────────────────
 function canCapture(attacker, defender) {
     if (attacker.player === defender.player) return false;
@@ -34,7 +43,7 @@ function getValidMoves(state, r, c) {
         if (!inBounds(nr, nc)) continue;
         const target = state.board[nr][nc];
         if (!target) {
-            moves.push({ row: nr, col: nc });
+            if (!isPushBlocked(state, nr, nc)) moves.push({ row: nr, col: nc });
         } else if (!state.covered[nr][nc] && canCapture(piece, target)) {
             moves.push({ row: nr, col: nc });
         }
@@ -55,7 +64,7 @@ function getPushMoves(state, r, c, enabledAbilities) {
         if (!inBounds(er, ec) || !inBounds(destR, destC)) continue;
         const enemy = state.board[er][ec];
         if (!enemy || enemy.player === piece.player || state.covered[er][ec]) continue;
-        if (state.board[destR][destC] !== null) continue;
+        if (state.board[destR][destC] !== null || isPushBlocked(state, destR, destC)) continue;
         result.push({ type: 'push', drR: r, drC: c, enemyR: er, enemyC: ec, destR, destC });
     }
     return result;
@@ -71,7 +80,7 @@ function getHopMoves(state, r, c, enabledAbilities) {
         const landR = r + 2*dr, landC = c + 2*dc;
         if (!inBounds(midR, midC) || !inBounds(landR, landC)) continue;
         if (!state.board[midR][midC]) continue;
-        if (state.board[landR][landC] !== null) continue;
+        if (state.board[landR][landC] !== null || isPushBlocked(state, landR, landC)) continue;
         result.push({ type: 'hop', fromR: r, fromC: c, toR: landR, toC: landC });
     }
     return result;
@@ -97,13 +106,13 @@ function getTransformMoves(state, r, c, enabledAbilities) {
             { r: r+2*dr, c: c+2*dc },
             { r: r+3*dr, c: c+3*dc },
         ];
-        if (cells.slice(1).every(({ r: cr, c: cc }) => inBounds(cr, cc) && state.board[cr][cc] === null)) {
+        if (cells.slice(1).every(({ r: cr, c: cc }) => inBounds(cr, cc) && state.board[cr][cc] === null && !isPushBlocked(state, cr, cc))) {
             result.push({ type: 'transform', wizR: r, wizC: c, cells, isExplosion: false });
         }
     }
     // Explosion: all 4 surrounding cells must be empty; wizard vanishes
     const explodeCells = DIRS.map(([dr, dc]) => ({ r: r+dr, c: c+dc }));
-    if (explodeCells.every(({ r: cr, c: cc }) => inBounds(cr, cc) && state.board[cr][cc] === null)) {
+    if (explodeCells.every(({ r: cr, c: cc }) => inBounds(cr, cc) && state.board[cr][cc] === null && !isPushBlocked(state, cr, cc))) {
         result.push({ type: 'transform', wizR: r, wizC: c, cells: explodeCells, isExplosion: true });
     }
     return result;
@@ -145,12 +154,14 @@ function getPyroMoves(state, r, c, enabledAbilities) {
     if (!enabledAbilities.has('pyromania')) return [];
     const piece = state.board[r][c];
     if (!piece || !piece.burning) return [];
+    const friendlyFire = enabledAbilities.has('friendlyFire');
     const result = [];
     for (const [dr, dc] of DIRS) {
         const tr = r + dr, tc = c + dc;
         if (!inBounds(tr, tc)) continue;
         const target = state.board[tr][tc];
-        if (!target || target.player === piece.player || target.burning || state.covered[tr][tc]) continue;
+        if (!target || target.burning || state.covered[tr][tc]) continue;
+        if (target.player === piece.player && !friendlyFire) continue;
         result.push({ type: 'pyro', fromR: r, fromC: c, targetR: tr, targetC: tc });
     }
     return result;
@@ -169,12 +180,14 @@ function cloneState(state) {
             covered[r][c] = state.covered[r][c];
         }
     }
-    return { board, covered };
+    return { board, covered, pushBlocked: state.pushBlocked ? [...state.pushBlocked] : [] };
 }
 
 // ─── Apply Move (pure — returns new state, never mutates input) ───────────
 function applyMoveToState(state, move) {
     const s = cloneState(state);
+    // Previous push blocks expire when a move is made
+    s.pushBlocked = [];
     switch (move.type) {
         case 'uncover':
             s.covered[move.r][move.c] = false;
@@ -207,6 +220,7 @@ function applyMoveToState(state, move) {
             s.board[move.destR][move.destC] = enemy;
             s.covered[move.destR][move.destC] = false;
             s.board[move.enemyR][move.enemyC] = null;
+            s.pushBlocked = [{ row: move.enemyR, col: move.enemyC }];
             break;
         }
         case 'engulf':

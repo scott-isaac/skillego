@@ -9,6 +9,7 @@ const path     = require('path');
 const fs       = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const GameRoom = require('./GameRoom');
+const { ALL_ABILITY_IDS } = require('./lib/constants');
 
 const app    = express();
 const server = http.createServer(app);
@@ -195,6 +196,9 @@ function broadcastState(room, lastMove) {
 // ─── Socket events ────────────────────────────────────────────────────────────
 io.on('connection', (socket) => {
     console.log(`[connect] ${socket.id}`);
+    // Tell the client which abilities this server's rules engine understands, so
+    // it can strip ones we'd silently ignore (e.g. features added after deploy).
+    socket.emit('server-capabilities', { abilities: ALL_ABILITY_IDS });
 
     // ── create-game ──────────────────────────────────────────────────────────
     // payload: { numPlayers, playerConfigs, enabledAbilities }

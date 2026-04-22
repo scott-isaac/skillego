@@ -27,4 +27,6 @@ const gameState = {
     player4: { type: 'cpu', difficulty: 'expert' },
     eliminatedPlayers: new Set(),
     animationsEnabled: true,
+    pushBlocked: [],        // active blocked squares [{row,col}] — checked by move validation
+    _pendingPushBlock: null, // set by executePush, promoted to pushBlocked in endTurn
 };
