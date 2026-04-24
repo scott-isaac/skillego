@@ -313,6 +313,10 @@ function endTurn() {
         if (el) renderCell(el, gameState.board[row][col], gameState.covered[row][col]);
     }
 
+    // Contextual piece art (cat_scared / robot_angry / _heart) depends on
+    // neighbors, so every move potentially changes variants two cells away.
+    refreshDynamicPieces();
+
     const n = gameState.numPlayers || 2;
     let next = (gameState.currentPlayer % n) + 1;
     let safety = 0;
@@ -443,44 +447,106 @@ function executePush(dragonRow, dragonCol, enemyRow, enemyCol, destRow, destCol)
     endTurn();
 }
 
+// Robot Wants Kitty attack animation: a red laser charges from the robot toward
+// the target, grows more intense, then the robot dashes along the beam to land
+// on top of the target. The laser fades out as the robot arrives.
 function flyRobot(fromEl, toEl, piece, onComplete) {
     if (!fromEl || !toEl || !gameState.animationsEnabled) { onComplete(); return; }
 
     const board = document.getElementById('board');
     const color = PLAYER_ART[piece.player];
 
-    const flyer = document.createElement('div');
-    Object.assign(flyer.style, {
-        position:           'absolute',
-        left:               fromEl.offsetLeft + 'px',
-        top:                fromEl.offsetTop  + 'px',
-        width:              fromEl.offsetWidth  + 'px',
-        height:             fromEl.offsetHeight + 'px',
-        backgroundImage:    `url('assets/piece_${piece.type}.png'), url('assets/player_${color}.png')`,
-        backgroundSize:     '65% 65%, 85% 85%',
-        backgroundRepeat:   'no-repeat',
-        backgroundPosition: 'center',
-        zIndex:             '1000',
-        pointerEvents:      'none',
-        willChange:         'transform',
+    // Laser runs center-to-center of the two cells.
+    const fromX = fromEl.offsetLeft + fromEl.offsetWidth  / 2;
+    const fromY = fromEl.offsetTop  + fromEl.offsetHeight / 2;
+    const toX   = toEl.offsetLeft   + toEl.offsetWidth    / 2;
+    const toY   = toEl.offsetTop    + toEl.offsetHeight   / 2;
+    const dx    = toX - fromX, dy = toY - fromY;
+    const len   = Math.hypot(dx, dy);
+    const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+    const laser = document.createElement('div');
+    Object.assign(laser.style, {
+        position:            'absolute',
+        left:                fromX + 'px',
+        top:                 fromY + 'px',
+        width:               len   + 'px',
+        height:              '2px',
+        // Layered backgrounds: the repeating gradient on top gives the dithered
+        // laser-y shimmer; the smooth red gradient below provides the hot core.
+        background:
+            `repeating-linear-gradient(90deg, rgba(255,255,255,0.45) 0 2px, transparent 2px 5px),
+             linear-gradient(to bottom, rgba(255,80,80,0.85), rgba(255,30,30,1), rgba(170,0,0,0.85))`,
+        boxShadow:           '0 0 4px rgba(255,40,40,0.9), 0 0 10px rgba(255,60,60,0.7)',
+        borderRadius:        '2px',
+        transformOrigin:     '0 50%',
+        transform:           `rotate(${angle}deg) scaleY(0.4)`,
+        opacity:             '0.6',
+        pointerEvents:       'none',
+        zIndex:              '999',
+        willChange:          'transform, opacity, box-shadow',
     });
-    board.appendChild(flyer);
+    board.appendChild(laser);
 
-    // Immediately clear the source cell
-    renderCell(fromEl, null, false);
+    const CHARGE_MS = 220;
+    const FLY_MS    = 180;
+    const FADE_MS   = 160;
 
-    const dx = toEl.offsetLeft - fromEl.offsetLeft;
-    const dy = toEl.offsetTop  - fromEl.offsetTop;
+    // Phase 1: laser charges up — thickens, brightens, gets punchier glow.
+    const charge = laser.animate([
+        { transform: `rotate(${angle}deg) scaleY(0.4)`,
+          opacity: 0.6,
+          boxShadow: '0 0 4px rgba(255,40,40,0.9), 0 0 10px rgba(255,60,60,0.7)' },
+        { transform: `rotate(${angle}deg) scaleY(3.5)`,
+          opacity: 1.0,
+          boxShadow: '0 0 14px rgba(255,80,80,1), 0 0 32px rgba(255,90,90,0.9), 0 0 56px rgba(255,120,60,0.5)' },
+    ], { duration: CHARGE_MS, easing: 'cubic-bezier(0.3,0.0,0.7,1)', fill: 'forwards' });
 
-    // Fly: squish narrow at mid-flight, return to normal on landing
-    const anim = flyer.animate([
-        { transform: 'translate(0px, 0px) scaleX(1) scaleY(1)' },
-        { transform: `translate(${dx * 0.5}px, ${dy * 0.5}px) scaleX(0.15) scaleY(1.6)`,
-          offset: 0.5 },
-        { transform: `translate(${dx}px, ${dy}px) scaleX(1) scaleY(1)` },
-    ], { duration: 360, easing: 'ease-in-out', fill: 'forwards' });
+    charge.onfinish = () => {
+        // Phase 2: robot dashes along the beam to the target. Use the angry
+        // sprite — this is its kill shot.
+        const flyer = document.createElement('div');
+        Object.assign(flyer.style, {
+            position:           'absolute',
+            left:               fromEl.offsetLeft + 'px',
+            top:                fromEl.offsetTop  + 'px',
+            width:              fromEl.offsetWidth  + 'px',
+            height:             fromEl.offsetHeight + 'px',
+            backgroundImage:    `url('assets/piece_robot_angry.png'), url('assets/player_${color}.png')`,
+            backgroundSize:     '65% 65%, 85% 85%',
+            backgroundRepeat:   'no-repeat',
+            backgroundPosition: 'center',
+            zIndex:             '1000',
+            pointerEvents:      'none',
+            willChange:         'transform',
+            filter:             'drop-shadow(0 0 8px rgba(255,60,60,0.8))',
+        });
+        board.appendChild(flyer);
+        renderCell(fromEl, null, false);
 
-    anim.onfinish = () => { flyer.remove(); onComplete(); };
+        const cellDx = toEl.offsetLeft - fromEl.offsetLeft;
+        const cellDy = toEl.offsetTop  - fromEl.offsetTop;
+
+        const dash = flyer.animate([
+            { transform: 'translate(0,0) scale(1)',
+              filter:    'drop-shadow(0 0 8px rgba(255,60,60,0.8))' },
+            { transform: `translate(${cellDx}px, ${cellDy}px) scale(1.18)`,
+              filter:    'drop-shadow(0 0 16px rgba(255,40,40,1))' },
+        ], { duration: FLY_MS, easing: 'cubic-bezier(0.4,0,0.2,1)', fill: 'forwards' });
+
+        // Phase 3: laser fades while robot settles on target.
+        const fade = laser.animate([
+            { opacity: 1.0 },
+            { opacity: 0 },
+        ], { duration: FADE_MS, easing: 'ease-out', fill: 'forwards' });
+
+        dash.onfinish = () => {
+            flyer.remove();
+            fade.onfinish = () => { laser.remove(); };
+            if (fade.playState === 'finished') { laser.remove(); }
+            onComplete();
+        };
+    };
 }
 
 function executeRobotKitty(robotRow, robotCol, targetRow, targetCol) {
