@@ -820,6 +820,14 @@ function startGame() {
 function resignGame() {
     if (gameState.gameOver) return;
 
+    // Tournament spectator — "Leave" button just stops spectating and returns
+    // to the tournament lobby. No resignation to emit (no token).
+    if (typeof tournamentMode !== 'undefined' && tournamentMode.active &&
+        tournamentMode.spectatingMatchId && typeof stopSpectating === 'function') {
+        stopSpectating();
+        return;
+    }
+
     // In server mode, tell the server — it will broadcast game-over to both players
     if (typeof serverMode !== 'undefined' && serverMode.active) {
         serverMode.socket.emit('resign', {

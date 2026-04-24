@@ -92,18 +92,49 @@ function updateTurnIndicator() {
     const turnIndicator = document.getElementById('turn-indicator');
     if (!turnIndicator) return;
 
-    // Network play: "Your Turn" / "Opponent's Turn"
-    if (typeof serverMode !== 'undefined' && serverMode.active && serverMode.playerNumber) {
-        turnIndicator.textContent = gameState.currentPlayer === serverMode.playerNumber
-            ? "Your Turn" : "Opponent's Turn";
-        return;
+    const text = _computeTurnLabel();
+    turnIndicator.textContent = text;
+
+    // Shrink font for long text. The name is already truncated inside
+    // _computeTurnLabel so the "'s Turn" suffix always stays whole and
+    // the ellipsis appears on the name, not on "Turn".
+    turnIndicator.classList.remove('t-tight', 't-tighter');
+    if      (text.length > 22) turnIndicator.classList.add('t-tighter');
+    else if (text.length > 14) turnIndicator.classList.add('t-tight');
+}
+
+// Keep the name short enough that `Name's Turn` fits without clipping
+// "'s Turn" off the end. 14 characters is a comfortable upper bound for the
+// 42px font in the 580px indicator — longer names get the ellipsis.
+function _truncName(name, max) {
+    if (!name) return '';
+    max = max || 14;
+    return name.length <= max ? name : (name.slice(0, max - 1) + '…');
+}
+
+function _computeTurnLabel() {
+    const cp = gameState.currentPlayer;
+
+    // Tournament match — prefer player display names for both participants
+    // and spectators. "Your Turn" stays for the active player so it reads
+    // naturally in the middle of a game.
+    const tm = typeof tournamentMode !== 'undefined' ? tournamentMode : null;
+    if (tm && tm.currentGame) {
+        const name = cp === 1 ? tm.currentGame.nameA : tm.currentGame.nameB;
+        if (serverMode.playerNumber && cp === serverMode.playerNumber) return "Your Turn";
+        return `${_truncName(name)}'s Turn`;
     }
 
-    const playerKey = `player${gameState.currentPlayer}`;
-    const config = gameState[playerKey];
+    // Non-tournament network game: generic "Your Turn" / "Opponent's Turn"
+    if (typeof serverMode !== 'undefined' && serverMode.active && serverMode.playerNumber) {
+        return cp === serverMode.playerNumber ? "Your Turn" : "Opponent's Turn";
+    }
+
+    // Local play (vs CPU or hotseat)
+    const config = gameState[`player${cp}`];
     const isCpu  = config && config.type === 'cpu';
-    const label  = isCpu ? `CPU (P${gameState.currentPlayer})` : `Player ${gameState.currentPlayer}`;
-    turnIndicator.textContent = `${label}'s Turn`;
+    const label  = isCpu ? `CPU (P${cp})` : `Player ${cp}`;
+    return `${label}'s Turn`;
 }
 
 function highlightCell(row, col, className) {

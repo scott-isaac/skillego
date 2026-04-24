@@ -8,9 +8,80 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=6">
+    <link rel="stylesheet" href="styles.css?v=19">
 </head>
 <body>
+    <!-- ── Tournament page (top-level, sibling of game-container) ── -->
+    <div id="tournament-page" style="display:none">
+        <div class="t-page-inner">
+            <header class="t-page-header">
+                <h1 class="t-page-title">Tournament <code id="t-lobby-code">----</code></h1>
+                <div class="t-header-actions">
+                    <button id="t-copy-link-btn" class="secondary-btn">📋 Copy invite link</button>
+                    <button id="t-leave-btn" class="secondary-btn">Leave</button>
+                </div>
+            </header>
+
+            <div id="t-lobby-status" class="t-status-banner"></div>
+
+            <section id="t-champion-hero" class="t-champion-hero" style="display:none">
+                <div class="t-trophy">🏆</div>
+                <div class="t-champion-label">Tournament Champion</div>
+                <div class="t-champion-name" id="t-champion-name"></div>
+                <div class="t-champion-sub" id="t-champion-sub"></div>
+            </section>
+
+            <section id="t-config-section" class="t-section t-config-section">
+                <div class="t-config-item"><span class="t-config-label">Players</span><span id="t-config-players" class="t-config-value">—</span></div>
+                <div class="t-config-item"><span class="t-config-label">Format</span><span id="t-config-format" class="t-config-value">—</span></div>
+                <div class="t-config-item"><span class="t-config-label">Ready timeout</span><span id="t-config-timeout" class="t-config-value">—</span></div>
+                <div class="t-config-item" style="flex:1; min-width:200px"><span class="t-config-label">Abilities</span><span id="t-config-abilities" class="t-config-value">—</span></div>
+            </section>
+
+            <section id="t-name-row" class="t-section t-name-section" style="display:none">
+                <label for="t-rename-input">Your name</label>
+                <input id="t-rename-input" maxlength="30" />
+                <button id="t-rename-btn" class="secondary-btn">Rename</button>
+            </section>
+
+            <section id="t-your-match-section" class="t-section t-your-match-section" style="display:none">
+                <h3>Your match</h3>
+                <div id="t-your-match-body"></div>
+                <div class="t-your-match-actions">
+                    <button id="t-ready-btn" class="secondary-btn" style="display:none">Ready</button>
+                </div>
+            </section>
+
+            <div class="t-two-col">
+                <section class="t-section t-players-section">
+                    <div class="t-section-header">
+                        <h3>Players</h3>
+                        <div id="t-add-cpu-row" style="display:none; align-items:center; gap:6px">
+                            <select id="t-cpu-difficulty" class="t-cpu-diff">
+                                <option value="easy">Easy</option>
+                                <option value="medium">Medium</option>
+                                <option value="hard">Hard</option>
+                                <option value="expert" selected>Expert</option>
+                            </select>
+                            <button id="t-add-cpu-btn" class="secondary-btn">+ Add CPU</button>
+                        </div>
+                    </div>
+                    <div id="t-player-list"></div>
+                </section>
+
+                <section class="t-section t-bracket-section">
+                    <h3>Bracket</h3>
+                    <div id="t-bracket" class="t-bracket"></div>
+                </section>
+            </div>
+
+            <footer class="t-footer">
+                <button id="t-start-btn" class="primary-btn" style="display:none">Start Tournament</button>
+                <button id="t-stop-spectate-btn" class="secondary-btn" style="display:none">Stop Spectating</button>
+            </footer>
+        </div>
+    </div>
+
     <div id="game-container">
         <h1>Skillego</h1>
 
@@ -199,16 +270,15 @@
                 <input type="file" id="replay-file-input" accept=".txt" style="display:none">
             </div>
 
-            <!-- Shown only when connected to a game server -->
+            <!-- Shown only when connected to a game server. Joining happens via
+                 shared links (?join=… for games, ?tournament=… for tournaments).
+                 Tournament settings (player count, match format, timeout, abilities)
+                 are configured from the tournament lobby after creation. -->
             <div id="join-game-section" class="network-section" style="display:none">
                 <div class="network-divider"></div>
                 <div class="network-label">Network Play</div>
                 <button id="host-game-btn" class="secondary-btn network-host-btn">Host Game</button>
-                <div class="network-join-row">
-                    <input id="join-code-input" class="network-code-input" type="text"
-                           placeholder="CODE" maxlength="8">
-                    <button id="join-game-btn" class="secondary-btn">Join</button>
-                </div>
+                <button id="host-tournament-btn" class="secondary-btn network-host-btn">Host Tournament</button>
             </div>
         </div>
 
@@ -281,13 +351,13 @@
             document.write('<scr'+'ipt src="/socket.io/socket.io.js"><\/scr'+'ipt>');
         }
     </script>
-    <script src="js/no-modules/gamelog.js?v=3"></script>
+    <script src="js/no-modules/gamelog.js?v=4"></script>
     <script src="js/no-modules/utils.js?v=3"></script>
     <script src="js/no-modules/constants.js?v=3"></script>
     <script src="js/no-modules/state.js?v=3"></script>
     <script src="js/no-modules/rules.js?v=3"></script>
     <script src="js/no-modules/ai-learning.js?v=3"></script>
-    <script src="js/no-modules/board.js?v=4"></script>
+    <script src="js/no-modules/board.js?v=6"></script>
     <script src="js/no-modules/minimax.js?v=4"></script>
     <script src="js/no-modules/mcts.js?v=1"></script>
     <script src="js/no-modules/classic-ai.js?v=1"></script>
@@ -307,7 +377,8 @@
     </script>
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
     <script src="js/no-modules/server-config.js" onerror=""></script>
-    <script src="js/no-modules/socket-client.js?v=4"></script>
+    <script src="js/no-modules/socket-client.js?v=11"></script>
+    <script src="js/no-modules/tournament-client.js?v=20"></script>
     <script src="js/no-modules/main.js?v=3"></script>
     <script src="js/no-modules/replay.js"></script>
     <script>

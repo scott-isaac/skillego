@@ -27,11 +27,17 @@ function movesMatch(a, b) {
 }
 
 class GameRoom {
-    constructor(gameId, numPlayers, playerConfigs, enabledAbilities) {
+    constructor(gameId, numPlayers, playerConfigs, enabledAbilities, opts = {}) {
         this.gameId        = gameId;
         this.numPlayers    = numPlayers;
         this.playerConfigs = playerConfigs;  // { 1: {type, difficulty}, 2: ..., ... }
         this.enabledAbilities = new Set(enabledAbilities);
+
+        // Tournament context — null for standalone games. When set, the outer
+        // tournament manager listens for game-over to advance its bracket.
+        this.tournamentId = opts.tournamentId || null;
+        this.matchId      = opts.matchId      || null;
+        this.gameInMatch  = opts.gameInMatch  || null;  // 1-indexed game number inside the BO-N match
 
         const cfg    = BOARD_CONFIG[numPlayers] || BOARD_CONFIG[2];
         this.rows    = cfg.rows;
