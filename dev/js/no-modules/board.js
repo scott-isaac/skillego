@@ -88,6 +88,76 @@ function assignPieces() {
     }
 }
 
+// Decide which piece art file to use for this square. Cats and robots have
+// contextual variants that depend on neighbors:
+//   cat + friendly robot adjacent  → piece_cat_heart.png   (love wins)
+//   cat + enemy can capture it      → piece_cat_scared.png
+//   robot + friendly cat adjacent   → piece_robot_heart.png
+//   robot has a legal snipe         → piece_robot_angry.png
+//   anything else                   → piece_<type>.png
+// Adjacency is orthogonal and ignores covered pieces.
+function _pieceSpriteKey(piece, r, c) {
+    if (!piece) return null;
+    if (piece.type === 'cat')   return _catSpriteKey(piece, r, c);
+    if (piece.type === 'robot') return _robotSpriteKey(piece, r, c);
+    return piece.type;
+}
+function _catSpriteKey(piece, r, c) {
+    if (_hasAdjacentOwnKind(piece, r, c, 'robot')) return 'cat_heart';
+    for (const [dr, dc] of DIRS) {
+        const nr = r + dr, nc = c + dc;
+        if (nr < 0 || nc < 0 || nr >= BOARD_ROWS || nc >= BOARD_COLS) continue;
+        if (gameState.covered[nr][nc]) continue;
+        const adj = gameState.board[nr][nc];
+        if (!adj || adj.player === piece.player) continue;
+        if (canCapture(adj, piece)) return 'cat_scared';
+    }
+    return 'cat';
+}
+function _robotSpriteKey(piece, r, c) {
+    // Angry beats heart for the robot: a robot mid-snipe is in kill-shot mode
+    // even if a friendly cat happens to be adjacent (e.g., spotter Cat A next
+    // to the robot while Cat B gives a snipe line in another direction).
+    if (!piece.burning) {  // burning robots can't snipe
+        const abilities = gameState.enabledAbilities;
+        if (abilities && abilities.has && abilities.has('snipe') &&
+            getSnipeMoves(gameState, r, c, abilities).length > 0) {
+            return 'robot_angry';
+        }
+    }
+    if (_hasAdjacentOwnKind(piece, r, c, 'cat')) return 'robot_heart';
+    return 'robot';
+}
+function _hasAdjacentOwnKind(piece, r, c, kind) {
+    for (const [dr, dc] of DIRS) {
+        const nr = r + dr, nc = c + dc;
+        if (nr < 0 || nc < 0 || nr >= BOARD_ROWS || nc >= BOARD_COLS) continue;
+        if (gameState.covered[nr][nc]) continue;
+        const adj = gameState.board[nr][nc];
+        if (adj && adj.player === piece.player && adj.type === kind) return true;
+    }
+    return false;
+}
+
+// Re-render every revealed piece cell. Called after moves so contextual sprite
+// variants (scared/angry/heart) pick up changes in neighboring cells, not just
+// the cells that moved. Cheap at 36–72 cells per board.
+// Skips cells flagged with data-animating so the refresh doesn't stomp on a
+// slide/hop that's still in flight (the animation's own onLand callback will
+// render the correct final sprite when it finishes).
+function refreshDynamicPieces() {
+    for (let r = 0; r < BOARD_ROWS; r++) {
+        for (let c = 0; c < BOARD_COLS; c++) {
+            const p = gameState.board[r][c];
+            if (!p) continue;
+            if (gameState.covered[r][c]) continue;
+            const el = document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
+            if (!el || el.dataset.animating) continue;
+            renderCell(el, p, false);
+        }
+    }
+}
+
 function updateTurnIndicator() {
     const turnIndicator = document.getElementById('turn-indicator');
     if (!turnIndicator) return;
@@ -261,14 +331,21 @@ function slidePiece(fromEl, toEl, piece, onLand) {
     const dy = toEl.offsetTop  - fromEl.offsetTop;
     const SLIDE_MS = 140;
 
+    // Flag the destination so refreshDynamicPieces (which iterates the whole
+    // board on endTurn) doesn't paint the landed sprite underneath the ghost.
+    toEl.dataset.animating = '1';
+
     requestAnimationFrame(() => {
         ghost.style.transition = `transform ${SLIDE_MS}ms ease-out, opacity 60ms ease-in ${SLIDE_MS}ms`;
         ghost.style.transform  = `translate(${dx}px,${dy}px)`;
         ghost.style.opacity    = '0';
     });
 
-    setTimeout(() => { if (onLand) onLand(); },       SLIDE_MS);
-    setTimeout(() => ghost.remove(),                   SLIDE_MS + 80);
+    setTimeout(() => {
+        delete toEl.dataset.animating;
+        if (onLand) onLand();
+    }, SLIDE_MS);
+    setTimeout(() => ghost.remove(), SLIDE_MS + 80);
 }
 
 // Flip the mouse ghost from source over the piece in the middle, landing at destination.
@@ -300,6 +377,8 @@ function hopPiece(fromEl, toEl, piece, onLand) {
     // Use rotateY for left/right hops, rotateX for up/down hops
     const axis = Math.abs(dx) >= Math.abs(dy) ? 'rotateY' : 'rotateX';
 
+    toEl.dataset.animating = '1';
+
     ghost.animate([
         { transform: `perspective(300px) translate(0px,0px)               ${axis}(0deg)   scale(1)`   },
         { transform: `perspective(300px) translate(${dx*.5}px,${dy*.5}px) ${axis}(180deg) scale(1.4)`, offset: 0.45 },
@@ -308,6 +387,7 @@ function hopPiece(fromEl, toEl, piece, onLand) {
 
     setTimeout(() => {
         ghost.remove();
+        delete toEl.dataset.animating;
         if (onLand) onLand();
     }, DUR);
 }
@@ -352,15 +432,16 @@ function renderCell(el, piece, covered) {
     } else {
         // Revealed: piece + [fire gif if burning] + player colour + highlight + stone tile
         const color = PLAYER_ART[piece.player];
+        const sprite = _pieceSpriteKey(piece, r, c);
         if (piece.burning) {
             el.style.backgroundImage = glow
-                ? `url('assets/piece_${piece.type}.png'), url('assets/gifs/fire_${color}.gif'), url('assets/player_${color}.png'), ${glow}, ${tile}`
-                : `url('assets/piece_${piece.type}.png'), url('assets/gifs/fire_${color}.gif'), url('assets/player_${color}.png'), ${tile}`;
+                ? `url('assets/piece_${sprite}.png'), url('assets/gifs/fire_${color}.gif'), url('assets/player_${color}.png'), ${glow}, ${tile}`
+                : `url('assets/piece_${sprite}.png'), url('assets/gifs/fire_${color}.gif'), url('assets/player_${color}.png'), ${tile}`;
             el.style.backgroundSize  = glow ? '63% 63%, 107% 72%, 85% 85%, 100% 100%, 100% 100%' : '63% 63%, 107% 72%, 85% 85%, 100% 100%';
         } else {
             el.style.backgroundImage = glow
-                ? `url('assets/piece_${piece.type}.png'), url('assets/player_${color}.png'), ${glow}, ${tile}`
-                : `url('assets/piece_${piece.type}.png'), url('assets/player_${color}.png'), ${tile}`;
+                ? `url('assets/piece_${sprite}.png'), url('assets/player_${color}.png'), ${glow}, ${tile}`
+                : `url('assets/piece_${sprite}.png'), url('assets/player_${color}.png'), ${tile}`;
             el.style.backgroundSize  = glow ? '65% 65%, 85% 85%, 100% 100%, 100% 100%' : '65% 65%, 85% 85%, 100% 100%';
         }
         el.style.backgroundColor = '';
