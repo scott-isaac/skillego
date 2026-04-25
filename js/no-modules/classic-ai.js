@@ -15,6 +15,10 @@ const ClassicAI = (function () {
     PIECES.forEach(p => { BURN_LEVEL[p.power] = p.type; });
 
     function inB(r, c) { return r >= 0 && r < BOARD_ROWS && c >= 0 && c < BOARD_COLS; }
+    function isBlocked(r, c) {
+        for (const b of pushBlocked) { if (b.row === r && b.col === c) return true; }
+        return false;
+    }
 
     function canCap(a, d) {
         if (a.player === d.player) return false;
@@ -27,13 +31,14 @@ const ClassicAI = (function () {
     }
 
     // ── Search state ─────────────────────────────────────────────────────
-    let board, covered, staticValue, p1Pieces, p2Pieces, hasUnknown, abilities;
+    let board, covered, pushBlocked, staticValue, p1Pieces, p2Pieces, hasUnknown, abilities;
 
     function sv(p) { return p.player === 1 ? p.power : -p.power; }
     function getPieces(player) { return player === 1 ? p1Pieces : p2Pieces; }
 
     function initSearch(state, cpuPlayer, enabledAbilities) {
         board = []; covered = [];
+        pushBlocked = state.pushBlocked ? [...state.pushBlocked] : [];
         p1Pieces = []; p2Pieces = [];
         staticValue = 0; hasUnknown = false;
         abilities = enabledAbilities;
@@ -83,7 +88,7 @@ const ClassicAI = (function () {
                 if (!inB(nr, nc)) continue;
                 const t = board[nr][nc];
                 if (t === null) {
-                    quiets.push({ kind: 'move', p, pr, pc, nr, nc, t: null });
+                    if (!isBlocked(nr, nc)) quiets.push({ kind: 'move', p, pr, pc, nr, nc, t: null });
                 } else if (t.player !== 0 && t.player !== p.player && canCap(p, t)) {
                     captures.push({ kind: 'cap', p, pr, pc, nr, nc, t });
                 }
@@ -95,7 +100,7 @@ const ClassicAI = (function () {
                     const mr = pr + dr, mc = pc + dc;
                     const lr = pr + 2*dr, lc = pc + 2*dc;
                     if (!inB(mr, mc) || !inB(lr, lc)) continue;
-                    if (board[mr][mc] === null || board[lr][lc] !== null) continue;
+                    if (board[mr][mc] === null || board[lr][lc] !== null || isBlocked(lr, lc)) continue;
                     quiets.push({ kind: 'hop', p, pr, pc, nr: lr, nc: lc, t: null });
                 }
             }
@@ -108,7 +113,7 @@ const ClassicAI = (function () {
                     if (!inB(er, ec) || !inB(dest_r, dest_c)) continue;
                     const enemy = board[er][ec];
                     if (!enemy || enemy.player === p.player || enemy.player === 0 || covered[er][ec]) continue;
-                    if (board[dest_r][dest_c] !== null) continue;
+                    if (board[dest_r][dest_c] !== null || isBlocked(dest_r, dest_c)) continue;
                     quiets.push({ kind: 'push', p, pr, pc, er, ec, dest_r, dest_c, enemy });
                 }
             }
@@ -149,7 +154,7 @@ const ClassicAI = (function () {
                     const cells = [{ r: pr, c: pc }];
                     for (let step = 1; step <= 3; step++) {
                         const cr = pr + step*dr, cc = pc + step*dc;
-                        if (!inB(cr, cc) || board[cr][cc] !== null) { valid = false; break; }
+                        if (!inB(cr, cc) || board[cr][cc] !== null || isBlocked(cr, cc)) { valid = false; break; }
                         cells.push({ r: cr, c: cc });
                     }
                     if (valid) {
@@ -158,7 +163,7 @@ const ClassicAI = (function () {
                 }
                 // Explosion
                 const eCells = DIRS.map(([dr, dc]) => ({ r: pr + dr, c: pc + dc }));
-                if (eCells.every(({ r, c }) => inB(r, c) && board[r][c] === null)) {
+                if (eCells.every(({ r, c }) => inB(r, c) && board[r][c] === null && !isBlocked(r, c))) {
                     quiets.push({ kind: 'transform', p, pr, pc, cells: eCells, isExplosion: true });
                 }
             }
@@ -196,7 +201,7 @@ const ClassicAI = (function () {
                             const adj = board[er][ec];
                             if (adj && adj.type === 'mouse' && adj.player !== p.player && !covered[er][ec]) {
                                 const dest_r = pr + 2*dr, dest_c = pc + 2*dc;
-                                if (inB(dest_r, dest_c) && board[dest_r][dest_c] === null) canPushMouse = true;
+                                if (inB(dest_r, dest_c) && board[dest_r][dest_c] === null && !isBlocked(dest_r, dest_c)) canPushMouse = true;
                             }
                         }
                     }
@@ -204,7 +209,7 @@ const ClassicAI = (function () {
                     if (!canCapMouse && !canPushMouse) {
                         for (const [dr, dc] of DIRS) {
                             const nr = pr + dr, nc = pc + dc;
-                            if (!inB(nr, nc) || board[nr][nc] !== null) continue;
+                            if (!inB(nr, nc) || board[nr][nc] !== null || isBlocked(nr, nc)) continue;
                             let safe = true;
                             for (const [dr2, dc2] of DIRS) {
                                 const ar = nr + dr2, ac = nc + dc2;
@@ -245,6 +250,9 @@ const ClassicAI = (function () {
     // ── Make / Unmake ────────────────────────────────────────────────────
     // Returns an undo object to pass to unmake.
     function makeMove(m) {
+        // Save and clear push-blocked squares (they expire after 1 ply)
+        m._prevBlocked = pushBlocked;
+        pushBlocked = [];
         switch (m.kind) {
             case 'move':
             case 'hop': {
@@ -297,6 +305,7 @@ const ClassicAI = (function () {
                 board[m.dest_r][m.dest_c] = m.enemy;
                 m.enemy.r = m.dest_r; m.enemy.c = m.dest_c;
                 board[m.er][m.ec] = null;
+                pushBlocked = [{ row: m.er, col: m.ec }];
                 return;
             }
             case 'engulf': {
@@ -345,6 +354,7 @@ const ClassicAI = (function () {
     }
 
     function unmakeMove(m) {
+        pushBlocked = m._prevBlocked;
         switch (m.kind) {
             case 'move':
             case 'hop': {

@@ -25,6 +25,6 @@ const CPU_DIFFICULTY_PARAMS = {
     expert: { depth: null, noise: 0 },  // server fallback; client Expert uses ClassicAI
 };
 
-const ALL_ABILITY_IDS = ['push', 'engulf', 'hop', 'transform', 'snipe', 'pyromania'];
+const ALL_ABILITY_IDS = ['push', 'engulf', 'hop', 'transform', 'snipe', 'pyromania', 'friendlyFire'];
 
 module.exports = { BOARD_CONFIG, PIECES, BURN_LEVEL, CPU_DIFFICULTY_PARAMS, ALL_ABILITY_IDS };

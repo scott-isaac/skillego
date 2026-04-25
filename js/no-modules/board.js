@@ -88,22 +88,123 @@ function assignPieces() {
     }
 }
 
+// Decide which piece art file to use for this square. Cats and robots have
+// contextual variants that depend on neighbors:
+//   cat + friendly robot adjacent  → piece_cat_heart.png   (love wins)
+//   cat + enemy can capture it      → piece_cat_scared.png
+//   robot + friendly cat adjacent   → piece_robot_heart.png
+//   robot has a legal snipe         → piece_robot_angry.png
+//   anything else                   → piece_<type>.png
+// Adjacency is orthogonal and ignores covered pieces.
+function _pieceSpriteKey(piece, r, c) {
+    if (!piece) return null;
+    if (piece.type === 'cat')   return _catSpriteKey(piece, r, c);
+    if (piece.type === 'robot') return _robotSpriteKey(piece, r, c);
+    return piece.type;
+}
+function _catSpriteKey(piece, r, c) {
+    if (_hasAdjacentOwnKind(piece, r, c, 'robot')) return 'cat_heart';
+    for (const [dr, dc] of DIRS) {
+        const nr = r + dr, nc = c + dc;
+        if (nr < 0 || nc < 0 || nr >= BOARD_ROWS || nc >= BOARD_COLS) continue;
+        if (gameState.covered[nr][nc]) continue;
+        const adj = gameState.board[nr][nc];
+        if (!adj || adj.player === piece.player) continue;
+        if (canCapture(adj, piece)) return 'cat_scared';
+    }
+    return 'cat';
+}
+function _robotSpriteKey(piece, r, c) {
+    // Angry beats heart for the robot: a robot mid-snipe is in kill-shot mode
+    // even if a friendly cat happens to be adjacent (e.g., spotter Cat A next
+    // to the robot while Cat B gives a snipe line in another direction).
+    if (!piece.burning) {  // burning robots can't snipe
+        const abilities = gameState.enabledAbilities;
+        if (abilities && abilities.has && abilities.has('snipe') &&
+            getSnipeMoves(gameState, r, c, abilities).length > 0) {
+            return 'robot_angry';
+        }
+    }
+    if (_hasAdjacentOwnKind(piece, r, c, 'cat')) return 'robot_heart';
+    return 'robot';
+}
+function _hasAdjacentOwnKind(piece, r, c, kind) {
+    for (const [dr, dc] of DIRS) {
+        const nr = r + dr, nc = c + dc;
+        if (nr < 0 || nc < 0 || nr >= BOARD_ROWS || nc >= BOARD_COLS) continue;
+        if (gameState.covered[nr][nc]) continue;
+        const adj = gameState.board[nr][nc];
+        if (adj && adj.player === piece.player && adj.type === kind) return true;
+    }
+    return false;
+}
+
+// Re-render every revealed piece cell. Called after moves so contextual sprite
+// variants (scared/angry/heart) pick up changes in neighboring cells, not just
+// the cells that moved. Cheap at 36–72 cells per board.
+// Skips cells flagged with data-animating so the refresh doesn't stomp on a
+// slide/hop that's still in flight (the animation's own onLand callback will
+// render the correct final sprite when it finishes).
+function refreshDynamicPieces() {
+    for (let r = 0; r < BOARD_ROWS; r++) {
+        for (let c = 0; c < BOARD_COLS; c++) {
+            const p = gameState.board[r][c];
+            if (!p) continue;
+            if (gameState.covered[r][c]) continue;
+            const el = document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
+            if (!el || el.dataset.animating) continue;
+            renderCell(el, p, false);
+        }
+    }
+}
+
 function updateTurnIndicator() {
     const turnIndicator = document.getElementById('turn-indicator');
     if (!turnIndicator) return;
 
-    // Network play: "Your Turn" / "Opponent's Turn"
-    if (typeof serverMode !== 'undefined' && serverMode.active && serverMode.playerNumber) {
-        turnIndicator.textContent = gameState.currentPlayer === serverMode.playerNumber
-            ? "Your Turn" : "Opponent's Turn";
-        return;
+    const text = _computeTurnLabel();
+    turnIndicator.textContent = text;
+
+    // Shrink font for long text. The name is already truncated inside
+    // _computeTurnLabel so the "'s Turn" suffix always stays whole and
+    // the ellipsis appears on the name, not on "Turn".
+    turnIndicator.classList.remove('t-tight', 't-tighter');
+    if      (text.length > 22) turnIndicator.classList.add('t-tighter');
+    else if (text.length > 14) turnIndicator.classList.add('t-tight');
+}
+
+// Keep the name short enough that `Name's Turn` fits without clipping
+// "'s Turn" off the end. 14 characters is a comfortable upper bound for the
+// 42px font in the 580px indicator — longer names get the ellipsis.
+function _truncName(name, max) {
+    if (!name) return '';
+    max = max || 14;
+    return name.length <= max ? name : (name.slice(0, max - 1) + '…');
+}
+
+function _computeTurnLabel() {
+    const cp = gameState.currentPlayer;
+
+    // Tournament match — prefer player display names for both participants
+    // and spectators. "Your Turn" stays for the active player so it reads
+    // naturally in the middle of a game.
+    const tm = typeof tournamentMode !== 'undefined' ? tournamentMode : null;
+    if (tm && tm.currentGame) {
+        const name = cp === 1 ? tm.currentGame.nameA : tm.currentGame.nameB;
+        if (serverMode.playerNumber && cp === serverMode.playerNumber) return "Your Turn";
+        return `${_truncName(name)}'s Turn`;
     }
 
-    const playerKey = `player${gameState.currentPlayer}`;
-    const config = gameState[playerKey];
+    // Non-tournament network game: generic "Your Turn" / "Opponent's Turn"
+    if (typeof serverMode !== 'undefined' && serverMode.active && serverMode.playerNumber) {
+        return cp === serverMode.playerNumber ? "Your Turn" : "Opponent's Turn";
+    }
+
+    // Local play (vs CPU or hotseat)
+    const config = gameState[`player${cp}`];
     const isCpu  = config && config.type === 'cpu';
-    const label  = isCpu ? `CPU (P${gameState.currentPlayer})` : `Player ${gameState.currentPlayer}`;
-    turnIndicator.textContent = `${label}'s Turn`;
+    const label  = isCpu ? `CPU (P${cp})` : `Player ${cp}`;
+    return `${label}'s Turn`;
 }
 
 function highlightCell(row, col, className) {
@@ -118,10 +219,14 @@ function highlightCell(row, col, className) {
 const LAST_MOVE_GLOW = 'linear-gradient(rgba(200,169,110,0.5), rgba(200,169,110,0.5))';
 
 function showLastMove(cells) {
-    // Clear old highlights and re-render to remove glow layer
+    // Cells in the new list are about to be rendered by the caller (often via an
+    // animation callback). Skip them here so we don't paint a stale piece into a
+    // destination square before the slide starts.
+    const skip = new Set(cells.map(({ row, col }) => `${row},${col}`));
     document.querySelectorAll('.last-move').forEach(el => {
         el.classList.remove('last-move');
         const r = +el.dataset.row, c = +el.dataset.col;
+        if (skip.has(`${r},${c}`)) return;
         renderCell(el, gameState.board[r]?.[c], gameState.covered[r]?.[c]);
     });
     // Set class on new cells — the caller's renderCell will pick up the glow
@@ -226,14 +331,21 @@ function slidePiece(fromEl, toEl, piece, onLand) {
     const dy = toEl.offsetTop  - fromEl.offsetTop;
     const SLIDE_MS = 140;
 
+    // Flag the destination so refreshDynamicPieces (which iterates the whole
+    // board on endTurn) doesn't paint the landed sprite underneath the ghost.
+    toEl.dataset.animating = '1';
+
     requestAnimationFrame(() => {
         ghost.style.transition = `transform ${SLIDE_MS}ms ease-out, opacity 60ms ease-in ${SLIDE_MS}ms`;
         ghost.style.transform  = `translate(${dx}px,${dy}px)`;
         ghost.style.opacity    = '0';
     });
 
-    setTimeout(() => { if (onLand) onLand(); },       SLIDE_MS);
-    setTimeout(() => ghost.remove(),                   SLIDE_MS + 80);
+    setTimeout(() => {
+        delete toEl.dataset.animating;
+        if (onLand) onLand();
+    }, SLIDE_MS);
+    setTimeout(() => ghost.remove(), SLIDE_MS + 80);
 }
 
 // Flip the mouse ghost from source over the piece in the middle, landing at destination.
@@ -265,6 +377,8 @@ function hopPiece(fromEl, toEl, piece, onLand) {
     // Use rotateY for left/right hops, rotateX for up/down hops
     const axis = Math.abs(dx) >= Math.abs(dy) ? 'rotateY' : 'rotateX';
 
+    toEl.dataset.animating = '1';
+
     ghost.animate([
         { transform: `perspective(300px) translate(0px,0px)               ${axis}(0deg)   scale(1)`   },
         { transform: `perspective(300px) translate(${dx*.5}px,${dy*.5}px) ${axis}(180deg) scale(1.4)`, offset: 0.45 },
@@ -273,6 +387,7 @@ function hopPiece(fromEl, toEl, piece, onLand) {
 
     setTimeout(() => {
         ghost.remove();
+        delete toEl.dataset.animating;
         if (onLand) onLand();
     }, DUR);
 }
@@ -283,10 +398,26 @@ function renderCell(el, piece, covered) {
     el.textContent = '';
     const tile = `url('assets/tile_${el.dataset.tile || '1'}.png')`;
     const glow = el.classList.contains('last-move') ? LAST_MOVE_GLOW : '';
+    const r = +el.dataset.row, c = +el.dataset.col;
+    const blocked = isPushBlocked(gameState, r, c);
     if (!piece) {
-        // Empty square — just the stone tile (+ highlight if last-move)
-        el.style.backgroundImage = glow ? `${glow}, ${tile}` : tile;
-        el.style.backgroundSize  = glow ? '100% 100%, 100% 100%' : '100% 100%';
+        // Empty square — stone tile + push-block gif if applicable + last-move glow
+        const pushGif = blocked ? "url('assets/gifs/dragon_push.gif')" : '';
+        if (pushGif && glow) {
+            el.style.backgroundImage = `${pushGif}, ${glow}, ${tile}`;
+            el.style.backgroundSize  = '80% 80%, 100% 100%, 100% 100%';
+        } else if (pushGif) {
+            el.style.backgroundImage = `${pushGif}, ${tile}`;
+            el.style.backgroundSize  = '80% 80%, 100% 100%';
+        } else if (glow) {
+            el.style.backgroundImage = `${glow}, ${tile}`;
+            el.style.backgroundSize  = '100% 100%, 100% 100%';
+        } else {
+            el.style.backgroundImage = tile;
+            el.style.backgroundSize  = '100% 100%';
+        }
+        el.style.backgroundRepeat   = 'no-repeat';
+        el.style.backgroundPosition = 'center';
         el.style.backgroundColor = '';
         el.classList.remove('covered', 'burning');
     } else if (covered) {
@@ -301,15 +432,16 @@ function renderCell(el, piece, covered) {
     } else {
         // Revealed: piece + [fire gif if burning] + player colour + highlight + stone tile
         const color = PLAYER_ART[piece.player];
+        const sprite = _pieceSpriteKey(piece, r, c);
         if (piece.burning) {
             el.style.backgroundImage = glow
-                ? `url('assets/piece_${piece.type}.png'), url('assets/gifs/fire_${color}.gif'), url('assets/player_${color}.png'), ${glow}, ${tile}`
-                : `url('assets/piece_${piece.type}.png'), url('assets/gifs/fire_${color}.gif'), url('assets/player_${color}.png'), ${tile}`;
+                ? `url('assets/piece_${sprite}.png'), url('assets/gifs/fire_${color}.gif'), url('assets/player_${color}.png'), ${glow}, ${tile}`
+                : `url('assets/piece_${sprite}.png'), url('assets/gifs/fire_${color}.gif'), url('assets/player_${color}.png'), ${tile}`;
             el.style.backgroundSize  = glow ? '63% 63%, 107% 72%, 85% 85%, 100% 100%, 100% 100%' : '63% 63%, 107% 72%, 85% 85%, 100% 100%';
         } else {
             el.style.backgroundImage = glow
-                ? `url('assets/piece_${piece.type}.png'), url('assets/player_${color}.png'), ${glow}, ${tile}`
-                : `url('assets/piece_${piece.type}.png'), url('assets/player_${color}.png'), ${tile}`;
+                ? `url('assets/piece_${sprite}.png'), url('assets/player_${color}.png'), ${glow}, ${tile}`
+                : `url('assets/piece_${sprite}.png'), url('assets/player_${color}.png'), ${tile}`;
             el.style.backgroundSize  = glow ? '65% 65%, 85% 85%, 100% 100%, 100% 100%' : '65% 65%, 85% 85%, 100% 100%';
         }
         el.style.backgroundColor = '';
