@@ -238,7 +238,8 @@ const gameLog = {
         return this.saveToStorage();
     },
 
-    // Auto-save game log to server (if running locally)
+    // Auto-save game log to server (if running locally). The gameId lets the
+    // server route tournament-linked games to the tournament archive.
     saveToServer() {
         const logText = this.saveToStorage();
         const cpuPlayer = (typeof gameState !== 'undefined' && gameState.cpuPlayer) || 2;
@@ -247,12 +248,13 @@ const gameLog = {
             cpuPlayer,
             winner: typeof gameState !== 'undefined' ? (gameState.eliminatedPlayers?.has(cpuPlayer) ? 'human' : 'cpu') : null,
         };
+        const gameId = (typeof serverMode !== 'undefined' && serverMode.gameId) || null;
         fetch('/api/save-game', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ logText, moveData }),
+            body: JSON.stringify({ logText, moveData, gameId }),
         }).then(r => r.json()).then(data => {
-            console.log(`Game auto-saved as ${data.saved} (${data.blunders} blunders detected)`);
+            console.log(`Game auto-saved as ${data.saved} (${data.blunders || 0} blunders detected)`);
         }).catch(() => {
             // Server not running (GitHub Pages, file://) — silently skip
         });

@@ -43,6 +43,8 @@ const ALL_ABILITIES = [
       description: 'If a Robot sees a friendly Kitty in danger from another piece, it can race to help — capturing any enemy along a clear orthogonal line if a friendly (non-burning) Cat is adjacent to the target. The Robot moves to the target\'s square. A burning Robot cannot snipe.' },
     { id: 'pyromania', piece: null, emoji: '🔥', name: 'Pyromania',
       description: 'Any burning piece can spread fire to an adjacent enemy, setting it ablaze (and revealing it if covered). Costs the spreader 1 power level — even down to burnout.' },
+    { id: 'friendlyFire', piece: null, emoji: '🔥', name: 'Friendly Fire',
+      description: 'Pyromania can target your own uncovered pieces too. Chaos.' },
 ];
 
 const PLAYER_COLORS = {

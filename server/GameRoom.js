@@ -27,11 +27,17 @@ function movesMatch(a, b) {
 }
 
 class GameRoom {
-    constructor(gameId, numPlayers, playerConfigs, enabledAbilities) {
+    constructor(gameId, numPlayers, playerConfigs, enabledAbilities, opts = {}) {
         this.gameId        = gameId;
         this.numPlayers    = numPlayers;
         this.playerConfigs = playerConfigs;  // { 1: {type, difficulty}, 2: ..., ... }
         this.enabledAbilities = new Set(enabledAbilities);
+
+        // Tournament context — null for standalone games. When set, the outer
+        // tournament manager listens for game-over to advance its bracket.
+        this.tournamentId = opts.tournamentId || null;
+        this.matchId      = opts.matchId      || null;
+        this.gameInMatch  = opts.gameInMatch  || null;  // 1-indexed game number inside the BO-N match
 
         const cfg    = BOARD_CONFIG[numPlayers] || BOARD_CONFIG[2];
         this.rows    = cfg.rows;
@@ -44,6 +50,8 @@ class GameRoom {
 
         this.board             = null;
         this.covered           = null;
+        this.pushBlocked       = [];
+        this._pendingPushBlock = null;
         this.currentPlayer     = 1;
         this.eliminatedPlayers = new Set();
         this.gameOver          = false;
@@ -129,6 +137,7 @@ class GameRoom {
         return {
             board,
             covered:           this.covered.map(row => [...row]),
+            pushBlocked:       this.pushBlocked ? [...this.pushBlocked] : [],
             currentPlayer:     this.currentPlayer,
             numPlayers:        this.numPlayers,
             eliminatedPlayers: [...this.eliminatedPlayers],
@@ -145,7 +154,7 @@ class GameRoom {
         if (playerNumber !== this.currentPlayer)        return { valid: false, error: 'Not your turn' };
         if (this.eliminatedPlayers.has(playerNumber))   return { valid: false, error: 'You have been eliminated' };
 
-        const state = { board: this.board, covered: this.covered };
+        const state = { board: this.board, covered: this.covered, pushBlocked: this.pushBlocked };
         const legalMoves = this._getAllMovesForPlayer(playerNumber);
         const legal = legalMoves.find(m => movesMatch(m, move));
         if (!legal) return { valid: false, error: 'Illegal move' };
@@ -155,6 +164,8 @@ class GameRoom {
         const newState = this.rules.applyMoveToState(state, legal);
         this.board   = newState.board;
         this.covered = newState.covered;
+        // applyMoveToState clears old blocks and sets new ones for push
+        this._pendingPushBlock = newState.pushBlocked.length ? newState.pushBlocked[0] : null;
 
         // Track CPU oscillation data (used when computing the next CPU move)
         if (legal.type === 'move' || legal.type === 'capture') {
@@ -179,7 +190,7 @@ class GameRoom {
     _getAllMovesForPlayer(playerNumber) {
         // Minimax's getAllMoves lives in the minimax factory, but we need it here
         // for validation. Re-implement the same logic using rules functions directly.
-        const state    = { board: this.board, covered: this.covered };
+        const state    = { board: this.board, covered: this.covered, pushBlocked: this.pushBlocked };
         const captures = [], moves = [], uncovers = [];
 
         for (let r = 0; r < this.rows; r++) {
@@ -235,6 +246,11 @@ class GameRoom {
 
     // ─── Turn / Elimination ───────────────────────────────────────────────────
     _endTurn() {
+        // Promote pending push-blocked square
+        this.pushBlocked = this._pendingPushBlock
+            ? [this._pendingPushBlock] : [];
+        this._pendingPushBlock = null;
+
         let next   = (this.currentPlayer % this.numPlayers) + 1;
         let safety = 0;
         while (this.eliminatedPlayers.has(next) && safety++ < this.numPlayers) {

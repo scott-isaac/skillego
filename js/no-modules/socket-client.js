@@ -8,7 +8,29 @@ const serverMode = {
     gameId:       null,
     playerNumber: null, // null = spectator (CPU vs CPU); 1..N = human player
     token:        null,
+    capabilities: null, // Set of ability IDs — populated via handshake or legacy fallback
+    features:     null, // Set of feature IDs (e.g., 'tournament') — same handshake
 };
+
+// Abilities that exist on every server released to date. A server that hasn't been
+// redeployed since a later feature was added won't emit a capabilities handshake,
+// so we fall back to this set and strip newer abilities (e.g. friendlyFire) from
+// outgoing network games.
+const LEGACY_SERVER_ABILITIES = ['push', 'engulf', 'hop', 'transform', 'snipe', 'pyromania'];
+
+// Filter an ability Set to only what the connected server will honor. Safe to
+// call before the handshake — returns the original set unchanged until we've
+// received capabilities or timed out into the legacy fallback.
+function stripUnsupportedAbilities(abilities) {
+    if (!serverMode.capabilities) return { filtered: new Set(abilities), stripped: [] };
+    const filtered = new Set();
+    const stripped = [];
+    for (const a of abilities) {
+        if (serverMode.capabilities.has(a)) filtered.add(a);
+        else stripped.push(a);
+    }
+    return { filtered, stripped };
+}
 
 // Emoji lookup for re-hydrating pieces from server state (server strips emoji field)
 const _TYPE_EMOJI = {
@@ -32,6 +54,28 @@ if (typeof io !== 'undefined') {
         console.log('Connected to Skillego server');
         const joinSection = document.getElementById('join-game-section');
         if (joinSection) joinSection.style.display = '';
+
+        // Wait briefly for the capability handshake. If an old server never sends
+        // one, assume the legacy ability set + no features (so opt-in features
+        // like tournaments stay hidden when connected to a pre-handshake server).
+        serverMode.capabilities = null;
+        serverMode.features     = null;
+        setTimeout(() => {
+            if (serverMode.capabilities === null) {
+                console.log('No server-capabilities handshake — falling back to legacy ability set');
+                serverMode.capabilities = new Set(LEGACY_SERVER_ABILITIES);
+                serverMode.features     = new Set();
+                window.dispatchEvent(new CustomEvent('server-features-changed'));
+            }
+        }, 500);
+    });
+
+    serverMode.socket.on('server-capabilities', ({ abilities, features }) => {
+        serverMode.capabilities = new Set(abilities);
+        serverMode.features     = new Set(features || []);
+        console.log('Server capabilities:', [...serverMode.capabilities],
+                    '· features:', [...serverMode.features]);
+        window.dispatchEvent(new CustomEvent('server-features-changed'));
     });
 
     serverMode.socket.on('disconnect', () => {
@@ -51,9 +95,15 @@ if (typeof io !== 'undefined') {
     }
 
     // On connect, try to rejoin a saved session (page was refreshed).
-    // Skip if there's a ?join= param in the URL — that takes priority.
-    const hasJoinParam = new URLSearchParams(window.location.search).has('join');
-    if (!hasJoinParam) {
+    // Skip if:
+    //   - a ?join= or ?tournament= param is in the URL (explicit action overrides), or
+    //   - a tournament session exists (tournament-client.js handles that path —
+    //     it rejoins the tournament and then rejoins the in-progress game if any).
+    const urlParams    = new URLSearchParams(window.location.search);
+    const hasJoinParam = urlParams.has('join');
+    const hasTournamentParam   = urlParams.has('tournament');
+    const hasTournamentSession = !!sessionStorage.getItem('skillego_tournament_session');
+    if (!hasJoinParam && !hasTournamentParam && !hasTournamentSession) {
         const saved = sessionStorage.getItem('skillego_session');
         if (saved) {
             try {
@@ -95,6 +145,48 @@ if (typeof io !== 'undefined') {
     serverMode.socket.on('game-started', ({ state }) => {
         _hideWaitOverlay();
         _showGameScreen(state);
+    });
+
+    // Minimal tournament hook (pre-UI). When a tournament match spawns a game,
+    // treat it the same as a standalone game-started: seat the player with the
+    // new gameId/token/playerNumber and render the board. Hides the winner
+    // overlay in case the previous game in the series just ended.
+    serverMode.socket.on('tournament-match-start', ({ gameId, playerNumber, token, state, matchId, tournamentId, gameInMatch, matchFormat, scoreA, scoreB, opponentName }) => {
+        serverMode.active       = true;
+        serverMode.gameId       = gameId;
+        serverMode.playerNumber = playerNumber;
+        serverMode.token        = token;
+        _saveSession();
+        // Record slotA/slotB names so updateTurnIndicator shows real names
+        // instead of generic "Player 1". My own name comes from tournamentMode.displayName.
+        if (typeof tournamentMode !== 'undefined') {
+            const myName = tournamentMode.displayName || `Player ${playerNumber}`;
+            tournamentMode.currentGame = playerNumber === 1
+                ? { nameA: myName, nameB: opponentName }
+                : { nameA: opponentName, nameB: myName };
+        }
+        document.getElementById('winner-message').style.display = 'none';
+        _hideWaitOverlay();
+        // Reset log per game so each game in a BO-N series archives cleanly on
+        // its own file instead of accumulating across games in the same match.
+        if (typeof gameLog !== 'undefined') gameLog.reset();
+        _showGameScreen(state);
+        if (typeof gameLog !== 'undefined') gameLog.recordInitialBoard();
+        console.log(`[tournament] Match ${matchId} · game ${gameInMatch}/${matchFormat} · vs ${opponentName} · score ${scoreA}-${scoreB}`);
+    });
+
+    serverMode.socket.on('tournament-state', ({ state }) => {
+        console.log('[tournament-state]', state.status, '· players:',
+            state.players.map(p => `${p.displayName}[${p.status}]`).join(', '));
+    });
+
+    serverMode.socket.on('tournament-match-result', (r) => {
+        console.log(`[tournament-match-result] ${r.matchId}: ${r.scoreA}-${r.scoreB}` +
+            (r.matchComplete ? ` COMPLETE (winner ${r.matchWinnerPlayerId}${r.forfeited ? ' forfeit' : ''})` : ''));
+    });
+
+    serverMode.socket.on('tournament-over', ({ championPlayerId, championName }) => {
+        console.log(`[tournament-over] Champion: ${championName} (playerId=${championPlayerId})`);
     });
 
     serverMode.socket.on('game-rejoined', ({ state }) => {
@@ -227,6 +319,7 @@ function applyServerState(state) {
         return { ...cell, emoji: _TYPE_EMOJI[cell.type] || '?' };
     }));
     gameState.covered           = state.covered.map(row => [...row]);
+    gameState.pushBlocked       = state.pushBlocked || [];
     gameState.currentPlayer     = state.currentPlayer;
     gameState.numPlayers        = state.numPlayers;
     gameState.eliminatedPlayers = new Set(state.eliminatedPlayers || []);
@@ -376,7 +469,7 @@ function _showGameScreen(state) {
     const resignBtn = document.getElementById('resign-button');
     if (resignBtn) {
         const isSpectator = serverMode.playerNumber === null;
-        resignBtn.textContent = isSpectator ? 'Stop' : 'Resign';
+        resignBtn.textContent = isSpectator ? 'Leave' : 'Resign';
     }
 }
 
@@ -581,9 +674,7 @@ function _hideDisconnectOverlay() {
 
 // ─── Host / Join button wiring ────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-    const hostBtn   = document.getElementById('host-game-btn');
-    const joinBtn   = document.getElementById('join-game-btn');
-    const joinInput = document.getElementById('join-code-input');
+    const hostBtn = document.getElementById('host-game-btn');
 
     if (hostBtn) {
         hostBtn.addEventListener('click', () => {
@@ -593,10 +684,16 @@ document.addEventListener('DOMContentLoaded', () => {
             gameState.numPlayers = 2;
             gameState.cpuEnabled = false;
 
-            // Read abilities from the setup screen checkboxes (same as startGame)
-            gameState.enabledAbilities = new Set(
+            // Read abilities from the setup screen checkboxes (same as startGame),
+            // then strip any the connected server doesn't advertise support for.
+            const requested = new Set(
                 Array.from(document.querySelectorAll('.ability-toggle:checked')).map(cb => cb.value)
             );
+            const { filtered, stripped } = stripUnsupportedAbilities(requested);
+            gameState.enabledAbilities = filtered;
+            if (stripped.length) {
+                alert(`Server doesn't support: ${stripped.join(', ')} — disabled for this game.`);
+            }
 
             serverMode.createGame({
                 numPlayers: 2,
@@ -609,20 +706,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    if (joinBtn) {
-        joinBtn.addEventListener('click', () => {
-            const code = joinInput?.value?.trim();
-            if (code) serverMode.joinGame(code);
-        });
-    }
-    if (joinInput) {
-        joinInput.addEventListener('keydown', e => {
-            if (e.key === 'Enter') {
-                const code = joinInput.value.trim();
-                if (code) serverMode.joinGame(code);
-            }
-        });
-    }
+    // Join-by-code UI removed — people join via shared ?join=… links.
 
     // Auto-join if URL has ?join=XXXX
     const urlParams = new URLSearchParams(window.location.search);
