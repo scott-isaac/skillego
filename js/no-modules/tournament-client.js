@@ -15,15 +15,12 @@ const tournamentMode = {
     // lastResult } so tournament-state broadcasts can refresh the overlay
     // (opponent's ready status, countdown) without losing it.
     betweenGames: null,
-    // When a tournament match game is in progress (player or spectator),
-    // this holds { nameA, nameB } so the turn indicator can show real names.
-    // Cleared on return-to-lobby / stop-spectate.
-    currentGame:  null,
 };
 
 function _generateDefaultName() {
-    // Player1000..Player9999 — low collision for small tournaments, trivially human-rememberable
-    return 'Player' + Math.floor(1000 + Math.random() * 9000);
+    // Delegates to MP.defaultDisplayName so every multiplayer page picks
+    // names from the same pool. MP is defined by multiplayer-base.js.
+    return MP.defaultDisplayName();
 }
 
 // ─── Session persistence (basic — full wiring is step 8) ──────────────────────
@@ -789,7 +786,7 @@ function _updateMatchCompleteOverlay() {
         newGame.onclick = () => {
             tournamentMode.matchComplete     = null;
             tournamentMode.spectatingMatchId = null;
-            tournamentMode.currentGame       = null;
+            gameState.playerNames            = null;
             serverMode.active       = false;
             serverMode.gameId       = null;
             serverMode.token        = null;
@@ -810,7 +807,7 @@ function stopSpectating() {
         matchId: tournamentMode.spectatingMatchId,
     });
     tournamentMode.spectatingMatchId = null;
-    tournamentMode.currentGame       = null;
+    gameState.playerNames            = null;
     // Drop the game-view state we were borrowing to render as spectator.
     serverMode.active       = false;
     serverMode.gameId       = null;
@@ -930,13 +927,11 @@ document.addEventListener('DOMContentLoaded', () => {
         else document.getElementById('setup-screen').style.display = '';
     });
 
-    if (copyLinkBtn) copyLinkBtn.addEventListener('click', () => {
-        if (!tournamentMode.tournamentId) return;
-        const url = `${window.location.origin}${window.location.pathname}?tournament=${tournamentMode.tournamentId}`;
-        navigator.clipboard?.writeText(url);
-        copyLinkBtn.textContent = 'Copied!';
-        setTimeout(() => { copyLinkBtn.textContent = 'Copy link'; }, 1500);
-    });
+    MP.setupCopyLinkButton(
+        copyLinkBtn,
+        () => tournamentMode.tournamentId ? MP.inviteUrl('tournament', tournamentMode.tournamentId) : null,
+        { idleLabel: '📋 Copy invite link' }
+    );
 
     if (stopSpecBtn) stopSpecBtn.addEventListener('click', stopSpectating);
 });
@@ -1138,7 +1133,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     s.on('spectate-state', (d) => {
         tournamentMode.spectatingMatchId = d.matchId;
-        tournamentMode.currentGame       = { nameA: d.nameA, nameB: d.nameB };
+        // Unified name map for the in-game turn indicator. _computeTurnLabel
+        // reads gameState.playerNames; populating it from spectate context
+        // means spectators see real names just like participants do.
+        gameState.playerNames = { 1: d.nameA, 2: d.nameB };
         // Spectator mode: no playerNumber/token — make-move won't validate for us.
         serverMode.playerNumber = null;
         serverMode.active       = true;
