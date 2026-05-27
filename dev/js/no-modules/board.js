@@ -88,6 +88,21 @@ function assignPieces() {
     }
 }
 
+// ─── Animating-cell registry ──────────────────────────────────────────────────
+// Any cell with an in-flight slide / hop / fly ghost registers itself here.
+// renderCell skips registered cells by default so bulk-refresh passes
+// (showLastMove, refreshDynamicPieces, push-block render, applyServerState…)
+// can't race an animation and paint the landed sprite under a moving ghost.
+// Animation primitives:
+//   - Call markCellAnimating(r, c) before starting the animation.
+//   - Call unmarkCellAnimating(r, c) on completion.
+//   - Pass `force: true` to renderCell for the intentional landing render.
+const _animatingCells = new Set();
+function _cellKey(r, c)     { return r + ',' + c; }
+function markCellAnimating(r, c)   { _animatingCells.add(_cellKey(r, c)); }
+function unmarkCellAnimating(r, c) { _animatingCells.delete(_cellKey(r, c)); }
+function isCellAnimating(r, c)     { return _animatingCells.has(_cellKey(r, c)); }
+
 // Decide which piece art file to use for this square. Cats and robots have
 // contextual variants that depend on neighbors:
 //   cat + friendly robot adjacent  → piece_cat_heart.png   (love wins)
@@ -142,9 +157,8 @@ function _hasAdjacentOwnKind(piece, r, c, kind) {
 // Re-render every revealed piece cell. Called after moves so contextual sprite
 // variants (scared/angry/heart) pick up changes in neighboring cells, not just
 // the cells that moved. Cheap at 36–72 cells per board.
-// Skips cells flagged with data-animating so the refresh doesn't stomp on a
-// slide/hop that's still in flight (the animation's own onLand callback will
-// render the correct final sprite when it finishes).
+// renderCell self-guards against animating cells, so mid-flight slides/hops
+// are safe from any refresher that goes through the normal render path.
 function refreshDynamicPieces() {
     for (let r = 0; r < BOARD_ROWS; r++) {
         for (let c = 0; c < BOARD_COLS; c++) {
@@ -152,8 +166,7 @@ function refreshDynamicPieces() {
             if (!p) continue;
             if (gameState.covered[r][c]) continue;
             const el = document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
-            if (!el || el.dataset.animating) continue;
-            renderCell(el, p, false);
+            if (el) renderCell(el, p, false);
         }
     }
 }
@@ -163,7 +176,26 @@ function updateTurnIndicator() {
     if (!turnIndicator) return;
 
     const text = _computeTurnLabel();
-    turnIndicator.textContent = text;
+
+    // In 4-player games show a colored player icon next to the name so
+    // it's obvious which color is up. 2-player keeps the original
+    // text-only treatment — there's only one opponent so no ambiguity.
+    const showColorIcon = (gameState.numPlayers || 2) > 2;
+    if (showColorIcon) {
+        const cp    = gameState.currentPlayer;
+        const color = PLAYER_ART[cp];
+        turnIndicator.textContent = '';
+        const icon = document.createElement('img');
+        icon.className = 'turn-color-icon';
+        icon.src = `assets/player_${color}.png`;
+        icon.alt = '';
+        const span = document.createElement('span');
+        span.textContent = text;
+        turnIndicator.appendChild(icon);
+        turnIndicator.appendChild(span);
+    } else {
+        turnIndicator.textContent = text;
+    }
 
     // Shrink font for long text. The name is already truncated inside
     // _computeTurnLabel so the "'s Turn" suffix always stays whole and
@@ -184,21 +216,23 @@ function _truncName(name, max) {
 
 function _computeTurnLabel() {
     const cp = gameState.currentPlayer;
+    const inNetwork = typeof serverMode !== 'undefined' && serverMode.active;
 
-    // Tournament match — prefer player display names for both participants
-    // and spectators. "Your Turn" stays for the active player so it reads
-    // naturally in the middle of a game.
-    const tm = typeof tournamentMode !== 'undefined' ? tournamentMode : null;
-    if (tm && tm.currentGame) {
-        const name = cp === 1 ? tm.currentGame.nameA : tm.currentGame.nameB;
-        if (serverMode.playerNumber && cp === serverMode.playerNumber) return "Your Turn";
-        return `${_truncName(name)}'s Turn`;
+    // Network game and it's the local player's turn: "Your Turn" wins over
+    // showing your own name back to you, regardless of which multiplayer
+    // path (tournament / lobby / 2P quick game) populated the name map.
+    if (inNetwork && serverMode.playerNumber && cp === serverMode.playerNumber) {
+        return "Your Turn";
     }
 
-    // Non-tournament network game: generic "Your Turn" / "Opponent's Turn"
-    if (typeof serverMode !== 'undefined' && serverMode.active && serverMode.playerNumber) {
-        return cp === serverMode.playerNumber ? "Your Turn" : "Opponent's Turn";
-    }
+    // Any path that knows real names — tournament match start, lobby game
+    // start, spectate handoff — writes them into gameState.playerNames.
+    // One reader, many writers.
+    const known = gameState.playerNames && gameState.playerNames[cp];
+    if (known) return `${_truncName(known)}'s Turn`;
+
+    // Network game with no name map (legacy 2P host-game path): generic.
+    if (inNetwork && serverMode.playerNumber) return "Opponent's Turn";
 
     // Local play (vs CPU or hotseat)
     const config = gameState[`player${cp}`];
@@ -252,6 +286,8 @@ function clearValidMoves() {
 }
 
 function movePiece(fromRow, fromCol, toRow, toCol) {
+    if (typeof _gameEngineValidateActor === 'function' &&
+        !_gameEngineValidateActor(fromRow, fromCol, 'movePiece')) return;
     const fromPiece = gameState.board[fromRow][fromCol];
     const toPiece = gameState.board[toRow][toCol];
 
@@ -275,7 +311,7 @@ function movePiece(fromRow, fromCol, toRow, toCol) {
                 gameLog.recordMove(fromPiece.player, fromRow, fromCol, toRow, toCol, fromPiece, toPiece || null);
             }
             toCell.classList.remove('valid-move', 'valid-capture');
-            slidePiece(fromCell, toCell, fromPiece, () => renderCell(toCell, null, false));
+            slidePiece(fromCell, toCell, fromPiece, () => renderCell(toCell, null, false, true));
             renderCell(fromCell, null, false);
             checkGameOver();
             return;
@@ -287,7 +323,7 @@ function movePiece(fromRow, fromCol, toRow, toCol) {
 
     // Slide ghost over destination; swap in the piece when it lands
     toCell.classList.remove('valid-move', 'valid-capture');
-    slidePiece(fromCell, toCell, fromPiece, () => renderCell(toCell, fromPiece, false));
+    slidePiece(fromCell, toCell, fromPiece, () => renderCell(toCell, fromPiece, false, true));
     renderCell(fromCell, null, false);
 
     if (toPiece) {
@@ -331,9 +367,10 @@ function slidePiece(fromEl, toEl, piece, onLand) {
     const dy = toEl.offsetTop  - fromEl.offsetTop;
     const SLIDE_MS = 140;
 
-    // Flag the destination so refreshDynamicPieces (which iterates the whole
-    // board on endTurn) doesn't paint the landed sprite underneath the ghost.
-    toEl.dataset.animating = '1';
+    // Register the destination with the central animating-cells set so
+    // renderCell refuses to paint over it mid-flight.
+    const toR = +toEl.dataset.row, toC = +toEl.dataset.col;
+    markCellAnimating(toR, toC);
 
     requestAnimationFrame(() => {
         ghost.style.transition = `transform ${SLIDE_MS}ms ease-out, opacity 60ms ease-in ${SLIDE_MS}ms`;
@@ -342,7 +379,7 @@ function slidePiece(fromEl, toEl, piece, onLand) {
     });
 
     setTimeout(() => {
-        delete toEl.dataset.animating;
+        unmarkCellAnimating(toR, toC);
         if (onLand) onLand();
     }, SLIDE_MS);
     setTimeout(() => ghost.remove(), SLIDE_MS + 80);
@@ -377,7 +414,8 @@ function hopPiece(fromEl, toEl, piece, onLand) {
     // Use rotateY for left/right hops, rotateX for up/down hops
     const axis = Math.abs(dx) >= Math.abs(dy) ? 'rotateY' : 'rotateX';
 
-    toEl.dataset.animating = '1';
+    const toR = +toEl.dataset.row, toC = +toEl.dataset.col;
+    markCellAnimating(toR, toC);
 
     ghost.animate([
         { transform: `perspective(300px) translate(0px,0px)               ${axis}(0deg)   scale(1)`   },
@@ -387,18 +425,23 @@ function hopPiece(fromEl, toEl, piece, onLand) {
 
     setTimeout(() => {
         ghost.remove();
-        delete toEl.dataset.animating;
+        unmarkCellAnimating(toR, toC);
         if (onLand) onLand();
     }, DUR);
 }
 
 // Central cell renderer — switches between covered / uncovered / empty using art images.
 // Call with (el, piece, covered). Always pass the current board state values.
-function renderCell(el, piece, covered) {
+// Central cell renderer. Pass `force: true` (4th arg) from an animation's own
+// landing callback to paint the arrived piece — otherwise renderCell refuses
+// to draw over a cell that has an in-flight animation, so bulk refreshes can't
+// race the ghost.
+function renderCell(el, piece, covered, force) {
     el.textContent = '';
     const tile = `url('assets/tile_${el.dataset.tile || '1'}.png')`;
     const glow = el.classList.contains('last-move') ? LAST_MOVE_GLOW : '';
     const r = +el.dataset.row, c = +el.dataset.col;
+    if (!force && isCellAnimating(r, c)) return;
     const blocked = isPushBlocked(gameState, r, c);
     if (!piece) {
         // Empty square — stone tile + push-block gif if applicable + last-move glow

@@ -8,11 +8,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=19">
+    <link rel="stylesheet" href="styles.css?v=24">
 </head>
 <body>
     <!-- ── Tournament page (top-level, sibling of game-container) ── -->
-    <div id="tournament-page" style="display:none">
+    <div id="tournament-page" class="mp-page" style="display:none">
         <div class="t-page-inner">
             <header class="t-page-header">
                 <h1 class="t-page-title">Tournament <code id="t-lobby-code">----</code></h1>
@@ -78,6 +78,56 @@
             <footer class="t-footer">
                 <button id="t-start-btn" class="primary-btn" style="display:none">Start Tournament</button>
                 <button id="t-stop-spectate-btn" class="secondary-btn" style="display:none">Stop Spectating</button>
+            </footer>
+        </div>
+    </div>
+
+    <!-- ── Lobby page (top-level, sibling of game-container).
+         Pre-game waiting room for a hosted N-player network game.
+         Carries class="mp-page" so it inherits the same shrunken
+         button/h3 sizing as the tournament page. Reuses .t-* layout
+         classes for player chips, sections, and config items. ── -->
+    <div id="lobby-page" class="mp-page" style="display:none">
+        <div class="t-page-inner">
+            <header class="t-page-header">
+                <h1 class="t-page-title">Lobby <code id="l-lobby-code">----</code></h1>
+                <div class="t-header-actions">
+                    <button id="l-copy-link-btn" class="secondary-btn">📋 Copy invite link</button>
+                    <button id="l-leave-btn" class="secondary-btn">Leave</button>
+                </div>
+            </header>
+
+            <div id="l-status" class="t-status-banner"></div>
+
+            <section class="t-section t-config-section">
+                <div class="t-config-item"><span class="t-config-label">Players</span><span id="l-config-players" class="t-config-value">—</span></div>
+                <div class="t-config-item" style="flex:1; min-width:200px"><span class="t-config-label">Abilities</span><span id="l-config-abilities" class="t-config-value">—</span></div>
+            </section>
+
+            <section id="l-rename-row" class="t-section t-name-section" style="display:none">
+                <label for="l-rename-input">Your name</label>
+                <input id="l-rename-input" maxlength="30" />
+                <button id="l-rename-btn" class="secondary-btn">Rename</button>
+            </section>
+
+            <section class="t-section t-players-section">
+                <div class="t-section-header">
+                    <h3>Players</h3>
+                    <div id="l-add-cpu-row" style="display:none; align-items:center; gap:6px">
+                        <select id="l-cpu-difficulty" class="t-cpu-diff">
+                            <option value="easy">Easy</option>
+                            <option value="medium">Medium</option>
+                            <option value="hard">Hard</option>
+                            <option value="expert" selected>Expert</option>
+                        </select>
+                        <button id="l-add-cpu-btn" class="secondary-btn">+ Add CPU</button>
+                    </div>
+                </div>
+                <div id="l-player-list"></div>
+            </section>
+
+            <footer class="t-footer">
+                <button id="l-start-btn" class="primary-btn" style="display:none" disabled>Start Game</button>
             </footer>
         </div>
     </div>
@@ -354,17 +404,17 @@
     <script src="js/no-modules/gamelog.js?v=4"></script>
     <script src="js/no-modules/utils.js?v=3"></script>
     <script src="js/no-modules/constants.js?v=3"></script>
-    <script src="js/no-modules/state.js?v=3"></script>
+    <script src="js/no-modules/state.js?v=4"></script>
     <script src="js/no-modules/rules.js?v=3"></script>
     <script src="js/no-modules/ai-learning.js?v=3"></script>
-    <script src="js/no-modules/board.js?v=9"></script>
+    <script src="js/no-modules/board.js?v=13"></script>
     <script src="js/no-modules/minimax.js?v=4"></script>
     <script src="js/no-modules/mcts.js?v=1"></script>
-    <script src="js/no-modules/classic-ai.js?v=1"></script>
+    <script src="js/no-modules/classic-ai.js?v=2"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
     <script src="js/no-modules/nn-mcts.js?v=1"></script>
-    <script src="js/no-modules/cpu.js?v=8"></script>
-    <script src="js/no-modules/game.js?v=8"></script>
+    <script src="js/no-modules/cpu.js?v=11"></script>
+    <script src="js/no-modules/game.js?v=13"></script>
     <!-- Multiplayer: Socket.io client (CDN fallback when not served by Node) -->
     <script>
         // Set the game server URL for cross-origin multiplayer.
@@ -377,8 +427,10 @@
     </script>
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
     <script src="js/no-modules/server-config.js" onerror=""></script>
-    <script src="js/no-modules/socket-client.js?v=11"></script>
-    <script src="js/no-modules/tournament-client.js?v=20"></script>
+    <script src="js/no-modules/socket-client.js?v=15"></script>
+    <script src="js/no-modules/multiplayer-base.js?v=1"></script>
+    <script src="js/no-modules/tournament-client.js?v=22"></script>
+    <script src="js/no-modules/lobby-client.js?v=5"></script>
     <script src="js/no-modules/main.js?v=3"></script>
     <script src="js/no-modules/replay.js"></script>
     <script>

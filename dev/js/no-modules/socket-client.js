@@ -157,13 +157,15 @@ if (typeof io !== 'undefined') {
         serverMode.playerNumber = playerNumber;
         serverMode.token        = token;
         _saveSession();
-        // Record slotA/slotB names so updateTurnIndicator shows real names
-        // instead of generic "Player 1". My own name comes from tournamentMode.displayName.
+        // Record per-player names so updateTurnIndicator shows real names
+        // instead of generic "Player 1". My own name comes from
+        // tournamentMode.displayName. The unified gameState.playerNames map
+        // is read by _computeTurnLabel for both tournament and lobby paths.
         if (typeof tournamentMode !== 'undefined') {
             const myName = tournamentMode.displayName || `Player ${playerNumber}`;
-            tournamentMode.currentGame = playerNumber === 1
-                ? { nameA: myName, nameB: opponentName }
-                : { nameA: opponentName, nameB: myName };
+            gameState.playerNames = playerNumber === 1
+                ? { 1: myName,       2: opponentName }
+                : { 1: opponentName, 2: myName       };
         }
         document.getElementById('winner-message').style.display = 'none';
         _hideWaitOverlay();
@@ -401,7 +403,7 @@ function _animateAndApply(newState, move) {
                         gameState.board[move.toR][move.toC] = piece;
                         gameState.board[move.fromR][move.fromC] = null;
                         gameState.covered[move.toR][move.toC] = false;
-                        hopPiece(fromEl, toEl, piece, () => renderCell(toEl, piece, false));
+                        hopPiece(fromEl, toEl, piece, () => renderCell(toEl, piece, false, true));
                         renderCell(fromEl, null, false);
                     }
                 }
@@ -414,7 +416,7 @@ function _animateAndApply(newState, move) {
                     gameState.board[move.destR][move.destC] = piece;
                     gameState.board[move.enemyR][move.enemyC] = null;
                     gameState.covered[move.destR][move.destC] = false;
-                    slidePiece(fromEl, toEl, piece, () => renderCell(toEl, piece, false));
+                    slidePiece(fromEl, toEl, piece, () => renderCell(toEl, piece, false, true));
                     renderCell(fromEl, null, false);
                 }
                 break;
@@ -427,7 +429,7 @@ function _animateAndApply(newState, move) {
                     gameState.board[move.targetR][move.targetC] = piece;
                     gameState.board[move.robotR][move.robotC] = null;
                     gameState.covered[move.targetR][move.targetC] = false;
-                    slidePiece(fromEl, toEl, piece, () => renderCell(toEl, piece, false));
+                    slidePiece(fromEl, toEl, piece, () => renderCell(toEl, piece, false, true));
                     renderCell(fromEl, null, false);
                 }
                 break;
@@ -456,6 +458,7 @@ function _showGameScreen(state) {
     const boardCfg = BOARD_CONFIG[state.numPlayers] || BOARD_CONFIG[2];
     BOARD_ROWS = boardCfg.rows;
     BOARD_COLS = boardCfg.cols;
+    document.getElementById('board-frame')?.classList.toggle('mode-4p', state.numPlayers > 2);
     initializeBoard();
 
     applyServerState(state);
@@ -673,42 +676,13 @@ function _hideDisconnectOverlay() {
 }
 
 // ─── Host / Join button wiring ────────────────────────────────────────────────
+// host-game-btn is wired by lobby-client.js (it opens the lobby with a
+// player-count dropdown for 2 or 4). The legacy direct-create-game flow
+// that bypassed the lobby is gone, but the server-side create-game and
+// join-game handlers still exist so old ?join=CODE invite links keep
+// working until they age out.
 document.addEventListener('DOMContentLoaded', () => {
-    const hostBtn = document.getElementById('host-game-btn');
-
-    if (hostBtn) {
-        hostBtn.addEventListener('click', () => {
-            // Host a network game: P1 = local human, P2 = remote human.
-            gameState.player1 = { type: 'human' };
-            gameState.player2 = { type: 'human' };
-            gameState.numPlayers = 2;
-            gameState.cpuEnabled = false;
-
-            // Read abilities from the setup screen checkboxes (same as startGame),
-            // then strip any the connected server doesn't advertise support for.
-            const requested = new Set(
-                Array.from(document.querySelectorAll('.ability-toggle:checked')).map(cb => cb.value)
-            );
-            const { filtered, stripped } = stripUnsupportedAbilities(requested);
-            gameState.enabledAbilities = filtered;
-            if (stripped.length) {
-                alert(`Server doesn't support: ${stripped.join(', ')} — disabled for this game.`);
-            }
-
-            serverMode.createGame({
-                numPlayers: 2,
-                playerConfigs: {
-                    1: { type: 'human' },
-                    2: { type: 'human' },
-                },
-                enabledAbilities: [...gameState.enabledAbilities],
-            });
-        });
-    }
-
-    // Join-by-code UI removed — people join via shared ?join=… links.
-
-    // Auto-join if URL has ?join=XXXX
+    // Auto-join if URL has ?join=XXXX (legacy invite links — direct GameRoom).
     const urlParams = new URLSearchParams(window.location.search);
     const joinCode = urlParams.get('join');
     if (joinCode && serverMode.socket) {

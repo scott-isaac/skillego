@@ -27,6 +27,12 @@ const gameState = {
     player4: { type: 'cpu', difficulty: 'expert' },
     eliminatedPlayers: new Set(),
     animationsEnabled: true,
+    // Optional per-player display names: { 1: 'Alice', 2: 'Bob', 3: 'Charlie', 4: 'Dave' }.
+    // Populated by tournament-client (match start / spectate) and lobby-client
+    // (game start). null in local play. _computeTurnLabel reads this so any
+    // multiplayer path that knows real names gets a single consolidated path
+    // for showing them in the turn indicator.
+    playerNames: null,
     pushBlocked: [],        // active blocked squares [{row,col}] — checked by move validation
     _pendingPushBlock: null, // set by executePush, promoted to pushBlocked in endTurn
 };
