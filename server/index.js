@@ -10,10 +10,11 @@ const fs       = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const GameRoom = require('./GameRoom');
 const Tournament = require('./Tournament');
+const Lobby = require('./Lobby');
 const { getPlayerCurrentMatch, findMatch, advanceWinner } = require('./lib/bracket');
 const { ALL_ABILITY_IDS } = require('./lib/constants');
 
-const SERVER_FEATURES = ['tournament'];
+const SERVER_FEATURES = ['tournament', 'lobby'];
 
 const app    = express();
 const server = http.createServer(app);
@@ -333,6 +334,58 @@ function scheduleTournamentCleanup(tournamentId) {
 
 function broadcastTournamentState(t) {
     io.to(T_ROOM(t.id)).emit('tournament-state', { state: t.getState() });
+}
+
+// ─── Lobby store ──────────────────────────────────────────────────────────────
+// lobbyId → Lobby. Each lobby maps to one upcoming game; once the host
+// starts, the lobby spawns a GameRoom and is disposed.
+const lobbies = new Map();
+const L_ROOM = (lobbyId) => 'L:' + lobbyId;
+const LOBBY_DISCONNECT_GRACE_MS = 30 * 1000;
+
+// playerId → setTimeout handle for the disconnect grace period. When a
+// player's socket disconnects we mark them disconnected and start a timer
+// that removes them after the grace window unless they reconnect first.
+const _lobbyDisconnectTimers = new Map();
+function _disconnectTimerKey(lobbyId, playerId) { return lobbyId + ':' + playerId; }
+
+function scheduleLobbyCleanup(lobbyId) {
+    setTimeout(() => lobbies.delete(lobbyId), 10 * 60 * 1000);
+}
+
+function broadcastLobbyState(lobby) {
+    io.to(L_ROOM(lobby.id)).emit('lobby-state', { state: lobby.getState() });
+}
+
+function clearLobbyDisconnectTimer(lobbyId, playerId) {
+    const key = _disconnectTimerKey(lobbyId, playerId);
+    const handle = _lobbyDisconnectTimers.get(key);
+    if (handle) {
+        clearTimeout(handle);
+        _lobbyDisconnectTimers.delete(key);
+    }
+}
+
+function startLobbyDisconnectTimer(lobby, playerId) {
+    const key = _disconnectTimerKey(lobby.id, playerId);
+    clearLobbyDisconnectTimer(lobby.id, playerId);
+    const handle = setTimeout(() => {
+        _lobbyDisconnectTimers.delete(key);
+        // Lobby may have been disposed (game started) or the player already
+        // reclaimed their slot; both are safe no-ops.
+        if (!lobbies.has(lobby.id)) return;
+        const p = lobby.players.get(playerId);
+        if (!p || p.status !== 'disconnected') return;
+        lobby.removePlayer(playerId);
+        if (lobby.players.size === 0) {
+            // Empty lobby — drop it.
+            lobbies.delete(lobby.id);
+            return;
+        }
+        broadcastLobbyState(lobby);
+        console.log(`[L:${lobby.id}] P${playerId} removed after grace window`);
+    }, LOBBY_DISCONNECT_GRACE_MS);
+    _lobbyDisconnectTimers.set(key, handle);
 }
 
 // ─── Ready-up timeouts ────────────────────────────────────────────────────────
@@ -1207,6 +1260,227 @@ io.on('connection', (socket) => {
         socket.leave(M_ROOM(tournamentId, matchId));
     });
 
+    // ── host-lobby ───────────────────────────────────────────────────────────
+    // payload: { numPlayers, enabledAbilities, displayName }
+    // Creates a new Lobby, seats the caller as host, returns lobby creds.
+    socket.on('host-lobby', ({ numPlayers, enabledAbilities, displayName }) => {
+        const n = Number(numPlayers) || 4;
+        if (![2, 3, 4].includes(n)) {
+            socket.emit('error', { message: 'Invalid player count for lobby' });
+            return;
+        }
+        const lobbyId = uuidv4().substring(0, 8).toUpperCase();
+        const lobby = new Lobby(lobbyId, {
+            numPlayers:       n,
+            enabledAbilities: Array.isArray(enabledAbilities) ? enabledAbilities : [],
+        });
+        const token = uuidv4();
+        const playerId = lobby.addPlayer(socket.id, token, _safeDisplayName(displayName, 'Host'), { type: 'human' });
+        lobby.hostPlayerId = playerId;
+        lobbies.set(lobbyId, lobby);
+        socket.join(L_ROOM(lobbyId));
+
+        socket.emit('lobby-created', {
+            lobbyId,
+            playerId,
+            token,
+            state: lobby.getState(),
+        });
+        console.log(`[L:${lobbyId}] created by ${socket.id} as P${playerId}`);
+    });
+
+    // ── join-lobby ───────────────────────────────────────────────────────────
+    // payload: { lobbyId, displayName, token? }
+    // Token is optional — supplying a known one reclaims an existing slot
+    // (used by the disconnect grace flow).
+    socket.on('join-lobby', ({ lobbyId, displayName, token }) => {
+        const lobby = lobbies.get(lobbyId);
+        if (!lobby) { socket.emit('error', { message: 'Lobby not found' }); return; }
+        if (lobby.status !== 'lobby') { socket.emit('error', { message: 'Lobby already started' }); return; }
+
+        // Existing player reconnecting via token?
+        if (token) {
+            const existingId = lobby.getPlayerByToken(token);
+            if (existingId) {
+                lobby.updateSocketId(existingId, socket.id);
+                clearLobbyDisconnectTimer(lobbyId, existingId);
+                socket.join(L_ROOM(lobbyId));
+                socket.emit('lobby-joined', {
+                    lobbyId,
+                    playerId: existingId,
+                    token,
+                    state: lobby.getState(),
+                });
+                broadcastLobbyState(lobby);
+                console.log(`[L:${lobbyId}] P${existingId} reconnected (${socket.id})`);
+                return;
+            }
+        }
+
+        // Fresh join.
+        if (lobby.isFull()) { socket.emit('error', { message: 'Lobby is full' }); return; }
+        const newToken = uuidv4();
+        const playerId = lobby.addPlayer(socket.id, newToken, _safeDisplayName(displayName, `Player ${lobby.seatedCount() + 1}`), { type: 'human' });
+        socket.join(L_ROOM(lobbyId));
+        socket.emit('lobby-joined', {
+            lobbyId,
+            playerId,
+            token: newToken,
+            state: lobby.getState(),
+        });
+        broadcastLobbyState(lobby);
+        console.log(`[L:${lobbyId}] P${playerId} joined (${socket.id})`);
+    });
+
+    // ── leave-lobby ──────────────────────────────────────────────────────────
+    // payload: { lobbyId, token }
+    socket.on('leave-lobby', ({ lobbyId, token }) => {
+        const lobby = lobbies.get(lobbyId);
+        if (!lobby) return;
+        const playerId = lobby.getPlayerByToken(token);
+        if (!playerId) return;
+        clearLobbyDisconnectTimer(lobbyId, playerId);
+        lobby.removePlayer(playerId);
+        socket.leave(L_ROOM(lobbyId));
+        if (lobby.players.size === 0) {
+            lobbies.delete(lobbyId);
+            console.log(`[L:${lobbyId}] disposed (empty)`);
+            return;
+        }
+        broadcastLobbyState(lobby);
+        console.log(`[L:${lobbyId}] P${playerId} left`);
+    });
+
+    // ── rename-in-lobby ──────────────────────────────────────────────────────
+    // payload: { lobbyId, token, name }
+    socket.on('rename-in-lobby', ({ lobbyId, token, name }) => {
+        const lobby = lobbies.get(lobbyId);
+        if (!lobby) return;
+        const playerId = lobby.getPlayerByToken(token);
+        if (!playerId) return;
+        try {
+            lobby.updateName(playerId, name);
+            broadcastLobbyState(lobby);
+        } catch (e) {
+            socket.emit('error', { message: e.message });
+        }
+    });
+
+    // ── update-lobby-config ──────────────────────────────────────────────────
+    // payload: { lobbyId, token, numPlayers }
+    // Host-only. Currently only numPlayers (2 or 4) is editable.
+    socket.on('update-lobby-config', ({ lobbyId, token, numPlayers }) => {
+        const lobby = lobbies.get(lobbyId);
+        if (!lobby) return;
+        const playerId = lobby.getPlayerByToken(token);
+        if (playerId !== lobby.hostPlayerId) {
+            socket.emit('error', { message: 'Only the host can change settings' });
+            return;
+        }
+        try {
+            lobby.updateConfig({ numPlayers });
+            broadcastLobbyState(lobby);
+        } catch (e) {
+            socket.emit('error', { message: e.message });
+        }
+    });
+
+    // ── add-lobby-cpu ────────────────────────────────────────────────────────
+    // payload: { lobbyId, token, difficulty }
+    // Host-only.
+    socket.on('add-lobby-cpu', ({ lobbyId, token, difficulty }) => {
+        const lobby = lobbies.get(lobbyId);
+        if (!lobby) return;
+        const playerId = lobby.getPlayerByToken(token);
+        if (playerId !== lobby.hostPlayerId) {
+            socket.emit('error', { message: 'Only the host can add CPUs' });
+            return;
+        }
+        try {
+            lobby.addCpu(difficulty);
+            broadcastLobbyState(lobby);
+        } catch (e) {
+            socket.emit('error', { message: e.message });
+        }
+    });
+
+    // ── remove-lobby-cpu ─────────────────────────────────────────────────────
+    // payload: { lobbyId, token, playerId }  (playerId of the CPU to remove)
+    socket.on('remove-lobby-cpu', ({ lobbyId, token, playerId: targetId }) => {
+        const lobby = lobbies.get(lobbyId);
+        if (!lobby) return;
+        const requesterId = lobby.getPlayerByToken(token);
+        if (requesterId !== lobby.hostPlayerId) {
+            socket.emit('error', { message: 'Only the host can remove CPUs' });
+            return;
+        }
+        try {
+            lobby.removeCpu(targetId);
+            broadcastLobbyState(lobby);
+        } catch (e) {
+            socket.emit('error', { message: e.message });
+        }
+    });
+
+    // ── start-lobby-game ─────────────────────────────────────────────────────
+    // payload: { lobbyId, token }
+    // Host clicks Start. We spawn a GameRoom from the lobby's player list,
+    // register every human player's socket+token with the room, emit
+    // lobby-game-started to all members with their per-player handoff
+    // payload, then dispose the lobby.
+    socket.on('start-lobby-game', ({ lobbyId, token }) => {
+        const lobby = lobbies.get(lobbyId);
+        if (!lobby) { socket.emit('error', { message: 'Lobby not found' }); return; }
+        const requesterId = lobby.getPlayerByToken(token);
+        if (!lobby.canStart(requesterId)) {
+            socket.emit('error', { message: 'Cannot start: lobby not ready' });
+            return;
+        }
+
+        let setup;
+        try {
+            setup = lobby.buildGameSetup();
+        } catch (e) {
+            socket.emit('error', { message: e.message });
+            return;
+        }
+
+        const gameId = uuidv4().substring(0, 8).toUpperCase();
+        const room = new GameRoom(gameId, lobby.config.numPlayers, setup.playerConfigs, [...lobby.config.enabledAbilities]);
+        rooms.set(gameId, room);
+
+        // Register human players. Reuse their lobby tokens as game tokens
+        // so the rest of the protocol (move validation by token) just works.
+        for (const h of setup.humans) {
+            room.addPlayer(h.playerNumber, h.socketId, h.token);
+            const sock = io.sockets.sockets.get(h.socketId);
+            if (sock) {
+                sock.leave(L_ROOM(lobbyId));
+                sock.join(gameId);
+                sock.emit('lobby-game-started', {
+                    lobbyId,
+                    gameId,
+                    playerNumber: h.playerNumber,
+                    token:        h.token,
+                    state:        room.getMaskedState(),
+                });
+            }
+        }
+
+        lobby.status = 'started';
+        // Dispose lobby and any lingering disconnect timers.
+        for (const pid of lobby.players.keys()) clearLobbyDisconnectTimer(lobbyId, pid);
+        lobbies.delete(lobbyId);
+
+        // CPU players don't get a socket event — the GameRoom's CPU
+        // scheduler picks them up automatically once readyToStart() fires.
+        if (room.readyToStart()) {
+            io.to(gameId).emit('game-started', { state: room.getMaskedState() });
+            scheduleCpuMove(room);
+        }
+        console.log(`[L:${lobbyId}] → ${gameId} started (${lobby.config.numPlayers}P)`);
+    });
+
     // ── disconnect ───────────────────────────────────────────────────────────
     socket.on('disconnect', () => {
         console.log(`[disconnect] ${socket.id}`);
@@ -1219,11 +1493,30 @@ io.on('connection', (socket) => {
                 }
             }
         }
+        // Lobbies: mark the player disconnected and start a grace timer.
+        // If they reconnect via join-lobby with their token before the
+        // window expires, they keep their slot. Otherwise they're removed.
+        for (const [lobbyId, lobby] of lobbies) {
+            for (const [playerId, p] of lobby.players) {
+                if (p.socketId === socket.id) {
+                    lobby.markDisconnected(playerId);
+                    startLobbyDisconnectTimer(lobby, playerId);
+                    broadcastLobbyState(lobby);
+                    console.log(`[L:${lobbyId}] P${playerId} disconnected (grace started)`);
+                }
+            }
+        }
         // Tournaments: don't kick anyone on a bare disconnect — the token-based
         // rejoin flow will reseat them. The UI uses freshness of socketId to
         // show a dimmed state for disconnected players.
     });
 });
+
+// Trim a display name and fall back to a sensible default if blank.
+function _safeDisplayName(raw, fallback) {
+    const trimmed = String(raw || '').trim().slice(0, 30);
+    return trimmed || fallback;
+}
 
 // ─── Start ────────────────────────────────────────────────────────────────────
 server.listen(PORT, () => {
