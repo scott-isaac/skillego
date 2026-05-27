@@ -292,6 +292,24 @@ function clearSkillTray() {
         .forEach(el => el.classList.remove('push-destination-preview'));
 }
 
+// Engine-level guard: reject any move whose actor doesn't belong to the
+// current player. Belt-and-suspenders against stale CPU results, double-fire
+// races, and any future caller that forgets to validate. Until move execution
+// is consolidated through a single applyMove() engine, every execute* and
+// movePiece path calls this before mutating the board.
+function _gameEngineValidateActor(row, col, label) {
+    const piece = gameState.board[row]?.[col];
+    if (!piece) {
+        debugLog(`${label} rejected: no piece at (${row},${col})`);
+        return false;
+    }
+    if (piece.player !== gameState.currentPlayer) {
+        debugLog(`${label} rejected: piece at (${row},${col}) belongs to P${piece.player}, current player is P${gameState.currentPlayer}`);
+        return false;
+    }
+    return true;
+}
+
 // ── Turn engine ───────────────────────────────────────────────────────────────
 // Single point of truth for advancing the game after any move (human or CPU).
 // execute* functions handle mechanics then call endTurn(); no turn logic elsewhere.
@@ -333,6 +351,10 @@ function executeUncover(row, col) {
         serverMode.sendMove({ type: 'uncover', r: row, c: col });
         return;
     }
+    if (!gameState.covered[row]?.[col]) {
+        debugLog(`executeUncover rejected: (${row},${col}) is not covered`);
+        return;
+    }
     const el = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
     const piece = gameState.board[row][col];
     if (!el || !piece) return;
@@ -353,6 +375,7 @@ function executeHop(mouseRow, mouseCol, destRow, destCol) {
         serverMode.sendMove({ type: 'hop', fromR: mouseRow, fromC: mouseCol, toR: destRow, toC: destCol });
         return;
     }
+    if (!_gameEngineValidateActor(mouseRow, mouseCol, 'executeHop')) return;
     const mouse = gameState.board[mouseRow][mouseCol];
 
     showLastMove([{ row: mouseRow, col: mouseCol }, { row: destRow, col: destCol }]);
@@ -363,7 +386,7 @@ function executeHop(mouseRow, mouseCol, destRow, destCol) {
     const fromEl = document.querySelector(`.cell[data-row="${mouseRow}"][data-col="${mouseCol}"]`);
     const toEl   = document.querySelector(`.cell[data-row="${destRow}"][data-col="${destCol}"]`);
     renderCell(fromEl, null, false);
-    hopPiece(fromEl, toEl, mouse, () => renderCell(toEl, mouse, false));
+    hopPiece(fromEl, toEl, mouse, () => renderCell(toEl, mouse, false, true));
 
     if (typeof gameLog !== 'undefined') gameLog.recordHop(gameState.currentPlayer, mouseRow, mouseCol, destRow, destCol);
 
@@ -383,6 +406,7 @@ function executeTransform(wizRow, wizCol, mouseCells, isExplosion = false) {
             cells: mouseCells.map(({ row, col }) => ({ r: row, c: col })), isExplosion: !!isExplosion });
         return;
     }
+    if (!_gameEngineValidateActor(wizRow, wizCol, 'executeTransform')) return;
     const player = gameState.board[wizRow][wizCol].player;
     showLastMove([{ row: wizRow, col: wizCol }, ...mouseCells]);
     const newMouse = () => ({ type: 'mouse', power: 1, player, emoji: '🐭' });
@@ -417,6 +441,7 @@ function executePush(dragonRow, dragonCol, enemyRow, enemyCol, destRow, destCol)
             enemyR: enemyRow, enemyC: enemyCol, destR: destRow, destC: destCol });
         return;
     }
+    if (!_gameEngineValidateActor(dragonRow, dragonCol, 'executePush')) return;
     const enemy = gameState.board[enemyRow][enemyCol];
 
     showLastMove([{ row: dragonRow, col: dragonCol }, { row: enemyRow, col: enemyCol }, { row: destRow, col: destCol }]);
@@ -455,6 +480,8 @@ function flyRobot(fromEl, toEl, piece, onComplete) {
 
     const board = document.getElementById('board');
     const color = PLAYER_ART[piece.player];
+    const toR = +toEl.dataset.row, toC = +toEl.dataset.col;
+    markCellAnimating(toR, toC);
 
     // Laser runs center-to-center of the two cells.
     const fromX = fromEl.offsetLeft + fromEl.offsetWidth  / 2;
@@ -544,6 +571,7 @@ function flyRobot(fromEl, toEl, piece, onComplete) {
             flyer.remove();
             fade.onfinish = () => { laser.remove(); };
             if (fade.playState === 'finished') { laser.remove(); }
+            unmarkCellAnimating(toR, toC);
             onComplete();
         };
     };
@@ -555,6 +583,7 @@ function executeRobotKitty(robotRow, robotCol, targetRow, targetCol) {
             targetR: targetRow, targetC: targetCol });
         return;
     }
+    if (!_gameEngineValidateActor(robotRow, robotCol, 'executeRobotKitty')) return;
     const robot    = gameState.board[robotRow][robotCol];
     const captured = gameState.board[targetRow][targetCol];
 
@@ -592,6 +621,7 @@ function executeEngulf(row, col) {
         serverMode.sendMove({ type: 'engulf', r: row, c: col });
         return;
     }
+    if (!_gameEngineValidateActor(row, col, 'executeEngulf')) return;
     const piece = gameState.board[row][col];
     piece.burning = true;
 
@@ -614,6 +644,7 @@ function executePyromania(burnerRow, burnerCol, targetRow, targetCol) {
             targetR: targetRow, targetC: targetCol });
         return;
     }
+    if (!_gameEngineValidateActor(burnerRow, burnerCol, 'executePyromania')) return;
     const burner = gameState.board[burnerRow][burnerCol];
     const target = gameState.board[targetRow][targetCol];
 
@@ -739,6 +770,16 @@ function showSetupScreen() {
     document.getElementById('resign-button').style.display = 'none';
     document.getElementById('help-button').style.display = 'none';
     document.getElementById('turn-indicator').style.display = 'none';
+    document.getElementById('board-frame')?.classList.remove('mode-4p');
+    // Wipe the previous game's cells so they don't peek out behind the
+    // setup overlay. Especially noticeable returning from 4-player, where
+    // the 8×9 layout would re-flow into the 6×6 frame and look mangled.
+    // The next game's initializeBoard() rebuilds the grid from scratch.
+    const boardEl = document.getElementById('board');
+    if (boardEl) boardEl.innerHTML = '';
+    // Drop any leftover network-side display names so the next local game
+    // doesn't accidentally label "Player 1" as the previous opponent.
+    gameState.playerNames = null;
     // Collapse How to Play and Abilities if they were left open
     document.querySelectorAll('#setup-screen details[open]').forEach(function(d) { d.removeAttribute('open'); });
     syncSetupUI();
@@ -841,6 +882,10 @@ function startGame() {
     const boardCfg = BOARD_CONFIG[gameState.numPlayers] || BOARD_CONFIG[2];
     BOARD_ROWS = boardCfg.rows;
     BOARD_COLS = boardCfg.cols;
+    document.getElementById('board-frame')?.classList.toggle('mode-4p', gameState.numPlayers > 2);
+    // Local-only path: no display names. Network paths (tournament/lobby)
+    // overwrite this after their own handoff.
+    gameState.playerNames = null;
 
     // In server mode: send config to server, create the DOM board shell, then wait.
     // The server will send back game-started with the authoritative board state.
@@ -969,10 +1014,15 @@ function restartGame() {
     gameState.cpuLastMoveTo           = null;
     gameState.cpuRecentSquares        = {};
     gameState.eliminatedPlayers = new Set();
+    // Local restart: same as startGame, no display names. Network rematches
+    // run a different code path (server emits a fresh game-started) that
+    // sets playerNames itself.
+    gameState.playerNames = null;
     if (typeof gameLog !== 'undefined') gameLog.reset();
     const boardCfg = BOARD_CONFIG[gameState.numPlayers] || BOARD_CONFIG[2];
     BOARD_ROWS = boardCfg.rows;
     BOARD_COLS = boardCfg.cols;
+    document.getElementById('board-frame')?.classList.toggle('mode-4p', gameState.numPlayers > 2);
     initializeBoard();
     if (typeof gameLog !== 'undefined') gameLog.recordInitialBoard();
     updateTurnIndicator();

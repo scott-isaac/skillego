@@ -60,6 +60,53 @@ button, .cell, input[type="range"] {
     margin: 0;
 }
 
+/* ── 4-player mode (dev-only) ──
+   The board.png frame is sized for a 6×6 layout; 4-player mode (8×9) drops
+   the background and reclaims the decorative top/bottom margins so the 8×9
+   grid fills the frame. Cells scale up to 122px. Chrome (turn indicator,
+   skill tray, resign, help, speed overlay) is repositioned so nothing
+   overlaps and the speed overlay no longer covers the skill tray when a
+   human player needs it. 2-player layout is untouched. */
+#board-frame.mode-4p {
+    background: linear-gradient(180deg, #2a1e10 0%, #1a1206 100%);
+}
+#board-frame.mode-4p #turn-indicator {
+    top: 30px;
+    height: 80px;
+    line-height: 80px;
+    font-size: 48px;
+    /* Flex so the player-color icon and the text label share a single
+       horizontally-centered baseline. line-height stays 80 so the
+       fallback (no icon) layout still vertically centers the text. */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+}
+#board-frame.mode-4p #turn-indicator .turn-color-icon {
+    width: 64px;
+    height: 64px;
+    flex-shrink: 0;
+    image-rendering: -webkit-optimize-contrast;
+}
+#board-frame.mode-4p #board {
+    left: 24px;
+    top: 130px;
+    width: 976px;
+    height: 1098px;
+    grid-template-columns: repeat(8, 122px);
+    grid-template-rows: repeat(9, 122px);
+}
+#board-frame.mode-4p .cell {
+    width: 122px;
+    height: 122px;
+    font-size: 32px;
+}
+#board-frame.mode-4p #skill-tray   { top: 1240px; }
+#board-frame.mode-4p #resign-button { top: 1340px; }
+#board-frame.mode-4p #help-button   { top: 1350px; }
+#board-frame.mode-4p #speed-overlay { top: 1445px; }
+
 .cell {
     width: 115px;
     height: 115px;
@@ -992,8 +1039,14 @@ tr.ability-disabled td:last-child::after {
 /* ──────────────────────────────────────────────────────────────────────────
    Tournament page — top-level, sibling of #game-container.
    Shown in place of the game page; not an overlay.
+   #lobby-page (the pre-game waiting room for hosted N-player network games)
+   reuses the same .t-* element styles for layout consistency, so the
+   page-level positioning rule covers both.
    ────────────────────────────────────────────────────────────────────────── */
-#tournament-page {
+/* Both #tournament-page and #lobby-page also carry class="mp-page" so any
+   styling that should apply to ANY multiplayer pre/in-game page can be
+   scoped under .mp-page. Page-specific tweaks still go on the ID selector. */
+.mp-page {
     position: fixed;
     inset: 0;
     background: linear-gradient(180deg, #1a1206 0%, #0d0803 100%);
@@ -1004,16 +1057,22 @@ tr.ability-disabled td:last-child::after {
     font-size: 14px;
     line-height: 1.45;
 }
-/* Shrink the setup-screen's huge buttons down inside the tournament page,
-   so typography feels consistent across the whole view. */
-#tournament-page .secondary-btn {
+.t-player-chip.is-disconnected {
+    opacity: 0.55;
+    border-left-color: rgba(230, 144, 144, 0.5);
+}
+/* Shrink the setup-screen's huge buttons down inside any multiplayer page
+   so typography feels consistent across the whole view. Without this, the
+   global .secondary-btn (sized for the setup screen) overwhelms these
+   denser layouts. */
+.mp-page .secondary-btn {
     padding: 7px 14px;
     font-size: 13px;
     border-width: 1px;
     border-radius: 6px;
 }
-#tournament-page h3 { font-size: 13px; }
-#tournament-page button { font-family: inherit; }
+.mp-page h3 { font-size: 13px; }
+.mp-page button { font-family: inherit; }
 .t-page-inner {
     max-width: 1200px;
     margin: 0 auto;

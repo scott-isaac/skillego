@@ -9,7 +9,7 @@ function _getCpuWorker() {
     if (_cpuWorkerFailed) return null;
     if (!_cpuWorker) {
         try {
-            _cpuWorker = new Worker('js/no-modules/cpu-worker.js');
+            _cpuWorker = new Worker('js/no-modules/cpu-worker.js?v=2');
             _cpuWorker.onerror = function () {
                 console.warn('CPU Worker failed to load — falling back to main thread');
                 _cpuWorkerFailed = true;
@@ -116,6 +116,10 @@ function makeCpuMove() {
             return;
         }
         if (!move) { debugLog('CPU: no move available'); return; }
+        if (gameState.currentPlayer !== cpuPlayer) {
+            debugLog(`Stale CPU move discarded: was for P${cpuPlayer}, currentPlayer=P${gameState.currentPlayer}`);
+            return;
+        }
         debugLog(`CPU P${cpuPlayer} (${difficulty}): ${move.type}`);
         _applyCpuMove(move, cpuPlayer);
         return;
@@ -136,6 +140,16 @@ function makeCpuMove() {
 
         // Guard against stale results after game ended
         if (gameState.gameOver) return;
+
+        // Guard against stale results for a player who is no longer up.
+        // The worker handler only fires once per request, but if anything
+        // has caused the turn to advance between request and response (or
+        // posted two requests for the same player), applying an old result
+        // would move the wrong player's piece and double-call endTurn.
+        if (gameState.currentPlayer !== cpuPlayer) {
+            debugLog(`Stale CPU move discarded: was for P${cpuPlayer}, currentPlayer=P${gameState.currentPlayer}`);
+            return;
+        }
 
         debugLog(`CPU P${cpuPlayer} (${difficulty}): ${move.type}`);
         _applyCpuMove(move, cpuPlayer);

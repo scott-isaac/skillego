@@ -1,8 +1,11 @@
-// classic-ai.js — Extended Classic AI: original Flash game's deep negamax engine
-// upgraded with Skillego's full ability moveset.
+// classic-ai.js — Extended Classic AI: original Flash game's deep search
+// engine upgraded with Skillego's full ability moveset and N-player support.
 //
-// Core: negamax + alpha-beta, iterative deepening with 500ms time budget,
-// incremental material evaluation, piece arrays with isDead flags.
+// Core: paranoid alpha-beta minimax, iterative deepening with 500ms time
+// budget, incremental material evaluation, per-player piece arrays with
+// isDead flags. cpuPlayer maximizes its own perspective score; every other
+// player minimizes (paranoid 4-player approximation). nextPlayer cycles
+// through all N players, so a depth-N search models a full round.
 // Extended: hop, push, snipe, transform, engulf (last resort), pyro.
 
 const ClassicAI = (function () {
@@ -31,15 +34,23 @@ const ClassicAI = (function () {
     }
 
     // ── Search state ─────────────────────────────────────────────────────
-    let board, covered, pushBlocked, staticValue, p1Pieces, p2Pieces, hasUnknown, abilities;
+    // playerPieces is indexed by player number (1..N). Score is in
+    // cpuPlayer's perspective: positive = good for cpu, negative = bad.
+    // numPlayers / cpuPlayer are set by initSearch and used by sv() and
+    // the N-player paranoid rotation in search().
+    let board, covered, pushBlocked, staticValue, playerPieces,
+        cpuPlayer, numPlayers, hasUnknown, abilities;
 
-    function sv(p) { return p.player === 1 ? p.power : -p.power; }
-    function getPieces(player) { return player === 1 ? p1Pieces : p2Pieces; }
+    function sv(p) { return p.player === cpuPlayer ? p.power : -p.power; }
+    function getPieces(player) { return playerPieces[player] || []; }
 
-    function initSearch(state, cpuPlayer, enabledAbilities) {
+    function initSearch(state, cpuPlayerArg, enabledAbilities) {
+        cpuPlayer  = cpuPlayerArg;
+        numPlayers = (typeof gameState !== 'undefined' && gameState.numPlayers) || 2;
         board = []; covered = [];
         pushBlocked = state.pushBlocked ? [...state.pushBlocked] : [];
-        p1Pieces = []; p2Pieces = [];
+        playerPieces = [];
+        for (let i = 0; i <= numPlayers; i++) playerPieces[i] = [];
         staticValue = 0; hasUnknown = false;
         abilities = enabledAbilities;
 
@@ -59,13 +70,14 @@ const ClassicAI = (function () {
                     const p = { type: src.type, power: src.power, player: src.player,
                                 r, c, isDead: false, burning: !!src.burning };
                     board[r][c] = p;
-                    (p.player === 1 ? p1Pieces : p2Pieces).push(p);
+                    if (playerPieces[p.player]) playerPieces[p.player].push(p);
                     staticValue += sv(p);
                 }
             }
         }
-        p1Pieces.sort((a, b) => b.power - a.power);
-        p2Pieces.sort((a, b) => b.power - a.power);
+        for (let i = 1; i <= numPlayers; i++) {
+            playerPieces[i].sort((a, b) => b.power - a.power);
+        }
     }
 
     // ── Move generation for search ───────────────────────────────────────
@@ -431,18 +443,27 @@ const ClassicAI = (function () {
         }
     }
 
-    // ── Negamax ──────────────────────────────────────────────────────────
-    function negamax(player, depth, alpha, beta) {
-        if (depth <= 0) {
-            return player === 1 ? staticValue : -staticValue;
-        }
+    // ── Paranoid alpha-beta minimax ──────────────────────────────────────
+    // Score is always in cpuPlayer's perspective (staticValue, signed by sv).
+    // cpuPlayer maximizes; every other player minimizes (the standard
+    // paranoid 4-player approximation: assume all opponents coordinate
+    // against the AI). nextPlayer cycles through all N players, so a depth-N
+    // search models a full round.
+    //
+    // In 2P with cpuPlayer=1 this is mathematically equivalent to the prior
+    // negamax: the recursive negation trick collapses into "min on opponent
+    // ply, max on own ply" with the same alpha-beta cuts.
+    function search(player, depth, alpha, beta) {
+        if (depth <= 0) return staticValue;
 
-        const opponent = player === 1 ? 2 : 1;
+        const nextPlayer = (player % numPlayers) + 1;
+        const isMax = (player === cpuPlayer);
 
         if (hasUnknown) {
-            const val = -negamax(opponent, depth - 1, -beta, -alpha);
-            if (val > alpha) alpha = val;
-            if (alpha >= beta) return alpha;
+            const val = search(nextPlayer, depth - 1, alpha, beta);
+            if (isMax) { if (val > alpha) alpha = val; }
+            else       { if (val < beta)  beta  = val; }
+            if (alpha >= beta) return isMax ? alpha : beta;
         }
 
         const { captures, quiets } = genMoves(player);
@@ -451,13 +472,18 @@ const ClassicAI = (function () {
         for (let i = 0; i < allMoves.length; i++) {
             const m = allMoves[i];
             makeMove(m);
-            const val = -negamax(opponent, depth - 1, -beta, -alpha);
+            const val = search(nextPlayer, depth - 1, alpha, beta);
             unmakeMove(m);
-            if (val > alpha) alpha = val;
-            if (alpha >= beta) return alpha;
+            if (isMax) {
+                if (val > alpha) alpha = val;
+                if (alpha >= beta) return alpha;
+            } else {
+                if (val < beta) beta = val;
+                if (alpha >= beta) return beta;
+            }
         }
 
-        return alpha;
+        return isMax ? alpha : beta;
     }
 
     // ── Uncover heuristic (3-tier from original) ─────────────────────────
@@ -519,11 +545,14 @@ const ClassicAI = (function () {
     }
 
     // ── getBestMove ──────────────────────────────────────────────────────
-    function getBestMove({ state, cpuPlayer, enabledAbilities, timeLimit }) {
+    // After initSearch, cpuPlayer/numPlayers/playerPieces are module-scope
+    // and shared with sv(), search(), genMoves(), make/unmakeMove. Keep
+    // local references through this function for clarity.
+    function getBestMove({ state, cpuPlayer: cpuPlayerArg, enabledAbilities, timeLimit }) {
         const timeBudget = timeLimit || DEFAULT_TIME_MS;
-        initSearch(state, cpuPlayer, enabledAbilities);
+        initSearch(state, cpuPlayerArg, enabledAbilities);
 
-        const opponent = cpuPlayer === 1 ? 2 : 1;
+        const nextPlayer = (cpuPlayer % numPlayers) + 1;
         const { captures, quiets } = genMoves(cpuPlayer);
         const allRootMoves = captures.concat(quiets);
 
@@ -540,23 +569,24 @@ const ClassicAI = (function () {
             candidates.push({ m, isTurn: false, value: -INFINITY });
         }
 
-        // Phase 1: single-piece probe (skip if hidden pieces exist)
+        // Phase 1: single-piece probe (skip if hidden pieces exist).
+        // Restrict cpuPlayer to its strongest piece to surface tactical
+        // forced wins quickly. Other players keep their full piece sets.
         let forcedWin = false;
-        const myPieces = getPieces(cpuPlayer);
+        const myPieces = playerPieces[cpuPlayer];
         if (!hasUnknown && myPieces.length > 1) {
-            const saved = cpuPlayer === 1 ? p1Pieces.slice() : p2Pieces.slice();
-            if (cpuPlayer === 1) p1Pieces = saved.slice(0, 1);
-            else p2Pieces = saved.slice(0, 1);
+            const saved = playerPieces[cpuPlayer].slice();
+            playerPieces[cpuPlayer] = saved.slice(0, 1);
 
             const t0 = Date.now();
             let d = 0;
             do {
                 for (const c of candidates) {
                     if (c.isTurn) {
-                        c.value = -negamax(opponent, d, -INFINITY, INFINITY);
+                        c.value = search(nextPlayer, d, -INFINITY, INFINITY);
                     } else {
                         makeMove(c.m);
-                        c.value = -negamax(opponent, d, -INFINITY, INFINITY);
+                        c.value = search(nextPlayer, d, -INFINITY, INFINITY);
                         unmakeMove(c.m);
                     }
                 }
@@ -565,7 +595,7 @@ const ClassicAI = (function () {
             } while (Date.now() - t0 < timeBudget && d < 30);
 
             if (candidates[0].value >= INFINITY) forcedWin = true;
-            if (cpuPlayer === 1) p1Pieces = saved; else p2Pieces = saved;
+            playerPieces[cpuPlayer] = saved;
         }
 
         // Phase 2: full search
@@ -575,10 +605,10 @@ const ClassicAI = (function () {
             do {
                 for (const c of candidates) {
                     if (c.isTurn) {
-                        c.value = -negamax(opponent, d, -INFINITY, INFINITY);
+                        c.value = search(nextPlayer, d, -INFINITY, INFINITY);
                     } else {
                         makeMove(c.m);
-                        c.value = -negamax(opponent, d, -INFINITY, INFINITY);
+                        c.value = search(nextPlayer, d, -INFINITY, INFINITY);
                         unmakeMove(c.m);
                     }
                 }

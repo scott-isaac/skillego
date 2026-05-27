@@ -5,7 +5,7 @@
 function debugLog() {}
 
 // Import the AI dependencies
-importScripts('constants.js', 'rules.js', 'minimax.js', 'classic-ai.js');
+importScripts('constants.js', 'rules.js', 'minimax.js', 'classic-ai.js?v=2');
 
 onmessage = function (e) {
     const { engine, params, state, cpuPlayer } = e.data;
