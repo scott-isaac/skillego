@@ -109,6 +109,22 @@ function ios_pieceSpriteKey(r, c) {
     return piece ? _pieceSpriteKey(piece, r, c) : null;
 }
 
+// Batched form of the above for the whole board — one JSContext round-trip per
+// snapshot instead of one per revealed cell per render (BoardView calls this
+// once whenever the engine yields a new snapshot).
+function ios_getAllSpriteKeys() {
+    const result = [];
+    for (let r = 0; r < BOARD_ROWS; r++) {
+        const row = [];
+        for (let c = 0; c < BOARD_COLS; c++) {
+            const piece = gameState.board[r][c];
+            row.push(piece && !gameState.covered[r][c] ? _pieceSpriteKey(piece, r, c) : null);
+        }
+        result.push(row);
+    }
+    return JSON.stringify(result);
+}
+
 // Mirrors server/GameRoom.js's _endTurn/_checkGameOver, applied to gameState
 // instead of a GameRoom instance.
 function _checkGameOver() {

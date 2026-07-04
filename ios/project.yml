@@ -56,14 +56,30 @@ targets:
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Skillego.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Skillego"
         BUNDLE_LOADER: "$(TEST_HOST)"
 
+  SkillegoUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: SkillegoUITests
+    dependencies:
+      - target: Skillego
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.crisiscontrol.skillego.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: Skillego
+
 schemes:
   Skillego:
     build:
       targets:
         Skillego: all
         SkillegoTests: [test]
+        SkillegoUITests: [test]
     test:
       targets:
         - SkillegoTests
+        - SkillegoUITests
     run:
       config: Debug

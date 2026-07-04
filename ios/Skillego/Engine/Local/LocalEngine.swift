@@ -24,6 +24,23 @@ final class LocalEngine: GameEngineClient {
         self.eventContinuation = eventContinuation
     }
 
+    // MARK: - Constants
+
+    /// Fetches piece/ability/board-size definitions live from constants.js —
+    /// used to drive the setup screen without hand-transcribing them into Swift.
+    func loadConstants() async throws -> GameConstants {
+        let resultJSON = try await host.call("ios_getConstants")
+        return try decode(GameConstants.self, from: resultJSON)
+    }
+
+    /// Contextual sprite keys (cat_heart/cat_scared/robot_angry/robot_heart/...)
+    /// for every revealed cell, computed by board.js's pure sprite-selection
+    /// helpers in one batched call. `nil` entries are empty or covered cells.
+    func spriteKeys() async throws -> [[String?]] {
+        let resultJSON = try await host.call("ios_getAllSpriteKeys")
+        return try decode([[String?]].self, from: resultJSON)
+    }
+
     // MARK: - Lifecycle
 
     func startLocalGame(_ config: GameSetupConfig) async throws -> GameSnapshot {

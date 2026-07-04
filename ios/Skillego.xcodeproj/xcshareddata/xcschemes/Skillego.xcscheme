@@ -35,6 +35,20 @@
                ReferencedContainer = "container:Skillego.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "DBEC33278FF8AF5E2F53D700"
+               BuildableName = "SkillegoUITests.xctest"
+               BlueprintName = "SkillegoUITests"
+               ReferencedContainer = "container:Skillego.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction
@@ -61,6 +75,17 @@
                BlueprintIdentifier = "AA039075C88F1196A469ACB1"
                BuildableName = "SkillegoTests.xctest"
                BlueprintName = "SkillegoTests"
+               ReferencedContainer = "container:Skillego.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "DBEC33278FF8AF5E2F53D700"
+               BuildableName = "SkillegoUITests.xctest"
+               BlueprintName = "SkillegoUITests"
                ReferencedContainer = "container:Skillego.xcodeproj">
             </BuildableReference>
          </TestableReference>

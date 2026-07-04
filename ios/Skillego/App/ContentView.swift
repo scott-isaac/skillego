@@ -1,14 +1,21 @@
 import SwiftUI
 
-// Placeholder root view — replaced by SetupView once the local-engine slice
-// (JSContext core + fixture tests) is verified. See the iOS build-order plan.
 struct ContentView: View {
+    @State private var appState = AppState()
+
     var body: some View {
-        VStack(spacing: 12) {
-            Text("Skillego").font(.largeTitle.bold())
-            Text("iOS engine bring-up in progress").foregroundStyle(.secondary)
+        Group {
+            switch appState.route {
+            case .setup:
+                SetupView()
+            case .playing(let config):
+                GameScreenView(config: config)
+            }
         }
-        .padding()
+        .environment(appState)
+        .task {
+            await appState.loadConstantsIfNeeded()
+        }
     }
 }
 
