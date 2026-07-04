@@ -14,27 +14,64 @@ struct BoardView: View {
     @State private var offset: CGSize = .zero
     @State private var lastOffset: CGSize = .zero
 
+    // board.png's native frame size + grid inset, taken directly from
+    // styles.css's #board-frame (1024x1536) / #board (left:158 top:314 690x690).
+    // 2-player (6x6) only — 4-player mode drops the art in the web app too,
+    // since it's sized for a 6x6 layout (styles.css's #board-frame.mode-4p).
+    private let frameSize = CGSize(width: 1024, height: 1536)
+    private let gridInset = CGRect(x: 158, y: 314, width: 690, height: 690)
+
     var body: some View {
         GeometryReader { geo in
             if let snapshot = viewModel.snapshot {
                 let rows = snapshot.board.count
                 let cols = snapshot.board.first?.count ?? 1
-                let cellSize = min(geo.size.width / CGFloat(cols), geo.size.height / CGFloat(rows))
 
-                grid(snapshot: snapshot, rows: rows, cols: cols, cellSize: cellSize)
-                    .frame(width: cellSize * CGFloat(cols), height: cellSize * CGFloat(rows))
-                    .scaleEffect(scale)
-                    .offset(offset)
-                    .position(x: geo.size.width / 2, y: cellSize * CGFloat(rows) / 2)
-                    .gesture(magnifyAndDragGesture)
-                    .onTapGesture(count: 2) {
-                        withAnimation { scale = 1; lastScale = 1; offset = .zero; lastOffset = .zero }
-                    }
+                if rows == 6, cols == 6, GameAssetImage.boardFrame != nil {
+                    decorativeBoard(geo: geo, snapshot: snapshot, rows: rows, cols: cols)
+                } else {
+                    plainBoard(geo: geo, snapshot: snapshot, rows: rows, cols: cols)
+                }
             } else {
                 ProgressView()
                     .frame(width: geo.size.width, height: geo.size.height)
             }
         }
+    }
+
+    @ViewBuilder
+    private func decorativeBoard(geo: GeometryProxy, snapshot: GameSnapshot, rows: Int, cols: Int) -> some View {
+        let frameW = min(geo.size.width, geo.size.height * frameSize.width / frameSize.height)
+        let frameH = frameW * frameSize.height / frameSize.width
+        let frameScale = frameW / frameSize.width
+        let cellSize = (gridInset.width * frameScale) / CGFloat(cols)
+
+        ZStack(alignment: .topLeading) {
+            if let boardImage = GameAssetImage.boardFrame {
+                Image(uiImage: boardImage).resizable().frame(width: frameW, height: frameH)
+            }
+            grid(snapshot: snapshot, rows: rows, cols: cols, cellSize: cellSize)
+                .frame(width: cellSize * CGFloat(cols), height: cellSize * CGFloat(rows))
+                .offset(x: gridInset.minX * frameScale, y: gridInset.minY * frameScale)
+        }
+        .frame(width: frameW, height: frameH)
+        .scaleEffect(scale)
+        .offset(offset)
+        .position(x: geo.size.width / 2, y: frameH / 2)
+        .gesture(magnifyAndDragGesture)
+        .onTapGesture(count: 2) { resetZoom() }
+    }
+
+    @ViewBuilder
+    private func plainBoard(geo: GeometryProxy, snapshot: GameSnapshot, rows: Int, cols: Int) -> some View {
+        let cellSize = min(geo.size.width / CGFloat(cols), geo.size.height / CGFloat(rows))
+        grid(snapshot: snapshot, rows: rows, cols: cols, cellSize: cellSize)
+            .frame(width: cellSize * CGFloat(cols), height: cellSize * CGFloat(rows))
+            .scaleEffect(scale)
+            .offset(offset)
+            .position(x: geo.size.width / 2, y: cellSize * CGFloat(rows) / 2)
+            .gesture(magnifyAndDragGesture)
+            .onTapGesture(count: 2) { resetZoom() }
     }
 
     private func grid(snapshot: GameSnapshot, rows: Int, cols: Int, cellSize: CGFloat) -> some View {
@@ -56,6 +93,13 @@ struct BoardView: View {
                     }
                 }
             }
+        }
+    }
+
+    private func resetZoom() {
+        withAnimation {
+            scale = 1; lastScale = 1
+            offset = .zero; lastOffset = .zero
         }
     }
 

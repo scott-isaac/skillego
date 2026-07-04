@@ -19,6 +19,12 @@ enum GameAssetImage {
 
     static let covered = png("piece_uncovered")
 
+    // Decorative frame behind the 6x6 (2-player) board — mirrors styles.css's
+    // #board-frame background. Not used in 4-player mode; the web app drops it
+    // there too since the art is sized for a 6x6 layout (see styles.css's
+    // #board-frame.mode-4p comment).
+    static let boardFrame = png("board")
+
     static func player(color: String) -> UIImage? {
         guard !color.isEmpty else { return nil }
         return png("player_\(color)")

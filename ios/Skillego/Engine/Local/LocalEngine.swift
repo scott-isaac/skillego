@@ -142,6 +142,24 @@ final class LocalEngine: GameEngineClient {
         guard let config else { return }
         _ = try await startLocalGame(config)
     }
+
+    #if DEBUG
+    /// Test-only: loads an arbitrary board state directly (bypassing the
+    /// random deal in `startLocalGame`) so `availableDestinations` can be
+    /// exercised deterministically. See SkillegoTests/AbilityMoveTests.swift.
+    func debugLoadState(board: [[Piece?]], covered: [[Bool]], pushBlocked: [BoardCell] = [], abilities: [String]) async throws {
+        let payload = TestLoadStatePayload(
+            rows: board.count, cols: board.first?.count ?? 0,
+            board: board, covered: covered, pushBlocked: pushBlocked, abilities: abilities
+        )
+        _ = try await host.call("ios_test_loadState", args: [try encode(payload)])
+        currentSnapshot = GameSnapshot(
+            board: board, covered: covered, pushBlocked: pushBlocked,
+            currentPlayer: 1, numPlayers: 2, eliminatedPlayers: [],
+            enabledAbilities: abilities, gameOver: false, winner: nil
+        )
+    }
+    #endif
 }
 
 // MARK: - Wire-format helpers (LocalEngine-internal, not shared UI models)
@@ -155,6 +173,17 @@ private struct CpuMoveResponse: Codable {
     var move: GameMove?
     var error: String?
 }
+
+#if DEBUG
+private struct TestLoadStatePayload: Encodable {
+    var rows: Int
+    var cols: Int
+    var board: [[Piece?]]
+    var covered: [[Bool]]
+    var pushBlocked: [BoardCell]
+    var abilities: [String]
+}
+#endif
 
 private func encode(_ value: some Encodable) throws -> String {
     let data = try JSONEncoder().encode(value)
