@@ -69,7 +69,7 @@ final class JSEngineTests: XCTestCase {
     }
 
     private func bridgeFunctionName(for function: String) -> String {
-        "ios_" + function
+        "ios_test_" + function
     }
 }
 

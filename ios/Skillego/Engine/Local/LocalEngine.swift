@@ -65,26 +65,13 @@ final class LocalEngine: GameEngineClient {
         }
 
         do {
-            var result: [GameMove] = []
-
-            let destinationsJSON = try await host.call("ios_getValidMoves", args: [String(row), String(col)])
-            let destinations = try decode([BoardCell].self, from: destinationsJSON)
-            for destination in destinations {
-                let occupied = snapshot.board[destination.row][destination.col] != nil
-                result.append(GameMove(
-                    type: occupied ? "capture" : "move",
-                    fromR: row, fromC: col, toR: destination.row, toC: destination.col
-                ))
-            }
-
-            for function in [
-                "ios_getPushMoves", "ios_getHopMoves", "ios_getEngulfMoves",
-                "ios_getTransformMoves", "ios_getSnipeMoves", "ios_getPyroMoves",
-            ] {
-                let json = try await host.call(function, args: [String(row), String(col)])
-                result += try decode([GameMove].self, from: json)
-            }
-            return result
+            // Plain moves/captures + all six ability generators in a single
+            // JSContext round trip (ios_getAllDestinations does the move/vs
+            // capture tagging JS-side now) — this is the highest-frequency
+            // path in the app, so it's worth collapsing what used to be 7
+            // sequential calls into 1.
+            let json = try await host.call("ios_getAllDestinations", args: [String(row), String(col)])
+            return try decode([GameMove].self, from: json)
         } catch {
             return []
         }

@@ -105,24 +105,35 @@ function ios_startLocalGame(configJSON) {
     return JSON.stringify(_snapshot());
 }
 
+// Everything a selected cell can do — plain moves/captures (from
+// getValidMoves, tagged with type here the same way LocalEngine used to)
+// plus all six ability generators — in one call instead of seven separate
+// round trips. This is the highest-frequency path in the app (fires on every
+// tap-to-select), so collapsing it here matters more than the other ios_*
+// functions, which are one-per-game-start/move/cpu-turn already.
+//
 // r/c arrive as strings — every call from Swift goes through JSContextHost.call's
 // [String] args (see its doc comment); rules.js does raw arithmetic on them
 // (e.g. `r + dr`), which silently string-concatenates instead of adding unless
 // coerced to numbers first.
-function ios_getValidMoves(r, c)     { r = Number(r); c = Number(c); return JSON.stringify(getValidMoves(gameState, r, c)); }
-function ios_getPushMoves(r, c)      { r = Number(r); c = Number(c); return JSON.stringify(getPushMoves(gameState, r, c, gameState.enabledAbilities)); }
-function ios_getHopMoves(r, c)       { r = Number(r); c = Number(c); return JSON.stringify(getHopMoves(gameState, r, c, gameState.enabledAbilities)); }
-function ios_getEngulfMoves(r, c)    { r = Number(r); c = Number(c); return JSON.stringify(getEngulfMoves(gameState, r, c, gameState.enabledAbilities)); }
-function ios_getTransformMoves(r, c) { r = Number(r); c = Number(c); return JSON.stringify(getTransformMoves(gameState, r, c, gameState.enabledAbilities)); }
-function ios_getSnipeMoves(r, c)     { r = Number(r); c = Number(c); return JSON.stringify(getSnipeMoves(gameState, r, c, gameState.enabledAbilities)); }
-function ios_getPyroMoves(r, c)      { r = Number(r); c = Number(c); return JSON.stringify(getPyroMoves(gameState, r, c, gameState.enabledAbilities)); }
-
-// board.js's contextual sprite key (cat_heart/cat_scared/robot_angry/robot_heart) —
-// 100% DOM-free already; reused verbatim rather than hand-porting the mood rules.
-function ios_pieceSpriteKey(r, c) {
+function ios_getAllDestinations(r, c) {
     r = Number(r); c = Number(c);
     const piece = gameState.board[r][c];
-    return piece ? _pieceSpriteKey(piece, r, c) : null;
+    if (!piece || gameState.covered[r][c]) return JSON.stringify([]);
+
+    const abilities = gameState.enabledAbilities;
+    const result = [];
+    for (const dest of getValidMoves(gameState, r, c)) {
+        const occupied = gameState.board[dest.row][dest.col] !== null;
+        result.push({ type: occupied ? 'capture' : 'move', fromR: r, fromC: c, toR: dest.row, toC: dest.col });
+    }
+    result.push(...getPushMoves(gameState, r, c, abilities));
+    result.push(...getHopMoves(gameState, r, c, abilities));
+    result.push(...getEngulfMoves(gameState, r, c, abilities));
+    result.push(...getTransformMoves(gameState, r, c, abilities));
+    result.push(...getSnipeMoves(gameState, r, c, abilities));
+    result.push(...getPyroMoves(gameState, r, c, abilities));
+    return JSON.stringify(result);
 }
 
 // Mirrors server/GameRoom.js's _endTurn/_checkGameOver, applied to gameState
@@ -264,3 +275,15 @@ function ios_test_applyMoveToState(moveJSON) {
     const state = { board: gameState.board, covered: gameState.covered, pushBlocked: gameState.pushBlocked };
     return JSON.stringify(applyMoveToState(state, JSON.parse(moveJSON)));
 }
+
+// Per-function wrappers so JSEngineTests can validate each rules.js generator
+// in isolation against scripts/gen-ios-fixtures.js's fixtures. Production
+// code doesn't call these individually — see ios_getAllDestinations above,
+// which runs all of them in one JSContext round trip instead of seven.
+function ios_test_getValidMoves(r, c)     { r = Number(r); c = Number(c); return JSON.stringify(getValidMoves(gameState, r, c)); }
+function ios_test_getPushMoves(r, c)      { r = Number(r); c = Number(c); return JSON.stringify(getPushMoves(gameState, r, c, gameState.enabledAbilities)); }
+function ios_test_getHopMoves(r, c)       { r = Number(r); c = Number(c); return JSON.stringify(getHopMoves(gameState, r, c, gameState.enabledAbilities)); }
+function ios_test_getEngulfMoves(r, c)    { r = Number(r); c = Number(c); return JSON.stringify(getEngulfMoves(gameState, r, c, gameState.enabledAbilities)); }
+function ios_test_getTransformMoves(r, c) { r = Number(r); c = Number(c); return JSON.stringify(getTransformMoves(gameState, r, c, gameState.enabledAbilities)); }
+function ios_test_getSnipeMoves(r, c)     { r = Number(r); c = Number(c); return JSON.stringify(getSnipeMoves(gameState, r, c, gameState.enabledAbilities)); }
+function ios_test_getPyroMoves(r, c)      { r = Number(r); c = Number(c); return JSON.stringify(getPyroMoves(gameState, r, c, gameState.enabledAbilities)); }
