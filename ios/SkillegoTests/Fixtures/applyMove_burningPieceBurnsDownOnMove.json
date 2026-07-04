@@ -1,0 +1,137 @@
+{
+  "name": "applyMove_burningPieceBurnsDownOnMove",
+  "function": "applyMoveToState",
+  "input": {
+    "rows": 6,
+    "cols": 6,
+    "pieces": [
+      {
+        "r": 2,
+        "c": 2,
+        "type": "dragon",
+        "power": 6,
+        "player": 1,
+        "burning": true
+      }
+    ],
+    "pushBlocked": [],
+    "abilities": []
+  },
+  "args": {
+    "move": {
+      "type": "move",
+      "fromR": 2,
+      "fromC": 2,
+      "toR": 2,
+      "toC": 3
+    }
+  },
+  "output": {
+    "board": [
+      [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        null,
+        null,
+        null,
+        {
+          "type": "robot",
+          "power": 5,
+          "player": 1,
+          "burning": true
+        },
+        null,
+        null
+      ],
+      [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ]
+    ],
+    "covered": [
+      [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    ],
+    "pushBlocked": []
+  }
+}

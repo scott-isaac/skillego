@@ -1,0 +1,48 @@
+{
+  "name": "validMoves_plainMoveAndCapture",
+  "function": "getValidMoves",
+  "input": {
+    "rows": 6,
+    "cols": 6,
+    "pieces": [
+      {
+        "r": 2,
+        "c": 2,
+        "type": "dog",
+        "power": 3,
+        "player": 1
+      },
+      {
+        "r": 2,
+        "c": 3,
+        "type": "cat",
+        "power": 2,
+        "player": 2
+      }
+    ],
+    "pushBlocked": [],
+    "abilities": []
+  },
+  "args": {
+    "r": 2,
+    "c": 2
+  },
+  "output": [
+    {
+      "row": 1,
+      "col": 2
+    },
+    {
+      "row": 3,
+      "col": 2
+    },
+    {
+      "row": 2,
+      "col": 1
+    },
+    {
+      "row": 2,
+      "col": 3
+    }
+  ]
+}

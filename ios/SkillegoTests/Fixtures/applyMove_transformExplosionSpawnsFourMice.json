@@ -1,0 +1,168 @@
+{
+  "name": "applyMove_transformExplosionSpawnsFourMice",
+  "function": "applyMoveToState",
+  "input": {
+    "rows": 6,
+    "cols": 6,
+    "pieces": [
+      {
+        "r": 3,
+        "c": 3,
+        "type": "wizard",
+        "power": 4,
+        "player": 1
+      }
+    ],
+    "pushBlocked": [],
+    "abilities": []
+  },
+  "args": {
+    "move": {
+      "type": "transform",
+      "wizR": 3,
+      "wizC": 3,
+      "isExplosion": true,
+      "cells": [
+        {
+          "r": 2,
+          "c": 3
+        },
+        {
+          "r": 4,
+          "c": 3
+        },
+        {
+          "r": 3,
+          "c": 2
+        },
+        {
+          "r": 3,
+          "c": 4
+        }
+      ]
+    }
+  },
+  "output": {
+    "board": [
+      [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        null,
+        null,
+        null,
+        {
+          "type": "mouse",
+          "power": 1,
+          "player": 1,
+          "burning": false
+        },
+        null,
+        null
+      ],
+      [
+        null,
+        null,
+        {
+          "type": "mouse",
+          "power": 1,
+          "player": 1,
+          "burning": false
+        },
+        null,
+        {
+          "type": "mouse",
+          "power": 1,
+          "player": 1,
+          "burning": false
+        },
+        null
+      ],
+      [
+        null,
+        null,
+        null,
+        {
+          "type": "mouse",
+          "power": 1,
+          "player": 1,
+          "burning": false
+        },
+        null,
+        null
+      ],
+      [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ]
+    ],
+    "covered": [
+      [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    ],
+    "pushBlocked": []
+  }
+}

@@ -1,0 +1,135 @@
+{
+  "name": "applyMove_uncoverRevealsPiece",
+  "function": "applyMoveToState",
+  "input": {
+    "rows": 6,
+    "cols": 6,
+    "pieces": [
+      {
+        "r": 1,
+        "c": 1,
+        "type": "dog",
+        "power": 3,
+        "player": 1,
+        "covered": true
+      }
+    ],
+    "pushBlocked": [],
+    "abilities": []
+  },
+  "args": {
+    "move": {
+      "type": "uncover",
+      "r": 1,
+      "c": 1
+    }
+  },
+  "output": {
+    "board": [
+      [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        null,
+        {
+          "type": "dog",
+          "power": 3,
+          "player": 1,
+          "burning": false
+        },
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ]
+    ],
+    "covered": [
+      [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    ],
+    "pushBlocked": []
+  }
+}

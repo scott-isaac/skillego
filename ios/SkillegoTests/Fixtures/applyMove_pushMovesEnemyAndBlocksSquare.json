@@ -1,0 +1,155 @@
+{
+  "name": "applyMove_pushMovesEnemyAndBlocksSquare",
+  "function": "applyMoveToState",
+  "input": {
+    "rows": 6,
+    "cols": 6,
+    "pieces": [
+      {
+        "r": 2,
+        "c": 2,
+        "type": "dragon",
+        "power": 6,
+        "player": 1
+      },
+      {
+        "r": 2,
+        "c": 3,
+        "type": "mouse",
+        "power": 1,
+        "player": 2
+      }
+    ],
+    "pushBlocked": [],
+    "abilities": []
+  },
+  "args": {
+    "move": {
+      "type": "push",
+      "drR": 2,
+      "drC": 2,
+      "enemyR": 2,
+      "enemyC": 3,
+      "destR": 2,
+      "destC": 4
+    }
+  },
+  "output": {
+    "board": [
+      [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        null,
+        null,
+        {
+          "type": "dragon",
+          "power": 6,
+          "player": 1,
+          "burning": false
+        },
+        null,
+        {
+          "type": "mouse",
+          "power": 1,
+          "player": 2,
+          "burning": false
+        },
+        null
+      ],
+      [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ]
+    ],
+    "covered": [
+      [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    ],
+    "pushBlocked": [
+      {
+        "row": 2,
+        "col": 3
+      }
+    ]
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "name": "snipeMoves_robotSnipesWithCatSpotter",
+  "function": "getSnipeMoves",
+  "input": {
+    "rows": 6,
+    "cols": 6,
+    "pieces": [
+      {
+        "r": 0,
+        "c": 0,
+        "type": "robot",
+        "power": 5,
+        "player": 1
+      },
+      {
+        "r": 0,
+        "c": 3,
+        "type": "mouse",
+        "power": 1,
+        "player": 2
+      },
+      {
+        "r": 1,
+        "c": 3,
+        "type": "cat",
+        "power": 2,
+        "player": 1
+      }
+    ],
+    "pushBlocked": [],
+    "abilities": [
+      "snipe"
+    ]
+  },
+  "args": {
+    "r": 0,
+    "c": 0
+  },
+  "output": [
+    {
+      "type": "snipe",
+      "robotR": 0,
+      "robotC": 0,
+      "targetR": 0,
+      "targetC": 3,
+      "spotterR": 1,
+      "spotterC": 3
+    }
+  ]
+}
