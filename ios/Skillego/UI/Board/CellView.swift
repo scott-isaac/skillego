@@ -43,18 +43,26 @@ struct CellView: View {
         }
     }
 
+    // Every fraction here is lifted straight from board.js's renderCell
+    // background-size percentages (65%/85%/75%/63%/107%,72%) — not eyeballed.
+    // Fixed-point padding rendered pieces much closer to full-cell size than
+    // the web version, which was the biggest single reason the board felt
+    // "behind" the live site: pieces read as cramped/oversized against tile
+    // art that's proportioned for a 65%-sized piece with visible tile around it.
     @ViewBuilder
     private func content(size: CGSize) -> some View {
         if let piece {
             if covered {
                 if let coveredImage = GameAssetImage.covered {
-                    Image(uiImage: coveredImage).resizable().scaledToFit().padding(6)
+                    Image(uiImage: coveredImage).resizable().scaledToFit()
+                        .frame(width: size.width * 0.75, height: size.height * 0.75)
                 }
             } else {
                 let color = playerArtColor[safe: piece.player] ?? ""
                 ZStack {
                     if let player = GameAssetImage.player(color: color) {
-                        Image(uiImage: player).resizable().scaledToFit().padding(3)
+                        Image(uiImage: player).resizable().scaledToFit()
+                            .frame(width: size.width * 0.85, height: size.height * 0.85)
                     }
                     // Sits between the player-color square and the piece sprite,
                     // matching board.js's renderCell background-image order
@@ -65,7 +73,13 @@ struct CellView: View {
                             .frame(width: size.width * 1.07, height: size.height * 0.72)
                     }
                     if let key = spriteKey, let sprite = GameAssetImage.piece(spriteKey: key) {
-                        Image(uiImage: sprite).resizable().scaledToFit().padding(6)
+                        // 63% while burning (vs. 65% normally) is deliberately
+                        // subtle — it's the fire gif's own 107%/72% overshoot
+                        // that actually makes the flame read as "behind" the
+                        // piece, not this size delta.
+                        let spriteFraction: CGFloat = piece.isBurning ? 0.63 : 0.65
+                        Image(uiImage: sprite).resizable().scaledToFit()
+                            .frame(width: size.width * spriteFraction, height: size.height * spriteFraction)
                     }
                 }
                 .modifier(BurningGlow(isBurning: piece.isBurning))
