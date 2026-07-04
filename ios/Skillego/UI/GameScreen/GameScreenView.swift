@@ -29,19 +29,13 @@ struct GameScreenView: View {
         ZStack(alignment: .topLeading) {
             Color.black.ignoresSafeArea()
 
-            BoardView(viewModel: viewModel, playerColors: appState.constants?.playerColors ?? [:])
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .ignoresSafeArea(edges: .bottom)
-
-            Button {
-                viewModel.resign()
-            } label: {
-                Image(systemName: "flag.fill")
-                    .padding(10)
-                    .background(.black.opacity(0.55), in: Circle())
-            }
-            .foregroundStyle(.white)
-            .padding()
+            BoardView(
+                viewModel: viewModel,
+                playerColors: appState.constants?.playerColors ?? [:],
+                onResign: { viewModel.resign() }
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .ignoresSafeArea(edges: .bottom)
 
             if let snapshot = viewModel.snapshot, snapshot.gameOver {
                 Color.black.opacity(0.4).ignoresSafeArea()

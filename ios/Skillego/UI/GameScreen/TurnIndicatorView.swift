@@ -1,23 +1,32 @@
 import SwiftUI
 
+/// Matches styles.css's #turn-indicator: gold (#FFD700) Cinzel-style bold
+/// serif text with a layered gold-glow + black-drop-shadow text-shadow,
+/// meant to echo the "Skillego" logo's own lettering. `fontScale` lets the
+/// caller size it proportionally to however zoomed-in the board frame is.
 struct TurnIndicatorView: View {
     let snapshot: GameSnapshot?
     let isCpuThinking: Bool
     let playerColors: [String: String]
+    var fontScale: CGFloat = 1
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 6 * fontScale) {
             if let snapshot {
                 Circle()
                     .fill(Color(hex: playerColors[String(snapshot.currentPlayer)] ?? "#999999"))
-                    .frame(width: 14, height: 14)
-                Text(isCpuThinking
-                    ? "Player \(snapshot.currentPlayer) (CPU) is thinking…"
-                    : "Player \(snapshot.currentPlayer)'s turn")
+                    .frame(width: 16 * fontScale, height: 16 * fontScale)
+                Text(isCpuThinking ? "Player \(snapshot.currentPlayer) (CPU)…" : "Player \(snapshot.currentPlayer)'s turn")
+                    .font(.system(size: 34 * fontScale, weight: .bold, design: .serif))
+                    .tracking(1.5 * fontScale)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.4)
+                    .foregroundStyle(Color(hex: "FFD700"))
+                    .shadow(color: .black.opacity(0.95), radius: 2 * fontScale, x: 1, y: 2)
+                    .shadow(color: .black.opacity(0.7), radius: 3 * fontScale, x: -1, y: -1)
+                    .shadow(color: Color(hex: "FFC83C").opacity(0.55), radius: 10 * fontScale)
             }
         }
-        .font(.headline)
-        .padding(.vertical, 8)
     }
 }
 

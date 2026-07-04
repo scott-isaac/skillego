@@ -1,6 +1,11 @@
 import Foundation
 import Observation
 
+enum DestinationKind {
+    case move
+    case capture
+}
+
 /// Turn/selection state machine mirroring js/no-modules/game.js's
 /// handleCellClick exactly: tapping a covered piece uncovers it immediately;
 /// tapping an own uncovered piece selects it and shows plain move/capture
@@ -103,8 +108,13 @@ final class GameSessionViewModel {
         selectedCell == BoardCell(row: row, col: col)
     }
 
-    func isValidDestination(row: Int, col: Int) -> Bool {
-        plainDestinations.contains { $0.toR == row && $0.toC == col }
+    /// `.move` (empty square) vs `.capture` (enemy square) render as distinct
+    /// visuals — a soft green dot vs. glowing orange corner brackets — since
+    /// they're materially different actions, mirroring styles.css's separate
+    /// .valid-move / .valid-capture treatments.
+    func destinationKind(row: Int, col: Int) -> DestinationKind? {
+        guard let move = plainDestinations.first(where: { $0.toR == row && $0.toC == col }) else { return nil }
+        return move.type == "capture" ? .capture : .move
     }
 
     private func clearSelection() {

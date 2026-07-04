@@ -25,6 +25,12 @@ enum GameAssetImage {
     // #board-frame.mode-4p comment).
     static let boardFrame = png("board")
 
+    // Shared glossy red button background for the resign button and skill-tray
+    // slots — mirrors styles.css's #resign-button/.skill-slot, both of which
+    // use `background: url('assets/button.png') ... / 100% 100%` (stretched to
+    // whatever size the element is, so one asset serves both contexts).
+    static let button = png("button")
+
     static func player(color: String) -> UIImage? {
         guard !color.isEmpty else { return nil }
         return png("player_\(color)")

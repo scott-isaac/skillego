@@ -22,6 +22,7 @@
 		3EE62801479D518EBE5CBFFE /* GameAssetImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FB4E59209970A6D009451AE /* GameAssetImage.swift */; };
 		40B2218BA8EB516E1B7D7A4C /* GameModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D88F5DB4E42DEC6FDED7675 /* GameModels.swift */; };
 		4475EC9B992B2788326C475C /* Array+Safe.swift in Sources */ = {isa = PBXBuildFile; fileRef = F28FB28E8A392CEE2086D766 /* Array+Safe.swift */; };
+		48738EF5B6DDA83672EE1406 /* ResignButtonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C1567BBB6F2B3024C84B23D /* ResignButtonView.swift */; };
 		5FFCA238FDB22BED38EDC7C6 /* hopMoves_mouseHopsOverPiece.json in Resources */ = {isa = PBXBuildFile; fileRef = 6A9D233D00B780855EDC74A1 /* hopMoves_mouseHopsOverPiece.json */; };
 		7FCEE5420A11C698B22415E9 /* JSContextHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = F28FE6CE375FA97D905BA054 /* JSContextHost.swift */; };
 		84697FBFF0ACE1F63DDE0007 /* GameSessionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D206CF64A453DBE278A26D7 /* GameSessionViewModel.swift */; };
@@ -77,6 +78,7 @@
 		5A2823BEC2BFE95D2DF2C15B /* LocalEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalEngine.swift; sourceTree = "<group>"; };
 		6288788E1AE84042C3B19E76 /* AbilityMoveTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AbilityMoveTests.swift; sourceTree = "<group>"; };
 		6A9D233D00B780855EDC74A1 /* hopMoves_mouseHopsOverPiece.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = hopMoves_mouseHopsOverPiece.json; sourceTree = "<group>"; };
+		6C1567BBB6F2B3024C84B23D /* ResignButtonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResignButtonView.swift; sourceTree = "<group>"; };
 		72EBDBB9E82CE2A3463DC8A0 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		732B1C86744EC25E8C4450D2 /* snipeMoves_robotSnipesWithCatSpotter.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = snipeMoves_robotSnipesWithCatSpotter.json; sourceTree = "<group>"; };
 		7685E5F6D64791E0388D304B /* pushMoves_dragonPushesEnemy.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = pushMoves_dragonPushesEnemy.json; sourceTree = "<group>"; };
@@ -142,6 +144,7 @@
 				4AAB60C3B9BEC5ED04D0B81B /* BoardView.swift */,
 				FBC6D2EAF3C4364B4C3D5CD8 /* CellView.swift */,
 				1FB4E59209970A6D009451AE /* GameAssetImage.swift */,
+				6C1567BBB6F2B3024C84B23D /* ResignButtonView.swift */,
 				8383C3A6FF82807EC144767D /* SkillTrayView.swift */,
 			);
 			path = Board;
@@ -443,6 +446,7 @@
 				7FCEE5420A11C698B22415E9 /* JSContextHost.swift in Sources */,
 				A5ED742DC7F3A9DE79F28400 /* LocalEngine.swift in Sources */,
 				1452BE28FF69182D3E0696A7 /* LocalStorageShim.swift in Sources */,
+				48738EF5B6DDA83672EE1406 /* ResignButtonView.swift in Sources */,
 				1D99B2FD2B00AEEA0280FAF1 /* SetupView.swift in Sources */,
 				3A3C7F45C5EE8F4657BF085C /* SkillTrayView.swift in Sources */,
 				D16C81582D29BFA5CAF80F65 /* SkillegoApp.swift in Sources */,

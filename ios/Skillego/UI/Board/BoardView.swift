@@ -4,12 +4,15 @@ import SwiftUI
 ///
 /// - 2-player (6x6): the web app's ornate board.png frame, zoomed in relative
 ///   to the web version — only ~1 tile's width of decorative margin left/right
-///   instead of the full frame — with the turn indicator and skill tray
-///   overlaid directly onto the frame's baked-in red bar and 5-slot bracket
-///   (see the pixel measurements below) rather than living in separate bars.
-///   The frame is scaled off its width, so it naturally runs taller than the
-///   screen; the excess (mostly the bottom "steps" decoration) is clipped
-///   rather than shrunk to fit, which is what keeps the grid itself large.
+///   instead of the full frame — with the turn indicator, skill tray, and
+///   resign button overlaid directly onto the frame's baked-in red bar, 5-slot
+///   bracket, and lower shelf (exact rects below are taken straight from
+///   styles.css's #turn-indicator/#skill-tray/#resign-button, which were
+///   hand-tuned against this same image). The frame is scaled off its width,
+///   so it naturally runs taller than the screen; the excess (the "Skillego"
+///   logo above, and mostly the bottom "steps" decoration) either shows or
+///   clips depending on how much room there is — nothing is deliberately
+///   cropped out.
 /// - 4-player (9x8): board.png doesn't fit that aspect ratio (same as the web
 ///   app's `#board-frame.mode-4p` fallback), so this keeps a plain grid with
 ///   separate header/footer bars.
@@ -20,19 +23,20 @@ import SwiftUI
 struct BoardView: View {
     let viewModel: GameSessionViewModel
     let playerColors: [String: String]
+    let onResign: () -> Void
 
     @State private var scale: CGFloat = 1
     @State private var lastScale: CGFloat = 1
     @State private var offset: CGSize = .zero
     @State private var lastOffset: CGSize = .zero
 
-    // Pixel-measured against assets/board.png (1024x1536) — see the iOS UI
-    // pass that introduced this for how these were derived.
+    // Taken directly from styles.css (#board, #turn-indicator, #skill-tray,
+    // #resign-button), all authored against this exact 1024x1536 board.png.
     private let frameSize = CGSize(width: 1024, height: 1536)
     private let gridInset = CGRect(x: 158, y: 314, width: 690, height: 690)
-    private let redBarRect = CGRect(x: 215, y: 215, width: 680, height: 75)
-    private let slotRowRect = CGRect(x: 232, y: 1035, width: 518, height: 100)
-    private let contentTopY: CGFloat = 190 // just above the red bar; crops the logo banner above it
+    private let redBarRect = CGRect(x: 213, y: 218, width: 580, height: 68)
+    private let slotRowRect = CGRect(x: 255, y: 1045, width: 503, height: 85)
+    private let resignRect = CGRect(x: 358, y: 1175, width: 290, height: 88)
     private let marginTiles: CGFloat = 1
 
     var body: some View {
@@ -63,23 +67,30 @@ struct BoardView: View {
         let fullW = frameSize.width * frameScale
         let fullH = frameSize.height * frameScale
         let originX = -visibleLeft * frameScale
-        let originY = -contentTopY * frameScale
         let cellSize = tileWidthOriginal * frameScale
 
         ZStack(alignment: .topLeading) {
             if let boardImage = GameAssetImage.boardFrame {
                 Image(uiImage: boardImage).resizable()
                     .frame(width: fullW, height: fullH)
-                    .offset(x: originX, y: originY)
+                    .offset(x: originX, y: 0)
             }
-            placed(redBarRect, scale: frameScale, origin: (originX, originY)) {
-                TurnIndicatorView(snapshot: snapshot, isCpuThinking: viewModel.isCpuThinking, playerColors: playerColors)
+            placed(redBarRect, scale: frameScale, originX: originX) {
+                TurnIndicatorView(
+                    snapshot: snapshot, isCpuThinking: viewModel.isCpuThinking,
+                    playerColors: playerColors, fontScale: frameScale
+                )
             }
-            placed(gridInset, scale: frameScale, origin: (originX, originY)) {
+            placed(gridInset, scale: frameScale, originX: originX) {
                 grid(snapshot: snapshot, rows: rows, cols: cols, cellSize: cellSize)
             }
-            placed(slotRowRect, scale: frameScale, origin: (originX, originY)) {
-                SkillTrayView(moves: viewModel.abilityMoves) { move in viewModel.submitAbilityMove(move) }
+            placed(slotRowRect, scale: frameScale, originX: originX) {
+                SkillTrayView(moves: viewModel.abilityMoves, fontScale: frameScale) { move in
+                    viewModel.submitAbilityMove(move)
+                }
+            }
+            placed(resignRect, scale: frameScale, originX: originX) {
+                ResignButtonView(fontScale: frameScale, action: onResign)
             }
         }
         .frame(width: geo.size.width, height: geo.size.height, alignment: .topLeading)
@@ -90,17 +101,26 @@ struct BoardView: View {
         .onTapGesture(count: 2) { resetZoom() }
     }
 
-    private func placed(_ rect: CGRect, scale frameScale: CGFloat, origin: (CGFloat, CGFloat), @ViewBuilder content: () -> some View) -> some View {
+    private func placed(_ rect: CGRect, scale frameScale: CGFloat, originX: CGFloat, @ViewBuilder content: () -> some View) -> some View {
         content()
             .frame(width: rect.width * frameScale, height: rect.height * frameScale)
-            .offset(x: rect.minX * frameScale + origin.0, y: rect.minY * frameScale + origin.1)
+            .offset(x: rect.minX * frameScale + originX, y: rect.minY * frameScale)
     }
 
     @ViewBuilder
     private func plainBoard(geo: GeometryProxy, snapshot: GameSnapshot, rows: Int, cols: Int) -> some View {
         VStack(spacing: 0) {
-            TurnIndicatorView(snapshot: snapshot, isCpuThinking: viewModel.isCpuThinking, playerColors: playerColors)
-                .padding(.vertical, 8)
+            HStack {
+                Button("Resign", action: onResign)
+                    .foregroundStyle(.white)
+                Spacer()
+                TurnIndicatorView(snapshot: snapshot, isCpuThinking: viewModel.isCpuThinking, playerColors: playerColors)
+                Spacer()
+                Color.clear.frame(width: 60, height: 1)
+            }
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal)
+            .padding(.vertical, 8)
             GeometryReader { innerGeo in
                 let cellSize = min(innerGeo.size.width / CGFloat(cols), innerGeo.size.height / CGFloat(rows))
                 grid(snapshot: snapshot, rows: rows, cols: cols, cellSize: cellSize)
@@ -129,7 +149,7 @@ struct BoardView: View {
                             tileIndex: viewModel.tileIndices[safe: row]?[safe: col] ?? 1,
                             spriteKey: viewModel.spriteKeys[safe: row]?[safe: col] ?? nil,
                             isSelected: viewModel.isSelected(row: row, col: col),
-                            isValidDestination: viewModel.isValidDestination(row: row, col: col)
+                            destinationKind: viewModel.destinationKind(row: row, col: col)
                         )
                         .frame(width: cellSize, height: cellSize)
                         .onTapGesture { viewModel.tapCell(row: row, col: col) }

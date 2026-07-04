@@ -8,25 +8,35 @@ import SwiftUI
 /// tray, which exists for exactly this reason).
 struct SkillTrayView: View {
     let moves: [GameMove]
+    var fontScale: CGFloat = 1
     let onSelect: (GameMove) -> Void
 
     /// board.png bakes exactly 5 slot rectangles into its art (see BoardView's
     /// slotRowRect) — matching game.js's own SKILL_TRAY_SLOTS constant — so
     /// this always renders 5 evenly-spaced slots (empty ones just show nothing)
     /// rather than a scrolling list, letting the caller size/position the whole
-    /// row to sit exactly on top of that baked-in bracket.
+    /// row to sit exactly on top of that baked-in bracket. Styling mirrors
+    /// styles.css's .skill-slot: button.png background, gold icon with a
+    /// black drop shadow, faded to 18% opacity when unavailable.
     var body: some View {
-        HStack(spacing: 0) {
+        HStack(spacing: 22 * fontScale) {
             ForEach(0..<5, id: \.self) { index in
                 let move = moves[safe: index]
                 let info = move.flatMap(Self.buttonInfo(for:))
                 Button {
                     if let move { onSelect(move) }
                 } label: {
-                    Text(info?.icon ?? "")
-                        .font(.system(size: 28))
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .contentShape(Rectangle())
+                    ZStack {
+                        if let button = GameAssetImage.button {
+                            Image(uiImage: button).resizable()
+                        }
+                        Text(info?.icon ?? "")
+                            .font(.system(size: 32 * fontScale))
+                            .foregroundStyle(Color(hex: "FFD700"))
+                            .shadow(color: .black.opacity(0.9), radius: 1, x: 1, y: 1)
+                    }
+                    .frame(width: 82 * fontScale, height: 82 * fontScale)
+                    .opacity(info == nil ? 0.18 : 1)
                 }
                 .disabled(info == nil)
                 .accessibilityLabel(info?.label ?? "")
