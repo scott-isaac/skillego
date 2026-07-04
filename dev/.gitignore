@@ -22,3 +22,8 @@ Thumbs.db
 art/
 
 # Multiplayer server config (injected by GitHub Actions deploy, not in source)
+
+# iOS / Xcode — user-specific state and local build output, not part of the project
+ios/Skillego.xcodeproj/project.xcworkspace/xcuserdata/
+ios/Skillego.xcodeproj/xcuserdata/
+ios/DerivedData/

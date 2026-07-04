@@ -1,0 +1,770 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		056301052DD0F2CB840E100D /* applyMove_uncoverRevealsPiece.json in Resources */ = {isa = PBXBuildFile; fileRef = A631C424EA4654E5C85CB9E2 /* applyMove_uncoverRevealsPiece.json */; };
+		059664B8AF96FDAB3D822A03 /* bridge.js in Resources */ = {isa = PBXBuildFile; fileRef = 9179DF0B3375D2F4E97158CE /* bridge.js */; };
+		0F0E4DF7A4655F83F2D82E07 /* validMoves_plainMoveAndCapture.json in Resources */ = {isa = PBXBuildFile; fileRef = 4A86C662006A8D4399A62862 /* validMoves_plainMoveAndCapture.json */; };
+		13749BEF21624C157B2B2997 /* applyMove_pushMovesEnemyAndBlocksSquare.json in Resources */ = {isa = PBXBuildFile; fileRef = D27AEF252B4EE3EE7F6D36C0 /* applyMove_pushMovesEnemyAndBlocksSquare.json */; };
+		1452BE28FF69182D3E0696A7 /* LocalStorageShim.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A497209B1300003042AC223 /* LocalStorageShim.swift */; };
+		1D99B2FD2B00AEEA0280FAF1 /* SetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C209E674B17C1BDCF9F58CE /* SetupView.swift */; };
+		32CA4B709BD92238B69C6DD4 /* snipeMoves_robotSnipesWithCatSpotter.json in Resources */ = {isa = PBXBuildFile; fileRef = 732B1C86744EC25E8C4450D2 /* snipeMoves_robotSnipesWithCatSpotter.json */; };
+		39CAD61A9193650A1114F88F /* validMoves_dragonCannotCaptureMouse.json in Resources */ = {isa = PBXBuildFile; fileRef = 0DC619DCEB1000C6FFD49518 /* validMoves_dragonCannotCaptureMouse.json */; };
+		39E8BF8C952FD388551B7655 /* pyroMoves_burningPieceSpreadsFire.json in Resources */ = {isa = PBXBuildFile; fileRef = 341C37746BDD8DB626F8A357 /* pyroMoves_burningPieceSpreadsFire.json */; };
+		3A3C7F45C5EE8F4657BF085C /* SkillTrayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8383C3A6FF82807EC144767D /* SkillTrayView.swift */; };
+		3BF9189CDFE068303CAE4460 /* BoardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AAB60C3B9BEC5ED04D0B81B /* BoardView.swift */; };
+		3C9641557C7123F618629E51 /* WinnerOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82FC6FD4BA324B2FE8CB0879 /* WinnerOverlayView.swift */; };
+		3EE62801479D518EBE5CBFFE /* GameAssetImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FB4E59209970A6D009451AE /* GameAssetImage.swift */; };
+		40B2218BA8EB516E1B7D7A4C /* GameModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D88F5DB4E42DEC6FDED7675 /* GameModels.swift */; };
+		4475EC9B992B2788326C475C /* Array+Safe.swift in Sources */ = {isa = PBXBuildFile; fileRef = F28FB28E8A392CEE2086D766 /* Array+Safe.swift */; };
+		48738EF5B6DDA83672EE1406 /* ResignButtonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C1567BBB6F2B3024C84B23D /* ResignButtonView.swift */; };
+		5FFCA238FDB22BED38EDC7C6 /* hopMoves_mouseHopsOverPiece.json in Resources */ = {isa = PBXBuildFile; fileRef = 6A9D233D00B780855EDC74A1 /* hopMoves_mouseHopsOverPiece.json */; };
+		7FCEE5420A11C698B22415E9 /* JSContextHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = F28FE6CE375FA97D905BA054 /* JSContextHost.swift */; };
+		84697FBFF0ACE1F63DDE0007 /* GameSessionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D206CF64A453DBE278A26D7 /* GameSessionViewModel.swift */; };
+		85D5F7A075645094339AE8A4 /* GameConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF3956FB50A1E19ED55795E5 /* GameConstants.swift */; };
+		88FD3336306A921772ADBCFA /* GameEngineClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04A020F3E3055C3B8F76FC4B /* GameEngineClient.swift */; };
+		89E67C88F4E65D6D69FC2ADD /* applyMove_captureRemovesDefender.json in Resources */ = {isa = PBXBuildFile; fileRef = F2FCAF39DF332FA2A2C567D1 /* applyMove_captureRemovesDefender.json */; };
+		8C8EC0FC960EA2F8C296E848 /* JSEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 966C2D8D72AB4C18394EF0DA /* JSEngineTests.swift */; };
+		928FF1E9B14D571F33DD4B3C /* AnimatedGIFView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2868C0F1F8A509005970FB7 /* AnimatedGIFView.swift */; };
+		93700EBDA9C44F19E10393E5 /* transformMoves_wizardLineAndExplosion.json in Resources */ = {isa = PBXBuildFile; fileRef = CB94B277BDFC2C060B65E9FB /* transformMoves_wizardLineAndExplosion.json */; };
+		98931774160609EA31647A5F /* TurnIndicatorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E72133C2191C155ED0BE5FBB /* TurnIndicatorView.swift */; };
+		A5ED742DC7F3A9DE79F28400 /* LocalEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A2823BEC2BFE95D2DF2C15B /* LocalEngine.swift */; };
+		A7D7D09E85D579D5888C3E29 /* SmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53762C520F7FE2C9AC730C16 /* SmokeTests.swift */; };
+		B121C77F610EBC9F9FA02F25 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72EBDBB9E82CE2A3463DC8A0 /* ContentView.swift */; };
+		B59962F6F795316A3F30A141 /* CellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBC6D2EAF3C4364B4C3D5CD8 /* CellView.swift */; };
+		BCD02D6B8B5E0F47CCF21951 /* validMoves_mouseBeatsDragon.json in Resources */ = {isa = PBXBuildFile; fileRef = 031600A2AA3A3A6B5509E22B /* validMoves_mouseBeatsDragon.json */; };
+		C17172157509AD047BF800A9 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87D3CD7479398785CA6E0184 /* AppState.swift */; };
+		C4D82D741691C1A252AAF4F7 /* AbilityMoveTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6288788E1AE84042C3B19E76 /* AbilityMoveTests.swift */; };
+		D16C81582D29BFA5CAF80F65 /* SkillegoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1726A8A2D54386F1720F39A /* SkillegoApp.swift */; };
+		DCD81CBBE3C2C7E3886F0F09 /* validMoves_coveredPieceHasNoMoves.json in Resources */ = {isa = PBXBuildFile; fileRef = CEA63759F900A12BD9B020DF /* validMoves_coveredPieceHasNoMoves.json */; };
+		E4DC4F282DB224493B026118 /* applyMove_burningPieceBurnsDownOnMove.json in Resources */ = {isa = PBXBuildFile; fileRef = A9BC2A1CFBDC7952C1CCD656 /* applyMove_burningPieceBurnsDownOnMove.json */; };
+		EF04BFA12071DF42A48C0DB4 /* pushMoves_dragonPushesEnemy.json in Resources */ = {isa = PBXBuildFile; fileRef = 7685E5F6D64791E0388D304B /* pushMoves_dragonPushesEnemy.json */; };
+		F7861372DB95780EDFBDDC2C /* GameScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 788FC7252A6006C3FD7F1D08 /* GameScreenView.swift */; };
+		FBC696FAC0B64D553E587037 /* applyMove_transformExplosionSpawnsFourMice.json in Resources */ = {isa = PBXBuildFile; fileRef = 42B76618D7A6161DCD2880DD /* applyMove_transformExplosionSpawnsFourMice.json */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		7CF1711DB174A494B2A41581 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 9D3CC6468FFE724BCA599270 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D59F03344D2E43120E380CF3;
+			remoteInfo = Skillego;
+		};
+		86628D7F91DBEB23D0005BD4 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 9D3CC6468FFE724BCA599270 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D59F03344D2E43120E380CF3;
+			remoteInfo = Skillego;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		031600A2AA3A3A6B5509E22B /* validMoves_mouseBeatsDragon.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = validMoves_mouseBeatsDragon.json; sourceTree = "<group>"; };
+		04A020F3E3055C3B8F76FC4B /* GameEngineClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameEngineClient.swift; sourceTree = "<group>"; };
+		0DC619DCEB1000C6FFD49518 /* validMoves_dragonCannotCaptureMouse.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = validMoves_dragonCannotCaptureMouse.json; sourceTree = "<group>"; };
+		1FB4E59209970A6D009451AE /* GameAssetImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameAssetImage.swift; sourceTree = "<group>"; };
+		341C37746BDD8DB626F8A357 /* pyroMoves_burningPieceSpreadsFire.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = pyroMoves_burningPieceSpreadsFire.json; sourceTree = "<group>"; };
+		42B76618D7A6161DCD2880DD /* applyMove_transformExplosionSpawnsFourMice.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = applyMove_transformExplosionSpawnsFourMice.json; sourceTree = "<group>"; };
+		4A497209B1300003042AC223 /* LocalStorageShim.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalStorageShim.swift; sourceTree = "<group>"; };
+		4A86C662006A8D4399A62862 /* validMoves_plainMoveAndCapture.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = validMoves_plainMoveAndCapture.json; sourceTree = "<group>"; };
+		4AAB60C3B9BEC5ED04D0B81B /* BoardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoardView.swift; sourceTree = "<group>"; };
+		53762C520F7FE2C9AC730C16 /* SmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmokeTests.swift; sourceTree = "<group>"; };
+		5A2823BEC2BFE95D2DF2C15B /* LocalEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalEngine.swift; sourceTree = "<group>"; };
+		6288788E1AE84042C3B19E76 /* AbilityMoveTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AbilityMoveTests.swift; sourceTree = "<group>"; };
+		6A9D233D00B780855EDC74A1 /* hopMoves_mouseHopsOverPiece.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = hopMoves_mouseHopsOverPiece.json; sourceTree = "<group>"; };
+		6C1567BBB6F2B3024C84B23D /* ResignButtonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResignButtonView.swift; sourceTree = "<group>"; };
+		72EBDBB9E82CE2A3463DC8A0 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		732B1C86744EC25E8C4450D2 /* snipeMoves_robotSnipesWithCatSpotter.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = snipeMoves_robotSnipesWithCatSpotter.json; sourceTree = "<group>"; };
+		7685E5F6D64791E0388D304B /* pushMoves_dragonPushesEnemy.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = pushMoves_dragonPushesEnemy.json; sourceTree = "<group>"; };
+		788FC7252A6006C3FD7F1D08 /* GameScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameScreenView.swift; sourceTree = "<group>"; };
+		7C209E674B17C1BDCF9F58CE /* SetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupView.swift; sourceTree = "<group>"; };
+		7EEAA60516868199034E07AB /* SkillegoTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = SkillegoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		82FC6FD4BA324B2FE8CB0879 /* WinnerOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WinnerOverlayView.swift; sourceTree = "<group>"; };
+		8383C3A6FF82807EC144767D /* SkillTrayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkillTrayView.swift; sourceTree = "<group>"; };
+		87D3CD7479398785CA6E0184 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		8D88F5DB4E42DEC6FDED7675 /* GameModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameModels.swift; sourceTree = "<group>"; };
+		8F005366F2B0C3D9816E58AB /* SkillegoUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = SkillegoUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		9179DF0B3375D2F4E97158CE /* bridge.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = bridge.js; sourceTree = "<group>"; };
+		966C2D8D72AB4C18394EF0DA /* JSEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSEngineTests.swift; sourceTree = "<group>"; };
+		9D206CF64A453DBE278A26D7 /* GameSessionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameSessionViewModel.swift; sourceTree = "<group>"; };
+		A2868C0F1F8A509005970FB7 /* AnimatedGIFView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnimatedGIFView.swift; sourceTree = "<group>"; };
+		A631C424EA4654E5C85CB9E2 /* applyMove_uncoverRevealsPiece.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = applyMove_uncoverRevealsPiece.json; sourceTree = "<group>"; };
+		A6663FE58997ADE80BB98E45 /* Skillego.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Skillego.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A9BC2A1CFBDC7952C1CCD656 /* applyMove_burningPieceBurnsDownOnMove.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = applyMove_burningPieceBurnsDownOnMove.json; sourceTree = "<group>"; };
+		AF3956FB50A1E19ED55795E5 /* GameConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameConstants.swift; sourceTree = "<group>"; };
+		CB94B277BDFC2C060B65E9FB /* transformMoves_wizardLineAndExplosion.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = transformMoves_wizardLineAndExplosion.json; sourceTree = "<group>"; };
+		CEA63759F900A12BD9B020DF /* validMoves_coveredPieceHasNoMoves.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = validMoves_coveredPieceHasNoMoves.json; sourceTree = "<group>"; };
+		D27AEF252B4EE3EE7F6D36C0 /* applyMove_pushMovesEnemyAndBlocksSquare.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = applyMove_pushMovesEnemyAndBlocksSquare.json; sourceTree = "<group>"; };
+		E1726A8A2D54386F1720F39A /* SkillegoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkillegoApp.swift; sourceTree = "<group>"; };
+		E72133C2191C155ED0BE5FBB /* TurnIndicatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TurnIndicatorView.swift; sourceTree = "<group>"; };
+		F28FB28E8A392CEE2086D766 /* Array+Safe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Array+Safe.swift"; sourceTree = "<group>"; };
+		F28FE6CE375FA97D905BA054 /* JSContextHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSContextHost.swift; sourceTree = "<group>"; };
+		F2FCAF39DF332FA2A2C567D1 /* applyMove_captureRemovesDefender.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = applyMove_captureRemovesDefender.json; sourceTree = "<group>"; };
+		FBC6D2EAF3C4364B4C3D5CD8 /* CellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CellView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		13B8D657C83E332D75F17BD5 /* GameScreen */ = {
+			isa = PBXGroup;
+			children = (
+				788FC7252A6006C3FD7F1D08 /* GameScreenView.swift */,
+				9D206CF64A453DBE278A26D7 /* GameSessionViewModel.swift */,
+				E72133C2191C155ED0BE5FBB /* TurnIndicatorView.swift */,
+				82FC6FD4BA324B2FE8CB0879 /* WinnerOverlayView.swift */,
+			);
+			path = GameScreen;
+			sourceTree = "<group>";
+		};
+		3623580A7EEBB07D40530213 /* Local */ = {
+			isa = PBXGroup;
+			children = (
+				F28FE6CE375FA97D905BA054 /* JSContextHost.swift */,
+				5A2823BEC2BFE95D2DF2C15B /* LocalEngine.swift */,
+				4A497209B1300003042AC223 /* LocalStorageShim.swift */,
+			);
+			path = Local;
+			sourceTree = "<group>";
+		};
+		396D1E05DFDB9EA40DCB3C04 /* Setup */ = {
+			isa = PBXGroup;
+			children = (
+				7C209E674B17C1BDCF9F58CE /* SetupView.swift */,
+			);
+			path = Setup;
+			sourceTree = "<group>";
+		};
+		5AC6A2116FCB7960C9B9176F /* Board */ = {
+			isa = PBXGroup;
+			children = (
+				A2868C0F1F8A509005970FB7 /* AnimatedGIFView.swift */,
+				4AAB60C3B9BEC5ED04D0B81B /* BoardView.swift */,
+				FBC6D2EAF3C4364B4C3D5CD8 /* CellView.swift */,
+				1FB4E59209970A6D009451AE /* GameAssetImage.swift */,
+				6C1567BBB6F2B3024C84B23D /* ResignButtonView.swift */,
+				8383C3A6FF82807EC144767D /* SkillTrayView.swift */,
+			);
+			path = Board;
+			sourceTree = "<group>";
+		};
+		89BFC61EBF20E2EFDA07C2FB /* Fixtures */ = {
+			isa = PBXGroup;
+			children = (
+				A9BC2A1CFBDC7952C1CCD656 /* applyMove_burningPieceBurnsDownOnMove.json */,
+				F2FCAF39DF332FA2A2C567D1 /* applyMove_captureRemovesDefender.json */,
+				D27AEF252B4EE3EE7F6D36C0 /* applyMove_pushMovesEnemyAndBlocksSquare.json */,
+				42B76618D7A6161DCD2880DD /* applyMove_transformExplosionSpawnsFourMice.json */,
+				A631C424EA4654E5C85CB9E2 /* applyMove_uncoverRevealsPiece.json */,
+				6A9D233D00B780855EDC74A1 /* hopMoves_mouseHopsOverPiece.json */,
+				7685E5F6D64791E0388D304B /* pushMoves_dragonPushesEnemy.json */,
+				341C37746BDD8DB626F8A357 /* pyroMoves_burningPieceSpreadsFire.json */,
+				732B1C86744EC25E8C4450D2 /* snipeMoves_robotSnipesWithCatSpotter.json */,
+				CB94B277BDFC2C060B65E9FB /* transformMoves_wizardLineAndExplosion.json */,
+				CEA63759F900A12BD9B020DF /* validMoves_coveredPieceHasNoMoves.json */,
+				0DC619DCEB1000C6FFD49518 /* validMoves_dragonCannotCaptureMouse.json */,
+				031600A2AA3A3A6B5509E22B /* validMoves_mouseBeatsDragon.json */,
+				4A86C662006A8D4399A62862 /* validMoves_plainMoveAndCapture.json */,
+			);
+			path = Fixtures;
+			sourceTree = "<group>";
+		};
+		94B4D66961274636297A38A5 /* UI */ = {
+			isa = PBXGroup;
+			children = (
+				5AC6A2116FCB7960C9B9176F /* Board */,
+				13B8D657C83E332D75F17BD5 /* GameScreen */,
+				396D1E05DFDB9EA40DCB3C04 /* Setup */,
+			);
+			path = UI;
+			sourceTree = "<group>";
+		};
+		9BAFA0CDF46C05B9DCEBEF46 /* SkillegoTests */ = {
+			isa = PBXGroup;
+			children = (
+				6288788E1AE84042C3B19E76 /* AbilityMoveTests.swift */,
+				966C2D8D72AB4C18394EF0DA /* JSEngineTests.swift */,
+				89BFC61EBF20E2EFDA07C2FB /* Fixtures */,
+			);
+			path = SkillegoTests;
+			sourceTree = "<group>";
+		};
+		B4930ED3123BDA7641FC9AD3 /* JSBridge */ = {
+			isa = PBXGroup;
+			children = (
+				9179DF0B3375D2F4E97158CE /* bridge.js */,
+			);
+			path = JSBridge;
+			sourceTree = "<group>";
+		};
+		B8A65BA138A35FEFA2BFD31F /* Engine */ = {
+			isa = PBXGroup;
+			children = (
+				F28FB28E8A392CEE2086D766 /* Array+Safe.swift */,
+				AF3956FB50A1E19ED55795E5 /* GameConstants.swift */,
+				04A020F3E3055C3B8F76FC4B /* GameEngineClient.swift */,
+				8D88F5DB4E42DEC6FDED7675 /* GameModels.swift */,
+				3623580A7EEBB07D40530213 /* Local */,
+			);
+			path = Engine;
+			sourceTree = "<group>";
+		};
+		BF0021C3BEBDAD89A23E5589 /* SkillegoUITests */ = {
+			isa = PBXGroup;
+			children = (
+				53762C520F7FE2C9AC730C16 /* SmokeTests.swift */,
+			);
+			path = SkillegoUITests;
+			sourceTree = "<group>";
+		};
+		CF13B642F48C223DB6C32BA5 = {
+			isa = PBXGroup;
+			children = (
+				E108DA91CBC36B297867E6B6 /* Skillego */,
+				9BAFA0CDF46C05B9DCEBEF46 /* SkillegoTests */,
+				BF0021C3BEBDAD89A23E5589 /* SkillegoUITests */,
+				FC1DCCEC66C3308E04498788 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		E108DA91CBC36B297867E6B6 /* Skillego */ = {
+			isa = PBXGroup;
+			children = (
+				F7FE5516C86E2396DA2A78C2 /* App */,
+				B8A65BA138A35FEFA2BFD31F /* Engine */,
+				B4930ED3123BDA7641FC9AD3 /* JSBridge */,
+				94B4D66961274636297A38A5 /* UI */,
+			);
+			path = Skillego;
+			sourceTree = "<group>";
+		};
+		F7FE5516C86E2396DA2A78C2 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				87D3CD7479398785CA6E0184 /* AppState.swift */,
+				72EBDBB9E82CE2A3463DC8A0 /* ContentView.swift */,
+				E1726A8A2D54386F1720F39A /* SkillegoApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		FC1DCCEC66C3308E04498788 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A6663FE58997ADE80BB98E45 /* Skillego.app */,
+				7EEAA60516868199034E07AB /* SkillegoTests.xctest */,
+				8F005366F2B0C3D9816E58AB /* SkillegoUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		AA039075C88F1196A469ACB1 /* SkillegoTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3DEA210733F5B16C86B10E84 /* Build configuration list for PBXNativeTarget "SkillegoTests" */;
+			buildPhases = (
+				4BE95D52827A9A5E61E826FC /* Sources */,
+				906F9D581EBD25BDEFDEE231 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A2837CBCC7B37390AC8DEF69 /* PBXTargetDependency */,
+			);
+			name = SkillegoTests;
+			packageProductDependencies = (
+			);
+			productName = SkillegoTests;
+			productReference = 7EEAA60516868199034E07AB /* SkillegoTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		D59F03344D2E43120E380CF3 /* Skillego */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A30F2D7BFFBA9B024D9F1894 /* Build configuration list for PBXNativeTarget "Skillego" */;
+			buildPhases = (
+				6DE92BC3C7BE440891A9F38A /* Bundle reused JS engine + assets */,
+				01CCD1A8A05880545BCE6B8B /* Sources */,
+				5306DEC30DF851EEACAC2C48 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Skillego;
+			packageProductDependencies = (
+			);
+			productName = Skillego;
+			productReference = A6663FE58997ADE80BB98E45 /* Skillego.app */;
+			productType = "com.apple.product-type.application";
+		};
+		DBEC33278FF8AF5E2F53D700 /* SkillegoUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 23DE8F7A9698D19E0C0AEFAC /* Build configuration list for PBXNativeTarget "SkillegoUITests" */;
+			buildPhases = (
+				F4FDC0F044DF92EB93F91030 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				6B1A051CFAAB7DD1803DBBA2 /* PBXTargetDependency */,
+			);
+			name = SkillegoUITests;
+			packageProductDependencies = (
+			);
+			productName = SkillegoUITests;
+			productReference = 8F005366F2B0C3D9816E58AB /* SkillegoUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		9D3CC6468FFE724BCA599270 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					AA039075C88F1196A469ACB1 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+					D59F03344D2E43120E380CF3 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+					DBEC33278FF8AF5E2F53D700 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+						TestTargetID = D59F03344D2E43120E380CF3;
+					};
+				};
+			};
+			buildConfigurationList = 355E7C50361BD0722AA8C7B7 /* Build configuration list for PBXProject "Skillego" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = CF13B642F48C223DB6C32BA5;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = FC1DCCEC66C3308E04498788 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				D59F03344D2E43120E380CF3 /* Skillego */,
+				AA039075C88F1196A469ACB1 /* SkillegoTests */,
+				DBEC33278FF8AF5E2F53D700 /* SkillegoUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		5306DEC30DF851EEACAC2C48 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				059664B8AF96FDAB3D822A03 /* bridge.js in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		906F9D581EBD25BDEFDEE231 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E4DC4F282DB224493B026118 /* applyMove_burningPieceBurnsDownOnMove.json in Resources */,
+				89E67C88F4E65D6D69FC2ADD /* applyMove_captureRemovesDefender.json in Resources */,
+				13749BEF21624C157B2B2997 /* applyMove_pushMovesEnemyAndBlocksSquare.json in Resources */,
+				FBC696FAC0B64D553E587037 /* applyMove_transformExplosionSpawnsFourMice.json in Resources */,
+				056301052DD0F2CB840E100D /* applyMove_uncoverRevealsPiece.json in Resources */,
+				5FFCA238FDB22BED38EDC7C6 /* hopMoves_mouseHopsOverPiece.json in Resources */,
+				EF04BFA12071DF42A48C0DB4 /* pushMoves_dragonPushesEnemy.json in Resources */,
+				39E8BF8C952FD388551B7655 /* pyroMoves_burningPieceSpreadsFire.json in Resources */,
+				32CA4B709BD92238B69C6DD4 /* snipeMoves_robotSnipesWithCatSpotter.json in Resources */,
+				93700EBDA9C44F19E10393E5 /* transformMoves_wizardLineAndExplosion.json in Resources */,
+				DCD81CBBE3C2C7E3886F0F09 /* validMoves_coveredPieceHasNoMoves.json in Resources */,
+				39CAD61A9193650A1114F88F /* validMoves_dragonCannotCaptureMouse.json in Resources */,
+				BCD02D6B8B5E0F47CCF21951 /* validMoves_mouseBeatsDragon.json in Resources */,
+				0F0E4DF7A4655F83F2D82E07 /* validMoves_plainMoveAndCapture.json in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		6DE92BC3C7BE440891A9F38A /* Bundle reused JS engine + assets */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/../js/no-modules/constants.js",
+				"$(SRCROOT)/../js/no-modules/state.js",
+				"$(SRCROOT)/../js/no-modules/rules.js",
+				"$(SRCROOT)/../js/no-modules/ai-learning.js",
+				"$(SRCROOT)/../js/no-modules/minimax.js",
+				"$(SRCROOT)/../js/no-modules/classic-ai.js",
+				"$(SRCROOT)/../js/no-modules/gamelog.js",
+				"$(SRCROOT)/../js/no-modules/board.js",
+				"$(SRCROOT)/Skillego/JSBridge/bridge.js",
+			);
+			name = "Bundle reused JS engine + assets";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/JSEngine/bridge.js",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${SRCROOT}/scripts/copy-js-engine.sh\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		01CCD1A8A05880545BCE6B8B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				928FF1E9B14D571F33DD4B3C /* AnimatedGIFView.swift in Sources */,
+				C17172157509AD047BF800A9 /* AppState.swift in Sources */,
+				4475EC9B992B2788326C475C /* Array+Safe.swift in Sources */,
+				3BF9189CDFE068303CAE4460 /* BoardView.swift in Sources */,
+				B59962F6F795316A3F30A141 /* CellView.swift in Sources */,
+				B121C77F610EBC9F9FA02F25 /* ContentView.swift in Sources */,
+				3EE62801479D518EBE5CBFFE /* GameAssetImage.swift in Sources */,
+				85D5F7A075645094339AE8A4 /* GameConstants.swift in Sources */,
+				88FD3336306A921772ADBCFA /* GameEngineClient.swift in Sources */,
+				40B2218BA8EB516E1B7D7A4C /* GameModels.swift in Sources */,
+				F7861372DB95780EDFBDDC2C /* GameScreenView.swift in Sources */,
+				84697FBFF0ACE1F63DDE0007 /* GameSessionViewModel.swift in Sources */,
+				7FCEE5420A11C698B22415E9 /* JSContextHost.swift in Sources */,
+				A5ED742DC7F3A9DE79F28400 /* LocalEngine.swift in Sources */,
+				1452BE28FF69182D3E0696A7 /* LocalStorageShim.swift in Sources */,
+				48738EF5B6DDA83672EE1406 /* ResignButtonView.swift in Sources */,
+				1D99B2FD2B00AEEA0280FAF1 /* SetupView.swift in Sources */,
+				3A3C7F45C5EE8F4657BF085C /* SkillTrayView.swift in Sources */,
+				D16C81582D29BFA5CAF80F65 /* SkillegoApp.swift in Sources */,
+				98931774160609EA31647A5F /* TurnIndicatorView.swift in Sources */,
+				3C9641557C7123F618629E51 /* WinnerOverlayView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4BE95D52827A9A5E61E826FC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C4D82D741691C1A252AAF4F7 /* AbilityMoveTests.swift in Sources */,
+				8C8EC0FC960EA2F8C296E848 /* JSEngineTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F4FDC0F044DF92EB93F91030 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A7D7D09E85D579D5888C3E29 /* SmokeTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		6B1A051CFAAB7DD1803DBBA2 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D59F03344D2E43120E380CF3 /* Skillego */;
+			targetProxy = 7CF1711DB174A494B2A41581 /* PBXContainerItemProxy */;
+		};
+		A2837CBCC7B37390AC8DEF69 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D59F03344D2E43120E380CF3 /* Skillego */;
+			targetProxy = 86628D7F91DBEB23D0005BD4 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		3793FDDF54C0C4C697270371 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = app.crisiscontrol.skillego.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Skillego;
+			};
+			name = Debug;
+		};
+		37D3E63335A91541D1675B34 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = app.crisiscontrol.skillego.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Skillego.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Skillego";
+			};
+			name = Debug;
+		};
+		3EB56CF19030731B338F66C5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Skillego;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = app.crisiscontrol.skillego;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		579841AECD22D4661FCFA1C7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = app.crisiscontrol.skillego.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Skillego;
+			};
+			name = Release;
+		};
+		D94F184A370D09CDF6D730B3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = app.crisiscontrol.skillego.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Skillego.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Skillego";
+			};
+			name = Release;
+		};
+		F1DD55C17C4DBBC4E78FBD33 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		FD0BBA4902DA17FE0A08E5F9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		FD318781147690BBE45F79A3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Skillego;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = app.crisiscontrol.skillego;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		23DE8F7A9698D19E0C0AEFAC /* Build configuration list for PBXNativeTarget "SkillegoUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3793FDDF54C0C4C697270371 /* Debug */,
+				579841AECD22D4661FCFA1C7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		355E7C50361BD0722AA8C7B7 /* Build configuration list for PBXProject "Skillego" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FD0BBA4902DA17FE0A08E5F9 /* Debug */,
+				F1DD55C17C4DBBC4E78FBD33 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		3DEA210733F5B16C86B10E84 /* Build configuration list for PBXNativeTarget "SkillegoTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				37D3E63335A91541D1675B34 /* Debug */,
+				D94F184A370D09CDF6D730B3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		A30F2D7BFFBA9B024D9F1894 /* Build configuration list for PBXNativeTarget "Skillego" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3EB56CF19030731B338F66C5 /* Debug */,
+				FD318781147690BBE45F79A3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 9D3CC6468FFE724BCA599270 /* Project object */;
+}

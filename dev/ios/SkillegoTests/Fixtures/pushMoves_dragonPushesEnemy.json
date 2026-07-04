@@ -1,0 +1,43 @@
+{
+  "name": "pushMoves_dragonPushesEnemy",
+  "function": "getPushMoves",
+  "input": {
+    "rows": 6,
+    "cols": 6,
+    "pieces": [
+      {
+        "r": 2,
+        "c": 2,
+        "type": "dragon",
+        "power": 6,
+        "player": 1
+      },
+      {
+        "r": 2,
+        "c": 3,
+        "type": "mouse",
+        "power": 1,
+        "player": 2
+      }
+    ],
+    "pushBlocked": [],
+    "abilities": [
+      "push"
+    ]
+  },
+  "args": {
+    "r": 2,
+    "c": 2
+  },
+  "output": [
+    {
+      "type": "push",
+      "drR": 2,
+      "drC": 2,
+      "enemyR": 2,
+      "enemyC": 3,
+      "destR": 2,
+      "destC": 4
+    }
+  ]
+}

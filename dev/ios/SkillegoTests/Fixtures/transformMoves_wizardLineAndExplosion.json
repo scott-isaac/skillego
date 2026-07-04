@@ -1,0 +1,99 @@
+{
+  "name": "transformMoves_wizardLineAndExplosion",
+  "function": "getTransformMoves",
+  "input": {
+    "rows": 6,
+    "cols": 6,
+    "pieces": [
+      {
+        "r": 3,
+        "c": 3,
+        "type": "wizard",
+        "power": 4,
+        "player": 1
+      }
+    ],
+    "pushBlocked": [],
+    "abilities": [
+      "transform"
+    ]
+  },
+  "args": {
+    "r": 3,
+    "c": 3
+  },
+  "output": [
+    {
+      "type": "transform",
+      "wizR": 3,
+      "wizC": 3,
+      "cells": [
+        {
+          "r": 3,
+          "c": 3
+        },
+        {
+          "r": 2,
+          "c": 3
+        },
+        {
+          "r": 1,
+          "c": 3
+        },
+        {
+          "r": 0,
+          "c": 3
+        }
+      ],
+      "isExplosion": false
+    },
+    {
+      "type": "transform",
+      "wizR": 3,
+      "wizC": 3,
+      "cells": [
+        {
+          "r": 3,
+          "c": 3
+        },
+        {
+          "r": 3,
+          "c": 2
+        },
+        {
+          "r": 3,
+          "c": 1
+        },
+        {
+          "r": 3,
+          "c": 0
+        }
+      ],
+      "isExplosion": false
+    },
+    {
+      "type": "transform",
+      "wizR": 3,
+      "wizC": 3,
+      "cells": [
+        {
+          "r": 2,
+          "c": 3
+        },
+        {
+          "r": 4,
+          "c": 3
+        },
+        {
+          "r": 3,
+          "c": 2
+        },
+        {
+          "r": 3,
+          "c": 4
+        }
+      ],
+      "isExplosion": true
+    }
+  ]
+}

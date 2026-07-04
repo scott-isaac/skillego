@@ -1,0 +1,41 @@
+{
+  "name": "hopMoves_mouseHopsOverPiece",
+  "function": "getHopMoves",
+  "input": {
+    "rows": 6,
+    "cols": 6,
+    "pieces": [
+      {
+        "r": 2,
+        "c": 2,
+        "type": "mouse",
+        "power": 1,
+        "player": 1
+      },
+      {
+        "r": 2,
+        "c": 3,
+        "type": "cat",
+        "power": 2,
+        "player": 1
+      }
+    ],
+    "pushBlocked": [],
+    "abilities": [
+      "hop"
+    ]
+  },
+  "args": {
+    "r": 2,
+    "c": 2
+  },
+  "output": [
+    {
+      "type": "hop",
+      "fromR": 2,
+      "fromC": 2,
+      "toR": 2,
+      "toC": 4
+    }
+  ]
+}

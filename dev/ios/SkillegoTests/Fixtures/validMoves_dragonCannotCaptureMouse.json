@@ -1,0 +1,44 @@
+{
+  "name": "validMoves_dragonCannotCaptureMouse",
+  "function": "getValidMoves",
+  "input": {
+    "rows": 6,
+    "cols": 6,
+    "pieces": [
+      {
+        "r": 3,
+        "c": 3,
+        "type": "dragon",
+        "power": 6,
+        "player": 1
+      },
+      {
+        "r": 3,
+        "c": 4,
+        "type": "mouse",
+        "power": 1,
+        "player": 2
+      }
+    ],
+    "pushBlocked": [],
+    "abilities": []
+  },
+  "args": {
+    "r": 3,
+    "c": 3
+  },
+  "output": [
+    {
+      "row": 2,
+      "col": 3
+    },
+    {
+      "row": 4,
+      "col": 3
+    },
+    {
+      "row": 3,
+      "col": 2
+    }
+  ]
+}

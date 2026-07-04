@@ -1,0 +1,42 @@
+{
+  "name": "pyroMoves_burningPieceSpreadsFire",
+  "function": "getPyroMoves",
+  "input": {
+    "rows": 6,
+    "cols": 6,
+    "pieces": [
+      {
+        "r": 2,
+        "c": 2,
+        "type": "dragon",
+        "power": 4,
+        "player": 1,
+        "burning": true
+      },
+      {
+        "r": 2,
+        "c": 3,
+        "type": "cat",
+        "power": 2,
+        "player": 2
+      }
+    ],
+    "pushBlocked": [],
+    "abilities": [
+      "pyromania"
+    ]
+  },
+  "args": {
+    "r": 2,
+    "c": 2
+  },
+  "output": [
+    {
+      "type": "pyro",
+      "fromR": 2,
+      "fromC": 2,
+      "targetR": 2,
+      "targetC": 3
+    }
+  ]
+}
