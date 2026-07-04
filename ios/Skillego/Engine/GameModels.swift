@@ -64,6 +64,41 @@ struct GameMove: Codable, Equatable {
     var targetC: Int?
     var spotterR: Int?
     var spotterC: Int?
+
+    /// Cells to highlight as "last move" once this move is applied — mirrors
+    /// game.js's per-execute* showLastMove(...) call sites exactly (e.g.
+    /// executePush marks the dragon's own cell + the enemy's old and new
+    /// cells; executeTransform marks the wizard's cell + every spawned mouse
+    /// cell). Computed client-side from the move itself, same as the web
+    /// version — not part of the engine's snapshot.
+    var lastMoveCells: [BoardCell] {
+        switch type {
+        case "uncover", "engulf":
+            guard let r, let c else { return [] }
+            return [BoardCell(row: r, col: c)]
+        case "move", "capture", "hop":
+            guard let fromR, let fromC, let toR, let toC else { return [] }
+            return [BoardCell(row: fromR, col: fromC), BoardCell(row: toR, col: toC)]
+        case "push":
+            guard let drR, let drC, let enemyR, let enemyC, let destR, let destC else { return [] }
+            return [
+                BoardCell(row: drR, col: drC),
+                BoardCell(row: enemyR, col: enemyC),
+                BoardCell(row: destR, col: destC),
+            ]
+        case "transform":
+            guard let wizR, let wizC else { return [] }
+            return [BoardCell(row: wizR, col: wizC)] + (cells ?? []).map { BoardCell(row: $0.r, col: $0.c) }
+        case "snipe":
+            guard let robotR, let robotC, let targetR, let targetC else { return [] }
+            return [BoardCell(row: robotR, col: robotC), BoardCell(row: targetR, col: targetC)]
+        case "pyro":
+            guard let fromR, let fromC, let targetR, let targetC else { return [] }
+            return [BoardCell(row: fromR, col: fromC), BoardCell(row: targetR, col: targetC)]
+        default:
+            return []
+        }
+    }
 }
 
 struct GameSnapshot: Codable, Equatable {

@@ -145,7 +145,9 @@ struct BoardView: View {
                             tileIndex: viewModel.tileIndices[safe: row]?[safe: col] ?? 1,
                             spriteKey: viewModel.spriteKeys[safe: row]?[safe: col] ?? nil,
                             isSelected: viewModel.isSelected(row: row, col: col),
-                            destinationKind: viewModel.destinationKind(row: row, col: col)
+                            destinationKind: viewModel.destinationKind(row: row, col: col),
+                            isLastMove: viewModel.isLastMove(row: row, col: col),
+                            isPushBlocked: snapshot.pushBlocked.contains(BoardCell(row: row, col: col))
                         )
                         .frame(width: cellSize, height: cellSize)
                         .onTapGesture { viewModel.tapCell(row: row, col: col) }

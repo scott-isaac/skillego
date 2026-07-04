@@ -11,6 +11,8 @@ struct CellView: View {
     let spriteKey: String?
     let isSelected: Bool
     let destinationKind: DestinationKind?
+    let isLastMove: Bool
+    let isPushBlocked: Bool
 
     @State private var pulse = false
 
@@ -18,6 +20,12 @@ struct CellView: View {
         GeometryReader { geo in
             ZStack {
                 tileImage
+                // Sits above the tile but below the piece/player-color layers,
+                // matching board.js's background-image order for the glow layer
+                // (it tints the tile peeking around a piece, not the piece itself).
+                if isLastMove {
+                    lastMoveTint
+                }
                 content(size: geo.size)
                 if isSelected {
                     selectionGlow(size: geo.size)
@@ -31,7 +39,16 @@ struct CellView: View {
         }
         .clipped()
         .contentShape(Rectangle())
+        .modifier(LastMoveGlow(isLastMove: isLastMove))
         .onAppear { pulse = true }
+    }
+
+    // Mirrors .cell.last-move's LAST_MOVE_GLOW background layer: a flat
+    // translucent tan tint (both gradient stops are the same color in the
+    // web version, so it's effectively a solid overlay, not an actual gradient).
+    private var lastMoveTint: some View {
+        Color(red: 200 / 255, green: 169 / 255, blue: 110 / 255).opacity(0.5)
+            .allowsHitTesting(false)
     }
 
     @ViewBuilder
@@ -58,33 +75,43 @@ struct CellView: View {
                         .frame(width: size.width * 0.75, height: size.height * 0.75)
                 }
             } else {
-                let color = playerArtColor[safe: piece.player] ?? ""
-                ZStack {
-                    if let player = GameAssetImage.player(color: color) {
-                        Image(uiImage: player).resizable().scaledToFit()
-                            .frame(width: size.width * 0.85, height: size.height * 0.85)
-                    }
-                    // Sits between the player-color square and the piece sprite,
-                    // matching board.js's renderCell background-image order
-                    // (piece_*.png, gifs/fire_*.gif, player_*.png, front-to-back)
-                    // and its background-size ('107% 72%' for the burning layer).
-                    if piece.isBurning, !color.isEmpty {
-                        AnimatedGIFView(name: "fire_\(color)")
-                            .frame(width: size.width * 1.07, height: size.height * 0.72)
-                    }
-                    if let key = spriteKey, let sprite = GameAssetImage.piece(spriteKey: key) {
-                        // 63% while burning (vs. 65% normally) is deliberately
-                        // subtle — it's the fire gif's own 107%/72% overshoot
-                        // that actually makes the flame read as "behind" the
-                        // piece, not this size delta.
-                        let spriteFraction: CGFloat = piece.isBurning ? 0.63 : 0.65
-                        Image(uiImage: sprite).resizable().scaledToFit()
-                            .frame(width: size.width * spriteFraction, height: size.height * spriteFraction)
-                    }
-                }
-                .modifier(BurningGlow(isBurning: piece.isBurning))
+                pieceContent(piece: piece, size: size)
+            }
+        } else if isPushBlocked {
+            // Mirrors board.js's empty-square branch: an empty square a piece
+            // was just pushed out of shows this gif until something moves in.
+            AnimatedGIFView(name: "dragon_push")
+                .frame(width: size.width * 0.8, height: size.height * 0.8)
+        }
+    }
+
+    @ViewBuilder
+    private func pieceContent(piece: Piece, size: CGSize) -> some View {
+        let color = playerArtColor[safe: piece.player] ?? ""
+        ZStack {
+            if let player = GameAssetImage.player(color: color) {
+                Image(uiImage: player).resizable().scaledToFit()
+                    .frame(width: size.width * 0.85, height: size.height * 0.85)
+            }
+            // Sits between the player-color square and the piece sprite,
+            // matching board.js's renderCell background-image order
+            // (piece_*.png, gifs/fire_*.gif, player_*.png, front-to-back)
+            // and its background-size ('107% 72%' for the burning layer).
+            if piece.isBurning, !color.isEmpty {
+                AnimatedGIFView(name: "fire_\(color)")
+                    .frame(width: size.width * 1.07, height: size.height * 0.72)
+            }
+            if let key = spriteKey, let sprite = GameAssetImage.piece(spriteKey: key) {
+                // 63% while burning (vs. 65% normally) is deliberately
+                // subtle — it's the fire gif's own 107%/72% overshoot
+                // that actually makes the flame read as "behind" the
+                // piece, not this size delta.
+                let spriteFraction: CGFloat = piece.isBurning ? 0.63 : 0.65
+                Image(uiImage: sprite).resizable().scaledToFit()
+                    .frame(width: size.width * spriteFraction, height: size.height * spriteFraction)
             }
         }
+        .modifier(BurningGlow(isBurning: piece.isBurning))
     }
 
     // Mirrors .cell.selected / @keyframes select-pulse: a pulsing multi-layer
@@ -150,6 +177,22 @@ private struct CornerBracket: Shape {
             path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
         }
         return path
+    }
+}
+
+// Mirrors .cell.last-move's box-shadow (the separate outer glow, distinct
+// from the tan tint layer applied inside body): a soft static border glow,
+// no animation.
+private struct LastMoveGlow: ViewModifier {
+    let isLastMove: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .cornerRadius(8)
+            .shadow(
+                color: isLastMove ? Color(red: 200 / 255, green: 169 / 255, blue: 110 / 255).opacity(0.2) : .clear,
+                radius: 12
+            )
     }
 }
 

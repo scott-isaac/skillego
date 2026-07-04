@@ -26,6 +26,7 @@ final class GameSessionViewModel {
     private(set) var isCpuThinking = false
     private(set) var tileIndices: [[Int]] = []
     private(set) var spriteKeys: [[String?]] = []
+    private(set) var lastMoveCells: [BoardCell] = []
     var errorMessage: String?
 
     private var snapshotObserver: Task<Void, Never>?
@@ -68,6 +69,7 @@ final class GameSessionViewModel {
             let move = plainDestinations.first { $0.toR == row && $0.toC == col }
             clearSelection()
             if let move {
+                lastMoveCells = move.lastMoveCells
                 Task { try? await engine.submitMove(move) }
             }
             return
@@ -75,7 +77,9 @@ final class GameSessionViewModel {
 
         guard let piece = snapshot.board[row][col] else { return }
         if snapshot.covered[row][col] {
-            Task { try? await engine.submitMove(GameMove(type: "uncover", r: row, c: col)) }
+            let move = GameMove(type: "uncover", r: row, c: col)
+            lastMoveCells = move.lastMoveCells
+            Task { try? await engine.submitMove(move) }
             return
         }
         guard piece.player == snapshot.currentPlayer else { return }
@@ -92,6 +96,7 @@ final class GameSessionViewModel {
 
     func submitAbilityMove(_ move: GameMove) {
         clearSelection()
+        lastMoveCells = move.lastMoveCells
         Task { try? await engine.submitMove(move) }
     }
 
@@ -101,6 +106,7 @@ final class GameSessionViewModel {
 
     func requestRematch() {
         clearSelection()
+        lastMoveCells = []
         Task { try? await engine.requestRematch() }
     }
 
@@ -115,6 +121,10 @@ final class GameSessionViewModel {
     func destinationKind(row: Int, col: Int) -> DestinationKind? {
         guard let move = plainDestinations.first(where: { $0.toR == row && $0.toC == col }) else { return nil }
         return move.type == "capture" ? .capture : .move
+    }
+
+    func isLastMove(row: Int, col: Int) -> Bool {
+        lastMoveCells.contains(BoardCell(row: row, col: col))
     }
 
     private func clearSelection() {
@@ -165,7 +175,8 @@ final class GameSessionViewModel {
         defer { isCpuThinking = false }
         do {
             try await Task.sleep(nanoseconds: UInt64(max(config.cpuMoveDelayMs, 0)) * 1_000_000)
-            try await engine.requestCpuMove(cpuPlayer: snapshot.currentPlayer, difficulty: cfg.difficulty ?? "expert")
+            let move = try await engine.requestCpuMove(cpuPlayer: snapshot.currentPlayer, difficulty: cfg.difficulty ?? "expert")
+            lastMoveCells = move.lastMoveCells
         } catch {
             errorMessage = "CPU error: \(error)"
         }

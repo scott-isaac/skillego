@@ -113,7 +113,8 @@ final class LocalEngine: GameEngineClient {
     /// `config.players[currentPlayer].type == "cpu"`, after showing a "thinking"
     /// state, applying `cpuMoveDelayMs` pacing the same way js/no-modules/cpu.js's
     /// scheduleNextCpuMoveIfNeeded does.
-    func requestCpuMove(cpuPlayer: Int, difficulty: String) async throws {
+    @discardableResult
+    func requestCpuMove(cpuPlayer: Int, difficulty: String) async throws -> GameMove {
         let resultJSON = try await host.call("ios_computeCpuMove", args: [String(cpuPlayer), difficulty])
         let response = try decode(CpuMoveResponse.self, from: resultJSON)
         if let error = response.error {
@@ -123,6 +124,7 @@ final class LocalEngine: GameEngineClient {
             throw GameEngineError.invalidResponse("CPU: no move available")
         }
         try await submitMove(move)
+        return move
     }
 
     func resign() async throws {
