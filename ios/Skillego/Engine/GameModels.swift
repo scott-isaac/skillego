@@ -111,6 +111,12 @@ struct GameSnapshot: Codable, Equatable {
     var enabledAbilities: [String]
     var gameOver: Bool
     var winner: Int?
+    // Contextual sprite keys (cat_heart/cat_scared/robot_angry/robot_heart/...)
+    // for every revealed cell, bundled in by bridge.js's _snapshot() so a
+    // fresh sprite pass doesn't need a second JSContext round-trip after
+    // every move — see JSContextHost's threading note on why that round-trip
+    // was worth cutting.
+    var spriteKeys: [[String?]]
 }
 
 struct PlayerConfig: Codable, Equatable {

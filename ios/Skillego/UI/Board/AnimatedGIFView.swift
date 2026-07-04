@@ -74,9 +74,14 @@ struct AnimatedGIFView: View {
     private func scheduleNextFrame() {
         guard frames.count > 1 else { return }
         let duration = frames[currentIndex].duration
-        timer = Timer.scheduledTimer(withTimeInterval: duration, repeats: false) { _ in
+        let next = Timer(timeInterval: duration, repeats: false) { _ in
             currentIndex = (currentIndex + 1) % frames.count
             scheduleNextFrame()
         }
+        // .common (not just Timer.scheduledTimer's default .default mode) so
+        // frame advancement keeps going during scroll/gesture tracking and
+        // heavy view-update passes, rather than stalling until things settle.
+        RunLoop.current.add(next, forMode: .common)
+        timer = next
     }
 }

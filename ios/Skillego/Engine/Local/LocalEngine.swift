@@ -33,14 +33,6 @@ final class LocalEngine: GameEngineClient {
         return try decode(GameConstants.self, from: resultJSON)
     }
 
-    /// Contextual sprite keys (cat_heart/cat_scared/robot_angry/robot_heart/...)
-    /// for every revealed cell, computed by board.js's pure sprite-selection
-    /// helpers in one batched call. `nil` entries are empty or covered cells.
-    func spriteKeys() async throws -> [[String?]] {
-        let resultJSON = try await host.call("ios_getAllSpriteKeys")
-        return try decode([[String?]].self, from: resultJSON)
-    }
-
     // MARK: - Lifecycle
 
     func startLocalGame(_ config: GameSetupConfig) async throws -> GameSnapshot {
@@ -158,7 +150,8 @@ final class LocalEngine: GameEngineClient {
         currentSnapshot = GameSnapshot(
             board: board, covered: covered, pushBlocked: pushBlocked,
             currentPlayer: 1, numPlayers: 2, eliminatedPlayers: [],
-            enabledAbilities: abilities, gameOver: false, winner: nil
+            enabledAbilities: abilities, gameOver: false, winner: nil,
+            spriteKeys: []
         )
     }
     #endif

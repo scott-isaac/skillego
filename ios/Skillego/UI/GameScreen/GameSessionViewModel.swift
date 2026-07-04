@@ -146,7 +146,7 @@ final class GameSessionViewModel {
                 self.snapshot = snap
                 self.clearSelection()
                 self.ensureTileIndices(rows: snap.board.count, cols: snap.board.first?.count ?? 0)
-                self.spriteKeys = (try? await engine.spriteKeys()) ?? self.spriteKeys
+                self.spriteKeys = snap.spriteKeys
                 await self.triggerCpuIfNeeded(snap)
             }
         }

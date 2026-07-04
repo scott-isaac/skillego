@@ -182,31 +182,42 @@ private struct CornerBracket: Shape {
 
 // Mirrors .cell.last-move's box-shadow (the separate outer glow, distinct
 // from the tan tint layer applied inside body): a soft static border glow,
-// no animation.
+// no animation. `.shadow()` costs an offscreen Core Animation pass even at
+// `.clear`, so this skips the modifier entirely rather than always attaching
+// it with a transparent color — with 36-72 cells re-rendering on every
+// snapshot, that unconditional cost was likely the biggest single reason
+// taps/reveals felt sluggish and GIF timers stalled under load.
 private struct LastMoveGlow: ViewModifier {
     let isLastMove: Bool
 
     func body(content: Content) -> some View {
-        content
-            .cornerRadius(8)
-            .shadow(
-                color: isLastMove ? Color(red: 200 / 255, green: 169 / 255, blue: 110 / 255).opacity(0.2) : .clear,
-                radius: 12
-            )
+        if isLastMove {
+            content
+                .cornerRadius(8)
+                .shadow(color: Color(red: 200 / 255, green: 169 / 255, blue: 110 / 255).opacity(0.2), radius: 12)
+        } else {
+            content
+        }
     }
 }
 
 // Mirrors .cell.burning / @keyframes burn-flicker: animated inset+outer
 // orange glow. The fire gif itself (added alongside this modifier) now
 // carries the "this piece is burning" signal, so no separate badge is needed.
+// See LastMoveGlow's note above on why this skips the modifier entirely
+// rather than applying a `.clear`-colored shadow when not burning.
 private struct BurningGlow: ViewModifier {
     let isBurning: Bool
     @State private var flicker = false
 
     func body(content: Content) -> some View {
-        content
-            .shadow(color: isBurning ? Color.orange.opacity(flicker ? 0.5 : 0.35) : .clear, radius: flicker ? 12 : 7)
-            .animation(isBurning ? .easeInOut(duration: 0.45).repeatForever(autoreverses: true) : .default, value: flicker)
-            .onAppear { if isBurning { flicker = true } }
+        if isBurning {
+            content
+                .shadow(color: Color.orange.opacity(flicker ? 0.5 : 0.35), radius: flicker ? 12 : 7)
+                .animation(.easeInOut(duration: 0.45).repeatForever(autoreverses: true), value: flicker)
+                .onAppear { flicker = true }
+        } else {
+            content
+        }
     }
 }
