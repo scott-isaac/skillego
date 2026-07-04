@@ -10,28 +10,27 @@ struct SkillTrayView: View {
     let moves: [GameMove]
     let onSelect: (GameMove) -> Void
 
+    /// board.png bakes exactly 5 slot rectangles into its art (see BoardView's
+    /// slotRowRect) — matching game.js's own SKILL_TRAY_SLOTS constant — so
+    /// this always renders 5 evenly-spaced slots (empty ones just show nothing)
+    /// rather than a scrolling list, letting the caller size/position the whole
+    /// row to sit exactly on top of that baked-in bracket.
     var body: some View {
-        if !moves.isEmpty {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
-                    ForEach(Array(moves.enumerated()), id: \.offset) { _, move in
-                        if let info = Self.buttonInfo(for: move) {
-                            Button {
-                                onSelect(move)
-                            } label: {
-                                VStack(spacing: 2) {
-                                    Text(info.icon).font(.title2)
-                                    Text(info.label).font(.caption2)
-                                }
-                                .padding(8)
-                                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 10))
-                            }
-                        }
-                    }
+        HStack(spacing: 0) {
+            ForEach(0..<5, id: \.self) { index in
+                let move = moves[safe: index]
+                let info = move.flatMap(Self.buttonInfo(for:))
+                Button {
+                    if let move { onSelect(move) }
+                } label: {
+                    Text(info?.icon ?? "")
+                        .font(.system(size: 28))
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .contentShape(Rectangle())
                 }
-                .padding(.horizontal)
+                .disabled(info == nil)
+                .accessibilityLabel(info?.label ?? "")
             }
-            .frame(height: 64)
         }
     }
 

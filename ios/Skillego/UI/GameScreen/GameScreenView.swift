@@ -26,28 +26,22 @@ struct GameScreenView: View {
 
     @ViewBuilder
     private func content(viewModel: GameSessionViewModel) -> some View {
-        ZStack {
-            VStack(spacing: 0) {
-                HStack {
-                    Button("Resign") { viewModel.resign() }
-                        .padding(.leading)
-                    Spacer()
-                    TurnIndicatorView(
-                        snapshot: viewModel.snapshot,
-                        isCpuThinking: viewModel.isCpuThinking,
-                        playerColors: appState.constants?.playerColors ?? [:]
-                    )
-                    Spacer()
-                    Color.clear.frame(width: 60, height: 1) // balances the Resign button so the indicator centers
-                }
-                .fixedSize(horizontal: false, vertical: true)
-                BoardView(viewModel: viewModel)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                SkillTrayView(moves: viewModel.abilityMoves) { move in
-                    viewModel.submitAbilityMove(move)
-                }
+        ZStack(alignment: .topLeading) {
+            Color.black.ignoresSafeArea()
+
+            BoardView(viewModel: viewModel, playerColors: appState.constants?.playerColors ?? [:])
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .ignoresSafeArea(edges: .bottom)
+
+            Button {
+                viewModel.resign()
+            } label: {
+                Image(systemName: "flag.fill")
+                    .padding(10)
+                    .background(.black.opacity(0.55), in: Circle())
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .foregroundStyle(.white)
+            .padding()
 
             if let snapshot = viewModel.snapshot, snapshot.gameOver {
                 Color.black.opacity(0.4).ignoresSafeArea()

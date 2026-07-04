@@ -1,25 +1,39 @@
 import SwiftUI
 
-/// Sizes the board grid to fit whatever screen it's on via GeometryReader —
-/// the native answer to the web version's fixed 1024x1536-with-CSS-scale
-/// layout, which relied on the browser's own pinch-zoom for anything smaller.
-/// Also adds a real pinch/pan gesture on the board itself (bounded, with a
-/// double-tap reset) since a 9x8 four-player board can still get cramped on a
-/// small phone even at best fit.
+/// Renders the board two ways depending on mode:
+///
+/// - 2-player (6x6): the web app's ornate board.png frame, zoomed in relative
+///   to the web version — only ~1 tile's width of decorative margin left/right
+///   instead of the full frame — with the turn indicator and skill tray
+///   overlaid directly onto the frame's baked-in red bar and 5-slot bracket
+///   (see the pixel measurements below) rather than living in separate bars.
+///   The frame is scaled off its width, so it naturally runs taller than the
+///   screen; the excess (mostly the bottom "steps" decoration) is clipped
+///   rather than shrunk to fit, which is what keeps the grid itself large.
+/// - 4-player (9x8): board.png doesn't fit that aspect ratio (same as the web
+///   app's `#board-frame.mode-4p` fallback), so this keeps a plain grid with
+///   separate header/footer bars.
+///
+/// Either way, sizing happens via GeometryReader so it adapts to any screen,
+/// plus a real pinch/pan gesture (bounded, double-tap to reset) as a fallback
+/// for anything still cramped, since there's no browser pinch-zoom on native.
 struct BoardView: View {
     let viewModel: GameSessionViewModel
+    let playerColors: [String: String]
 
     @State private var scale: CGFloat = 1
     @State private var lastScale: CGFloat = 1
     @State private var offset: CGSize = .zero
     @State private var lastOffset: CGSize = .zero
 
-    // board.png's native frame size + grid inset, taken directly from
-    // styles.css's #board-frame (1024x1536) / #board (left:158 top:314 690x690).
-    // 2-player (6x6) only — 4-player mode drops the art in the web app too,
-    // since it's sized for a 6x6 layout (styles.css's #board-frame.mode-4p).
+    // Pixel-measured against assets/board.png (1024x1536) — see the iOS UI
+    // pass that introduced this for how these were derived.
     private let frameSize = CGSize(width: 1024, height: 1536)
     private let gridInset = CGRect(x: 158, y: 314, width: 690, height: 690)
+    private let redBarRect = CGRect(x: 215, y: 215, width: 680, height: 75)
+    private let slotRowRect = CGRect(x: 232, y: 1035, width: 518, height: 100)
+    private let contentTopY: CGFloat = 190 // just above the red bar; crops the logo banner above it
+    private let marginTiles: CGFloat = 1
 
     var body: some View {
         GeometryReader { geo in
@@ -37,41 +51,71 @@ struct BoardView: View {
                     .frame(width: geo.size.width, height: geo.size.height)
             }
         }
+        .background(Color.black)
     }
 
     @ViewBuilder
     private func decorativeBoard(geo: GeometryProxy, snapshot: GameSnapshot, rows: Int, cols: Int) -> some View {
-        let frameW = min(geo.size.width, geo.size.height * frameSize.width / frameSize.height)
-        let frameH = frameW * frameSize.height / frameSize.width
-        let frameScale = frameW / frameSize.width
-        let cellSize = (gridInset.width * frameScale) / CGFloat(cols)
+        let tileWidthOriginal = gridInset.width / CGFloat(cols)
+        let visibleLeft = gridInset.minX - marginTiles * tileWidthOriginal
+        let visibleRight = gridInset.maxX + marginTiles * tileWidthOriginal
+        let frameScale = geo.size.width / (visibleRight - visibleLeft)
+        let fullW = frameSize.width * frameScale
+        let fullH = frameSize.height * frameScale
+        let originX = -visibleLeft * frameScale
+        let originY = -contentTopY * frameScale
+        let cellSize = tileWidthOriginal * frameScale
 
         ZStack(alignment: .topLeading) {
             if let boardImage = GameAssetImage.boardFrame {
-                Image(uiImage: boardImage).resizable().frame(width: frameW, height: frameH)
+                Image(uiImage: boardImage).resizable()
+                    .frame(width: fullW, height: fullH)
+                    .offset(x: originX, y: originY)
             }
-            grid(snapshot: snapshot, rows: rows, cols: cols, cellSize: cellSize)
-                .frame(width: cellSize * CGFloat(cols), height: cellSize * CGFloat(rows))
-                .offset(x: gridInset.minX * frameScale, y: gridInset.minY * frameScale)
+            placed(redBarRect, scale: frameScale, origin: (originX, originY)) {
+                TurnIndicatorView(snapshot: snapshot, isCpuThinking: viewModel.isCpuThinking, playerColors: playerColors)
+            }
+            placed(gridInset, scale: frameScale, origin: (originX, originY)) {
+                grid(snapshot: snapshot, rows: rows, cols: cols, cellSize: cellSize)
+            }
+            placed(slotRowRect, scale: frameScale, origin: (originX, originY)) {
+                SkillTrayView(moves: viewModel.abilityMoves) { move in viewModel.submitAbilityMove(move) }
+            }
         }
-        .frame(width: frameW, height: frameH)
+        .frame(width: geo.size.width, height: geo.size.height, alignment: .topLeading)
+        .clipped()
         .scaleEffect(scale)
         .offset(offset)
-        .position(x: geo.size.width / 2, y: frameH / 2)
         .gesture(magnifyAndDragGesture)
         .onTapGesture(count: 2) { resetZoom() }
     }
 
+    private func placed(_ rect: CGRect, scale frameScale: CGFloat, origin: (CGFloat, CGFloat), @ViewBuilder content: () -> some View) -> some View {
+        content()
+            .frame(width: rect.width * frameScale, height: rect.height * frameScale)
+            .offset(x: rect.minX * frameScale + origin.0, y: rect.minY * frameScale + origin.1)
+    }
+
     @ViewBuilder
     private func plainBoard(geo: GeometryProxy, snapshot: GameSnapshot, rows: Int, cols: Int) -> some View {
-        let cellSize = min(geo.size.width / CGFloat(cols), geo.size.height / CGFloat(rows))
-        grid(snapshot: snapshot, rows: rows, cols: cols, cellSize: cellSize)
-            .frame(width: cellSize * CGFloat(cols), height: cellSize * CGFloat(rows))
-            .scaleEffect(scale)
-            .offset(offset)
-            .position(x: geo.size.width / 2, y: cellSize * CGFloat(rows) / 2)
-            .gesture(magnifyAndDragGesture)
-            .onTapGesture(count: 2) { resetZoom() }
+        VStack(spacing: 0) {
+            TurnIndicatorView(snapshot: snapshot, isCpuThinking: viewModel.isCpuThinking, playerColors: playerColors)
+                .padding(.vertical, 8)
+            GeometryReader { innerGeo in
+                let cellSize = min(innerGeo.size.width / CGFloat(cols), innerGeo.size.height / CGFloat(rows))
+                grid(snapshot: snapshot, rows: rows, cols: cols, cellSize: cellSize)
+                    .frame(width: cellSize * CGFloat(cols), height: cellSize * CGFloat(rows))
+                    .scaleEffect(scale)
+                    .offset(offset)
+                    .position(x: innerGeo.size.width / 2, y: cellSize * CGFloat(rows) / 2)
+                    .gesture(magnifyAndDragGesture)
+                    .onTapGesture(count: 2) { resetZoom() }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            SkillTrayView(moves: viewModel.abilityMoves) { move in viewModel.submitAbilityMove(move) }
+                .frame(height: 64)
+        }
+        .frame(width: geo.size.width, height: geo.size.height)
     }
 
     private func grid(snapshot: GameSnapshot, rows: Int, cols: Int, cellSize: CGFloat) -> some View {
