@@ -30,6 +30,7 @@
 		88FD3336306A921772ADBCFA /* GameEngineClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04A020F3E3055C3B8F76FC4B /* GameEngineClient.swift */; };
 		89E67C88F4E65D6D69FC2ADD /* applyMove_captureRemovesDefender.json in Resources */ = {isa = PBXBuildFile; fileRef = F2FCAF39DF332FA2A2C567D1 /* applyMove_captureRemovesDefender.json */; };
 		8C8EC0FC960EA2F8C296E848 /* JSEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 966C2D8D72AB4C18394EF0DA /* JSEngineTests.swift */; };
+		928FF1E9B14D571F33DD4B3C /* AnimatedGIFView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2868C0F1F8A509005970FB7 /* AnimatedGIFView.swift */; };
 		93700EBDA9C44F19E10393E5 /* transformMoves_wizardLineAndExplosion.json in Resources */ = {isa = PBXBuildFile; fileRef = CB94B277BDFC2C060B65E9FB /* transformMoves_wizardLineAndExplosion.json */; };
 		98931774160609EA31647A5F /* TurnIndicatorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E72133C2191C155ED0BE5FBB /* TurnIndicatorView.swift */; };
 		A5ED742DC7F3A9DE79F28400 /* LocalEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A2823BEC2BFE95D2DF2C15B /* LocalEngine.swift */; };
@@ -93,6 +94,7 @@
 		9179DF0B3375D2F4E97158CE /* bridge.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = bridge.js; sourceTree = "<group>"; };
 		966C2D8D72AB4C18394EF0DA /* JSEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSEngineTests.swift; sourceTree = "<group>"; };
 		9D206CF64A453DBE278A26D7 /* GameSessionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameSessionViewModel.swift; sourceTree = "<group>"; };
+		A2868C0F1F8A509005970FB7 /* AnimatedGIFView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnimatedGIFView.swift; sourceTree = "<group>"; };
 		A631C424EA4654E5C85CB9E2 /* applyMove_uncoverRevealsPiece.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = applyMove_uncoverRevealsPiece.json; sourceTree = "<group>"; };
 		A6663FE58997ADE80BB98E45 /* Skillego.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Skillego.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A9BC2A1CFBDC7952C1CCD656 /* applyMove_burningPieceBurnsDownOnMove.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = applyMove_burningPieceBurnsDownOnMove.json; sourceTree = "<group>"; };
@@ -141,6 +143,7 @@
 		5AC6A2116FCB7960C9B9176F /* Board */ = {
 			isa = PBXGroup;
 			children = (
+				A2868C0F1F8A509005970FB7 /* AnimatedGIFView.swift */,
 				4AAB60C3B9BEC5ED04D0B81B /* BoardView.swift */,
 				FBC6D2EAF3C4364B4C3D5CD8 /* CellView.swift */,
 				1FB4E59209970A6D009451AE /* GameAssetImage.swift */,
@@ -432,6 +435,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				928FF1E9B14D571F33DD4B3C /* AnimatedGIFView.swift in Sources */,
 				C17172157509AD047BF800A9 /* AppState.swift in Sources */,
 				4475EC9B992B2788326C475C /* Array+Safe.swift in Sources */,
 				3BF9189CDFE068303CAE4460 /* BoardView.swift in Sources */,

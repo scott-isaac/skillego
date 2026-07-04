@@ -7,15 +7,11 @@ import SwiftUI
 struct TurnIndicatorView: View {
     let snapshot: GameSnapshot?
     let isCpuThinking: Bool
-    let playerColors: [String: String]
     var fontScale: CGFloat = 1
 
     var body: some View {
         HStack(spacing: 6 * fontScale) {
             if let snapshot {
-                Circle()
-                    .fill(Color(hex: playerColors[String(snapshot.currentPlayer)] ?? "#999999"))
-                    .frame(width: 16 * fontScale, height: 16 * fontScale)
                 Text(isCpuThinking ? "Player \(snapshot.currentPlayer) (CPU)…" : "Player \(snapshot.currentPlayer)'s turn")
                     .font(.system(size: 34 * fontScale, weight: .bold, design: .serif))
                     .tracking(1.5 * fontScale)

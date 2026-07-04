@@ -22,7 +22,6 @@ import SwiftUI
 /// for anything still cramped, since there's no browser pinch-zoom on native.
 struct BoardView: View {
     let viewModel: GameSessionViewModel
-    let playerColors: [String: String]
     let onResign: () -> Void
 
     @State private var scale: CGFloat = 1
@@ -37,7 +36,7 @@ struct BoardView: View {
     private let redBarRect = CGRect(x: 213, y: 218, width: 580, height: 68)
     private let slotRowRect = CGRect(x: 255, y: 1045, width: 503, height: 85)
     private let resignRect = CGRect(x: 358, y: 1175, width: 290, height: 88)
-    private let marginTiles: CGFloat = 1
+    private let marginTiles: CGFloat = 0.5
 
     var body: some View {
         GeometryReader { geo in
@@ -76,10 +75,7 @@ struct BoardView: View {
                     .offset(x: originX, y: 0)
             }
             placed(redBarRect, scale: frameScale, originX: originX) {
-                TurnIndicatorView(
-                    snapshot: snapshot, isCpuThinking: viewModel.isCpuThinking,
-                    playerColors: playerColors, fontScale: frameScale
-                )
+                TurnIndicatorView(snapshot: snapshot, isCpuThinking: viewModel.isCpuThinking, fontScale: frameScale)
             }
             placed(gridInset, scale: frameScale, originX: originX) {
                 grid(snapshot: snapshot, rows: rows, cols: cols, cellSize: cellSize)
@@ -114,7 +110,7 @@ struct BoardView: View {
                 Button("Resign", action: onResign)
                     .foregroundStyle(.white)
                 Spacer()
-                TurnIndicatorView(snapshot: snapshot, isCpuThinking: viewModel.isCpuThinking, playerColors: playerColors)
+                TurnIndicatorView(snapshot: snapshot, isCpuThinking: viewModel.isCpuThinking)
                 Spacer()
                 Color.clear.frame(width: 60, height: 1)
             }

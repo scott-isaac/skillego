@@ -18,7 +18,7 @@ struct CellView: View {
         GeometryReader { geo in
             ZStack {
                 tileImage
-                content
+                content(size: geo.size)
                 if isSelected {
                     selectionGlow(size: geo.size)
                 }
@@ -44,16 +44,25 @@ struct CellView: View {
     }
 
     @ViewBuilder
-    private var content: some View {
+    private func content(size: CGSize) -> some View {
         if let piece {
             if covered {
                 if let coveredImage = GameAssetImage.covered {
                     Image(uiImage: coveredImage).resizable().scaledToFit().padding(6)
                 }
             } else {
+                let color = playerArtColor[safe: piece.player] ?? ""
                 ZStack {
-                    if let player = GameAssetImage.player(color: playerArtColor[safe: piece.player] ?? "") {
+                    if let player = GameAssetImage.player(color: color) {
                         Image(uiImage: player).resizable().scaledToFit().padding(3)
+                    }
+                    // Sits between the player-color square and the piece sprite,
+                    // matching board.js's renderCell background-image order
+                    // (piece_*.png, gifs/fire_*.gif, player_*.png, front-to-back)
+                    // and its background-size ('107% 72%' for the burning layer).
+                    if piece.isBurning, !color.isEmpty {
+                        AnimatedGIFView(name: "fire_\(color)")
+                            .frame(width: size.width * 1.07, height: size.height * 0.72)
                     }
                     if let key = spriteKey, let sprite = GameAssetImage.piece(spriteKey: key) {
                         Image(uiImage: sprite).resizable().scaledToFit().padding(6)
@@ -131,18 +140,14 @@ private struct CornerBracket: Shape {
 }
 
 // Mirrors .cell.burning / @keyframes burn-flicker: animated inset+outer
-// orange glow, layered under the existing fire badge.
+// orange glow. The fire gif itself (added alongside this modifier) now
+// carries the "this piece is burning" signal, so no separate badge is needed.
 private struct BurningGlow: ViewModifier {
     let isBurning: Bool
     @State private var flicker = false
 
     func body(content: Content) -> some View {
         content
-            .overlay(alignment: .bottomTrailing) {
-                if isBurning {
-                    Text("🔥").font(.caption).padding(2)
-                }
-            }
             .shadow(color: isBurning ? Color.orange.opacity(flicker ? 0.5 : 0.35) : .clear, radius: flicker ? 12 : 7)
             .animation(isBurning ? .easeInOut(duration: 0.45).repeatForever(autoreverses: true) : .default, value: flicker)
             .onAppear { if isBurning { flicker = true } }

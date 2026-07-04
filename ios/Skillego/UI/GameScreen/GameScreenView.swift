@@ -29,13 +29,9 @@ struct GameScreenView: View {
         ZStack(alignment: .topLeading) {
             Color.black.ignoresSafeArea()
 
-            BoardView(
-                viewModel: viewModel,
-                playerColors: appState.constants?.playerColors ?? [:],
-                onResign: { viewModel.resign() }
-            )
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .ignoresSafeArea(edges: .bottom)
+            BoardView(viewModel: viewModel, onResign: { viewModel.resign() })
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .ignoresSafeArea(edges: .bottom)
 
             if let snapshot = viewModel.snapshot, snapshot.gameOver {
                 Color.black.opacity(0.4).ignoresSafeArea()
